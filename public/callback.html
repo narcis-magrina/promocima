@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Redirigiendo...</title></head>
+<body>
+<script>
+  (function() {
+    var hash   = window.location.hash
+    var search = window.location.search
+    var params = new URLSearchParams(search)
+    var tokenHash = params.get('token_hash')
+    var type      = params.get('type') || 'recovery'
+
+    if (tokenHash) {
+      // Flujo PKCE: token_hash en query string
+      sessionStorage.setItem('supabase_token_hash', tokenHash)
+      sessionStorage.setItem('supabase_auth_type', type)
+    } else if (hash.includes('access_token')) {
+      // Flujo implícito: tokens en hash
+      sessionStorage.setItem('supabase_auth_hash', hash)
+      sessionStorage.setItem('supabase_auth_type', hash.includes('type=invite') ? 'invite' : 'recovery')
+    }
+
+    window.location.replace('/')
+  })()
+</script>
+</body>
+</html>
