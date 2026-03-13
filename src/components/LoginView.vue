@@ -72,6 +72,11 @@
           />
         </div>
 
+        <div style="display:flex;align-items:center;gap:8px;margin-top:-4px">
+          <input id="recordar" type="checkbox" v-model="recordar" style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer" />
+          <label for="recordar" style="font-size:12px;color:var(--text3);cursor:pointer">Recordar sesión</label>
+        </div>
+
         <div v-if="error" class="login-error">{{ error }}</div>
 
         <button
@@ -97,7 +102,7 @@
 
     <!-- Modal recuperar contraseña -->
     <div v-if="mostrarRecuperar" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:1000">
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;width:360px;max-width:90vw">
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:28px;width:360px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,0.6)">
         <div style="font-size:16px;font-weight:700;margin-bottom:6px">Recuperar contraseña</div>
         <div style="font-size:12px;color:var(--text3);margin-bottom:16px">
           Introduce tu email y te enviaremos un enlace para restablecer tu contraseña.
@@ -130,6 +135,7 @@ const { login, authError, loading, isRecoveryMode } = useAuth()
 
 const email           = ref('')
 const password        = ref('')
+const recordar        = ref(false)
 const newPassword     = ref('')
 const confirmPassword = ref('')
 const error           = ref(null)
@@ -246,15 +252,20 @@ async function enviarRecuperar() {
   loadingRecuperar.value = true
   msgRecuperar.value = null
   try {
-    const { error } = await supabase.auth.resetPasswordForEmail(emailRecuperar.value, {
-      redirectTo: window.location.origin + '/callback.html'
+    const res = await fetch('/api/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accion: 'solicitar', email: emailRecuperar.value })
     })
-    if (error) {
-      msgRecuperar.value = { ok: false, text: error.message }
+    const data = await res.json()
+    if (!res.ok || data.error) {
+      msgRecuperar.value = { ok: false, text: data.error || 'Error al enviar el email' }
     } else {
       msgRecuperar.value = { ok: true, text: 'Email enviado. Revisa tu bandeja de entrada.' }
       emailRecuperar.value = ''
     }
+  } catch (e) {
+    msgRecuperar.value = { ok: false, text: 'Error de conexión' }
   } finally {
     loadingRecuperar.value = false
   }
@@ -263,7 +274,7 @@ async function enviarRecuperar() {
 async function handleLogin() {
   if (!email.value || !password.value) return
   error.value = null
-  const ok = await login(email.value, password.value)
+  const ok = await login(email.value, password.value, recordar.value)
   if (!ok) {
     error.value = authError.value || 'Email o contraseña incorrectos'
   }

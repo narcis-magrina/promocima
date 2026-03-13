@@ -37,6 +37,10 @@
       </div>
       <div style="display:flex;gap:10px;align-items:center">
         <span class="filter-label">Filtros</span>
+        <select class="form-control" style="width:140px;padding:5px 10px;font-size:12px" v-model="filtroActivo">
+          <option value="activos">Activos</option>
+          <option value="todos">Todos</option>
+        </select>
         <select class="form-control" :class="{'filter-active': !!filtroParticipe}" style="width:180px;padding:5px 10px;font-size:12px" v-model="filtroParticipe" :style="!!filtroParticipe ? 'border-color:var(--accent);border-width:2px;color:var(--accent)' : ''">
           <option value="">Todos los partícipes</option>
           <option v-for="p in participes" :key="p.id" :value="p.id">{{ p.nombre }}</option>
@@ -58,7 +62,8 @@
               <th @click="setSort('importe_participacion')" :class="thClass('importe_participacion')" style="text-align:right">Importe <span class="sort-icon">{{ thIcon('importe_participacion') }}</span></th>
               <th @click="setSort('porcentaje_participacion')" :class="thClass('porcentaje_participacion')" style="text-align:center">% Part. <span class="sort-icon">{{ thIcon('porcentaje_participacion') }}</span></th>
               <th @click="setSort('porcentaje_gestion')" :class="thClass('porcentaje_gestion')" style="text-align:center">% Gestión <span class="sort-icon">{{ thIcon('porcentaje_gestion') }}</span></th>
-              <th style="text-align:right">Neto/mes</th>
+              <th style="text-align:right">Bruto/mes</th>
+              <th style="text-align:right">Rentabilidad/mes</th>
               <th @click="setSort('activo')" :class="thClass('activo')">Estado <span class="sort-icon">{{ thIcon('activo') }}</span></th>
               <th></th>
             </tr>
@@ -72,6 +77,7 @@
               <td class="td-mono td-right">{{ fmt(c.importe_participacion) }}</td>
               <td class="td-mono td-center">{{ c.porcentaje_participacion }}%</td>
               <td class="td-mono td-center">{{ c.porcentaje_gestion }}%</td>
+              <td class="td-mono td-right" style="color:var(--accent)">{{ fmt(calcInteresBruto(c)) }}</td>
               <td class="td-mono td-right" style="color:var(--green)">{{ fmt(calcInteresNeto(c)) }}</td>
               <td><span class="badge" :class="c.activo ? 'badge-green' : 'badge-gray'">{{ c.activo ? 'Activo' : 'Inactivo' }}</span></td>
               <td @click.stop style="display:flex;gap:4px;align-items:center" v-if="!readOnly">
@@ -105,14 +111,16 @@ const emit = defineEmits(['seleccionar', 'nuevo', 'editar', 'eliminar'])
 
 // ── Filtro + orden ─────────────────────────────
 const filtroParticipe = ref('')
+const filtroActivo = ref('activos')  // 'activos' | 'todos'
 const contratosRef = computed(() => props.contratos)
 const { sorted: contratosOrdenados, setSort, thIcon, thClass } = useSort(contratosRef, 'id')
 
-const contratosFiltrados = computed(() =>
-  filtroParticipe.value
-    ? contratosOrdenados.value.filter(c => c.participe_id === filtroParticipe.value)
-    : contratosOrdenados.value
-)
+const contratosFiltrados = computed(() => {
+  let lista = contratosOrdenados.value
+  if (filtroActivo.value === 'activos') lista = lista.filter(c => c.activo)
+  if (filtroParticipe.value) lista = lista.filter(c => c.participe_id === filtroParticipe.value)
+  return lista
+})
 
 // ── KPIs ───────────────────────────────────────
 const kliEnriquecidos = computed(() =>
@@ -146,9 +154,15 @@ const kliCancelado   = computed(() => kliCancelados.value.reduce((s, c) => s + N
 const kliCanceladoN  = computed(() => new Set(kliCancelados.value.map(c => c.prestamo_id)).size)
 
 // ── Helper ─────────────────────────────────────
+function calcInteresBruto(c) {
+  const pr = props.prestamos.find(p => p.id === c.prestamo_id)
+  if (!pr || !c.activo || pr.estado === 'cancelado') return 0
+  return Math.round((Number(c.importe_participacion) * Number(pr.interes_ordinario) / 100 / 12) * (1 - Number(c.porcentaje_gestion) / 100) * 100) / 100
+}
+
 function calcInteresNeto(c) {
   const pr = props.prestamos.find(p => p.id === c.prestamo_id)
-  if (!pr) return 0
+  if (!pr || !c.activo || pr.estado === 'cancelado') return 0
   const bruto = (Number(c.importe_participacion) * Number(pr.interes_ordinario) / 100 / 12) * (1 - Number(c.porcentaje_gestion) / 100)
   return Math.round(bruto * (1 - 0.19) * 100) / 100
 }

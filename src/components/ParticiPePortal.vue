@@ -54,7 +54,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="c in contratos" :key="c.id">
+            <tr v-for="c in contratos" :key="c.id" style="cursor:pointer" @click="emit('navigate', 'contratos-ccp', c.id)">
               <td style="font-weight:500">{{ c.prestamos?.alias || c.prestamo_id }}</td>
               <td class="td-mono td-right">{{ fmt(c.importe_participacion) }}</td>
               <td class="td-mono td-center">{{ c.porcentaje_participacion }}%</td>
@@ -63,8 +63,8 @@
               <td><span class="badge" :class="c.activo ? 'badge-outline-green' : 'badge-outline-gray'">{{ c.activo ? 'Activo' : 'Inactivo' }}</span></td>
               <td class="td-center">
                 <button class="btn btn-sm btn-registrar" style="font-size:11px;padding:3px 9px"
-                  @click="contratoSeleccionado = contratoSeleccionado?.id === c.id ? null : c">
-                  {{ contratoSeleccionado?.id === c.id ? '▲ Ocultar' : '▼ Ver pagos' }}
+                  @click="emit('navigate', 'contratos-ccp', c.id)">
+                  Ver detalle
                 </button>
               </td>
             </tr>
@@ -72,64 +72,10 @@
         </table>
       </div>
 
-      <!-- Detalle pagos del contrato seleccionado -->
-      <div v-if="contratoSeleccionado" class="table-card">
-        <div class="table-header">
-          <h3>Pagos — {{ contratoSeleccionado.prestamos?.alias }}</h3>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Tipo</th>
-              <th style="text-align:right">Bruto</th>
-              <th style="text-align:right">IRPF (19%)</th>
-              <th style="text-align:right">Neto</th>
-              <th>Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="p in pagosContrato" :key="p.id">
-              <td style="font-size:12px">{{ fmtDate(p.fecha_pago_real) }}</td>
-              
-              <td class="td-mono td-right">{{ fmt(p.importe_bruto) }}</td>
-              <td class="td-mono td-right" style="color:var(--red)">{{ fmt(p.importe_retencion) }}</td>
-              <td class="td-mono td-right" style="color:var(--green);font-weight:600">{{ fmt(p.importe_neto) }}</td>
-              <td>
-                <span class="badge badge-outline-green">
-                  Pagado
-                </span>
-              </td>
-            </tr>
-            <tr v-if="!pagosContrato.length">
-              <td colspan="6" class="table-empty">Sin pagos registrados</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+
     </template>
 
-    <!-- Mis Datos Personales (única sección editable) -->
-    <div class="table-card" style="margin-top:20px">
-      <div class="table-header"><h3>Mis Datos de Contacto</h3></div>
-      <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:500px">
-        <div class="form-group">
-          <label class="form-label">Teléfono</label>
-          <input class="form-control" type="tel" v-model="formDatos.telefono" placeholder="Teléfono de contacto">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Email</label>
-          <input class="form-control" type="email" v-model="formDatos.email" placeholder="Email de contacto">
-        </div>
-        <div style="grid-column:span 2;display:flex;gap:8px;justify-content:flex-end">
-          <button class="btn btn-primary" :disabled="guardandoDatos" @click="guardarDatos">
-            <span v-if="guardandoDatos" class="btn-spinner"></span>
-            Guardar datos de contacto
-          </button>
-        </div>
-        <div v-if="msgDatos" style="grid-column:span 2;font-size:12px;color:var(--green)">{{ msgDatos }}</div>
-      </div>
-    </div>
+
   </div>
 </template>
 
@@ -139,25 +85,32 @@ import { supabase } from '../supabase.js'
 import { fmt, fmtInt, fmtDate, getEstadoBadge , calcSituacionPrestamo } from '../utils.js'
 import { useAuth } from '../composables/useAuth.js'
 
-const { participeId, participeIds } = useAuth()
+const props = defineProps({ participeId: { type: String, default: null } })
+const emit = defineEmits(['navigate'])
+
+const { participeId: authParticipeId, participeIds } = useAuth()
+// Usar el participeId del prop si se pasa, si no usar el del auth
+const participeIdActivo = computed(() => props.participeId || authParticipeId.value)
 
 const contratos  = ref([])
-const pagos      = ref([])   // todos los pagos de todos los contratos del partícipe
+const pagos      = ref([])
 const loading    = ref(true)
-const contratoSeleccionado = ref(null)
+
 
 onMounted(cargar)
+watch(() => props.participeId, cargar)
 watch(participeIds, cargar)
 
 async function cargar() {
-  if (!participeIds.value.length) { loading.value = false; return }
+  const pid = participeIdActivo.value
+  if (!pid) { loading.value = false; return }
   loading.value = true
   try {
     // 1. Load contratos first to get their IDs
     const { data: cc } = await supabase
       .from('contratos_ccp')
       .select('*, prestamos(id, alias, estado, interes_ordinario, importe, fecha_inicio, dia_cobro, duracion_meses, tipo_prestamo, periodicidad)')
-      .in('participe_id', participeIds.value)
+      .eq('participe_id', pid)
       .order('fecha_firma')
     // Cargar cobros para calcular situacion real de cada préstamo
     const prestamoIds = [...new Set((cc || []).map(c => c.prestamo_id).filter(Boolean))]
@@ -206,10 +159,7 @@ const proximoPago = computed(() => {
   return null
 })
 
-const pagosContrato = computed(() => {
-  if (!contratoSeleccionado.value) return []
-  return pagos.value.filter(p => p.contrato_ccp_id === contratoSeleccionado.value.id)
-})
+
 
 function calcInteresNeto(c) {
   if (!c.prestamos) return 0
@@ -218,39 +168,5 @@ function calcInteresNeto(c) {
   return Math.round(bruto * (1 - 0.19) * 100) / 100
 }
 
-// ── Datos personales editables ─────────────────
-const formDatos     = ref({ telefono: '', email: '' })
-const guardandoDatos = ref(false)
-const msgDatos      = ref('')
 
-// Cargar datos personales del partícipe
-async function cargarDatosPropios() {
-  if (!participeId.value) return  // usa primer partícipe para datos personales
-  const { data } = await supabase
-    .from('participes').select('telefono, email').eq('id', participeId.value).single()
-  if (data) {
-    formDatos.value.telefono = data.telefono || ''
-    formDatos.value.email    = data.email    || ''
-  }
-}
-
-onMounted(cargarDatosPropios)
-watch(participeIds, cargarDatosPropios)
-
-async function guardarDatos() {
-  if (guardandoDatos.value) return
-  guardandoDatos.value = true
-  msgDatos.value = ''
-  try {
-    const { error } = await supabase
-      .from('participes')
-      .update({ telefono: formDatos.value.telefono, email: formDatos.value.email })
-      .eq('id', participeId.value)
-    if (error) { alert('Error al guardar: ' + error.message); return }
-    msgDatos.value = '✓ Datos guardados correctamente'
-    setTimeout(() => { msgDatos.value = '' }, 3000)
-  } finally {
-    guardandoDatos.value = false
-  }
-}
 </script>

@@ -1,8 +1,8 @@
 import { ref, computed } from 'vue'
 
-export function useSort(items, defaultKey = null, defaultDir = 'asc') {
-  const sortKey = ref(defaultKey)
-  const sortDir = ref(defaultDir)
+export function useSort(items, defaultKey = null, defaultDir = 'asc', externalKey = null, externalDir = null) {
+  const sortKey = externalKey || ref(defaultKey)
+  const sortDir = externalDir || ref(defaultDir)
 
   function setSort(key) {
     if (sortKey.value === key) {

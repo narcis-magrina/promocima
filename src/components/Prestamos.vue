@@ -299,20 +299,46 @@ function estadoVisible(p) {
   return p.situacion || 'al_dia'
 }
 
-function calcSituacion(p) {
+function calcSituacion(p, cobrosPreCalculados) {
   if (!esActivo(p)) return null
   const hoy = today()
-  const cobrosP = todosCobros.value.filter(c => c.prestamo_id === p.id)
+  const cobrosP = cobrosPreCalculados !== undefined
+    ? cobrosPreCalculados
+    : todosCobros.value.filter(c => c.prestamo_id === p.id)
   const cal = generateCalendarioTeorico(p, cobrosP)
 
-  // Total cobrado con cobros ordinarios — distribuir secuencialmente sobre cuotas vencidas
-  let restante = cobrosP
-    .filter(c => c.tipo === 'pago_cuota' || c.tipo === 'cancelacion')
-    .reduce((s, c) => s + Number(c.importe), 0)
+  // Misma lógica de tramos que PrestamoDetalle para consistencia
+  const cobrosOrdinarios = cobrosP
+    .filter(x => x.tipo === 'pago_cuota' || x.tipo === 'cancelacion')
+    .map(x => ({ fecha: x.fecha_real || x.fecha_teorica, importe: Math.round(Number(x.importe) * 100) / 100 }))
+    .sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''))
 
+  const apFechas = cobrosP
+    .filter(x => x.tipo === 'amortizacion_parcial' && Number(x.importe_principal || 0) > 0)
+    .map(x => x.fecha_real || x.fecha_teorica)
+    .filter(Boolean).sort()
+
+  const limites = [...apFechas, null]
+  const tramos = []
+  let ci = 0
+  for (const limite of limites) {
+    let total = 0
+    while (ci < cobrosOrdinarios.length) {
+      if (limite !== null && cobrosOrdinarios[ci].fecha >= limite) break
+      total = Math.round((total + cobrosOrdinarios[ci].importe) * 100) / 100
+      ci++
+    }
+    tramos.push(total)
+  }
+
+  let tramoIdx = 0, restante = tramos[0] || 0, apIdx = 0
   for (const cuota of cal) {
+    while (apIdx < apFechas.length && apFechas[apIdx] < cuota.fecha) {
+      apIdx++; tramoIdx++
+      restante = tramos[tramoIdx] || 0
+    }
     if (cuota.fecha > hoy) break
-    const cobrado = Math.min(restante, cuota.total)
+    const cobrado = Math.round(Math.min(restante, cuota.total) * 100) / 100
     restante = Math.round((restante - cobrado) * 100) / 100
     if (cobrado < cuota.total * 0.99) return 'con_retraso'
   }
@@ -322,9 +348,7 @@ function calcSituacion(p) {
 const clientesSorted     = computed(() => [...clientes.value].sort((a,b) => a.nombre.localeCompare(b.nombre)))
 const intermediariosSorted = computed(() => [...intermediarios.value].sort((a,b) => a.nombre.localeCompare(b.nombre)))
 
-const prestamosConSituacion = computed(() =>
-  prestamos.value.map(p => ({ ...p, situacion: calcSituacion(p) }))
-)
+const prestamosConSituacion = computed(() => prestamos.value)
 
 const activos        = computed(() => prestamosConSituacion.value.filter(p => esActivo(p)))
 function calcCapitalActivoPrestamo(p) {
@@ -420,7 +444,20 @@ async function cargarTodo() {
     props.viewId
       ? supabase.from('cobros').select('*').eq('prestamo_id', props.viewId).order('fecha_real', { ascending: false, nullsFirst: false }).order('fecha_teorica', { ascending: false, nullsFirst: false })
       : Promise.resolve({ data: [] }),
-    supabase.from('cobros').select('prestamo_id, importe, tipo, importe_principal, fecha_real, fecha_teorica, modalidad_recalculo').range(0, 9999),
+    (async () => {
+      const PAGE = 1000
+      let all = [], from = 0, done = false
+      while (!done) {
+        const { data } = await supabase.from('cobros')
+          .select('prestamo_id, importe, tipo, importe_principal, fecha_real, fecha_teorica, modalidad_recalculo')
+          .order('id').range(from, from + PAGE - 1)
+        if (!data || data.length === 0) break
+        all = all.concat(data)
+        if (data.length < PAGE) done = true
+        else from += PAGE
+      }
+      return { data: all }
+    })(),
     supabase.from('clientes').select('id, nombre').order('nombre'),
     supabase.from('intermediarios').select('id, nombre').order('nombre'),
     supabase.from('contratos_ccp').select('prestamo_id'),
@@ -437,6 +474,19 @@ async function cargarTodo() {
   clientes.value    = cl || []
   intermediarios.value = i || []
   ccpPrestamosIds.value = new Set((ccp || []).map(x => x.prestamo_id))
+
+  // Calcular situación cuando TODOS los datos están cargados (evita condición de carrera)
+  const cobrosPorPrestamo = {}
+  for (const cb of todosCobros.value) {
+    if (!cobrosPorPrestamo[cb.prestamo_id]) cobrosPorPrestamo[cb.prestamo_id] = []
+    cobrosPorPrestamo[cb.prestamo_id].push(cb)
+  }
+  prestamosRaw.value = prestamosRaw.value.map(p => {
+    const cobrosP = cobrosPorPrestamo[p.id] || []
+    const sit = calcSituacion(p, cobrosP)
+    if (p.id === 'P061') console.log('[P061]', { cobrosP: cobrosP.length, sit, totalTodosCobros: todosCobros.value.length })
+    return { ...p, situacion: sit }
+  })
 }
 
 // ── Acciones ──────────────────────────────────

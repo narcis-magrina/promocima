@@ -149,7 +149,7 @@ const {
 
 inicializar()
 
-const { sorted: garantiasSorted, setSort, thIcon, thClass } = useSort(items, 'id')
+const { sorted: garantiasSorted, setSort, thIcon, thClass } = useSort(items, 'direccion')
 
 function abrirModal() {
   modoVer.value = false

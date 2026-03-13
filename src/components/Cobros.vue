@@ -64,14 +64,15 @@
           <table>
             <thead>
               <tr>
-                <th>Préstamo</th>
+                <th @click="setSortPrev('centro_coste')" :class="thClassPrev('centro_coste')">CC <span class="sort-icon">{{ thIconPrev('centro_coste') }}</span></th>
+                <th @click="setSortPrev('alias')" :class="thClassPrev('alias')">Préstamo <span class="sort-icon">{{ thIconPrev('alias') }}</span></th>
                 <th>Cliente</th>
                 <th>Intermediario</th>
                 <th>Estado</th>
                 <th style="text-align:center">Cuota</th>
-                <th>Fecha teórica</th>
+                <th @click="setSortPrev('fecha')" :class="thClassPrev('fecha')">Fecha teórica <span class="sort-icon">{{ thIconPrev('fecha') }}</span></th>
                 <th style="text-align:right">Importe</th>
-                <th style="text-align:right">Días retraso</th>
+                <th @click="setSortPrev('diasRetraso')" :class="thClassPrev('diasRetraso')" style="text-align:right">Días retraso <span class="sort-icon">{{ thIconPrev('diasRetraso') }}</span></th>
                 <th style="text-align:center">Fecha cobro</th>
                 <th></th>
               </tr>
@@ -80,6 +81,7 @@
               <!-- Vista plana -->
               <template v-if="!vistaAgrupada">
                 <tr v-for="c in cuotasFiltradas" :key="c._key" :style="c.esJudicial ? 'background:rgba(239,68,68,0.06)' : ''">
+                  <td style="font-size:12px;font-weight:600;text-align:center">{{ c.centro_coste }}</td>
                   <td style="font-size:12px;font-weight:500;cursor:pointer" @click="$emit('navigate','prestamos',c.prestamo_id)">{{ c.alias }}</td>
                   <td style="font-size:12px">{{ c.cliente }}</td>
                   <td style="font-size:12px">{{ c.intermediario }}</td>
@@ -238,8 +240,21 @@ async function calcularPendientes() {
   loadingProximos.value = true
 
   const [{ data: prestamos }, { data: cobros }] = await Promise.all([
-    supabase.from('prestamos').select('*, intermediarios(id, nombre)').neq('estado', 'cancelado'),
-    supabase.from('cobros').select('prestamo_id, cuota_num, fecha_teorica, importe, tipo, fecha_real, importe_principal, modalidad_recalculo').range(0, 9999),
+    supabase.from('prestamos').select('*, intermediarios(id, nombre)').neq('estado', 'cancelado').order('centro_coste'),
+    (async () => {
+      const PAGE = 1000
+      let all = [], from = 0
+      while (true) {
+        const { data } = await supabase.from('cobros')
+          .select('prestamo_id, cuota_num, fecha_teorica, importe, tipo, fecha_real, importe_principal, modalidad_recalculo')
+          .order('id').range(from, from + PAGE - 1)
+        if (!data || data.length === 0) break
+        all = all.concat(data)
+        if (data.length < PAGE) break
+        from += PAGE
+      }
+      return { data: all }
+    })(),
   ])
 
   const clientesIds = [...new Set((prestamos || []).map(p => p.cliente_id).filter(Boolean))]
@@ -262,6 +277,7 @@ async function calcularPendientes() {
         resultado.push({
           _key:              p.id + '-judicial',
           prestamo_id:       p.id,
+          centro_coste:      p.centro_coste || '—',
           alias:             p.alias,
           cliente:           clientesMap[p.cliente_id] || '—',
           intermediario:     p.intermediarios?.nombre || '—',
@@ -290,6 +306,7 @@ async function calcularPendientes() {
       resultado.push({
         _key:          p.id + '-' + cuota.num,
         prestamo_id:   p.id,
+        centro_coste:  p.centro_coste || '—',
         alias:         p.alias,
         cliente:       clientesMap[p.cliente_id] || '—',
         intermediario: p.intermediarios?.nombre || '—',
@@ -306,8 +323,6 @@ async function calcularPendientes() {
     }
   }
 
-  // Ordenar por fecha teórica descendente (más reciente primero)
-  resultado.sort((a, b) => b.fecha.localeCompare(a.fecha))
   cuotasPendientes.value = resultado
   loadingProximos.value  = false
 }
@@ -317,25 +332,25 @@ watch(seccion, v => { if (v === 'proximos') calcularPendientes() })
 
 const prestamosUnicosPrev = computed(() => [...new Set(cuotasPendientes.value.map(c => c.alias).filter(x => x && x !== '—'))].sort())
 const intermediariosUnicos = computed(() => [...new Set(cuotasPendientes.value.map(c => c.intermediario).filter(x => x && x !== '—'))].sort())
-const cuotasFiltradas = computed(() => {
+const cuotasFiltadasBase = computed(() => {
   let list = cuotasPendientes.value
   if (filtroPrestamosPrev.value) list = list.filter(c => c.alias === filtroPrestamosPrev.value)
   if (filtroIntermediario.value) list = list.filter(c => c.intermediario === filtroIntermediario.value)
   if (filtroEstado.value)        list = list.filter(c => c.estado === filtroEstado.value)
   if (soloMasAntiguo.value) {
-    // Para cada préstamo, quedarse solo con la cuota de fecha más antigua
-    const seen = new Set()
-    // lista ya ordenada desc, recorrer al revés para coger el más antiguo
     const porPrestamo = {}
     for (const c of list) {
       if (!porPrestamo[c.prestamo_id] || c.fecha < porPrestamo[c.prestamo_id].fecha) {
         porPrestamo[c.prestamo_id] = c
       }
     }
-    list = Object.values(porPrestamo).sort((a, b) => b.fecha.localeCompare(a.fecha))
+    list = Object.values(porPrestamo)
   }
   return list
 })
+const sortPrevKey = usePersistedRef('cobros.sortPrevKey', 'fecha')
+const sortPrevDir = usePersistedRef('cobros.sortPrevDir', 'asc')
+const { sorted: cuotasFiltradas, setSort: setSortPrev, thIcon: thIconPrev, thClass: thClassPrev } = useSort(cuotasFiltadasBase, 'fecha', 'asc', sortPrevKey, sortPrevDir)
 
 const totalPendienteGlobal = computed(() => cuotasPendientes.value.reduce((s, c) => s + Number(c.total || 0), 0))
 const totalJudicialGlobal  = computed(() => cuotasPendientes.value.filter(c => c.esJudicial).reduce((s, c) => s + Number(c.total || 0), 0))

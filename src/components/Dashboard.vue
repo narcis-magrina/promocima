@@ -297,7 +297,20 @@ const irpfGlobal       = ref(19)
 onMounted(async () => {
   const [{ data: p }, { data: c }, { data: cl }, { data: inter }, { data: ccp }, { data: cfg }] = await Promise.all([
     supabase.from('prestamos').select('*'),
-    supabase.from('cobros').select('prestamo_id, importe, tipo, fecha_real, fecha_teorica, importe_principal').range(0, 9999),
+    (async () => {
+      const PAGE = 1000
+      let all = [], from = 0
+      while (true) {
+        const { data } = await supabase.from('cobros')
+          .select('prestamo_id, importe, tipo, fecha_real, fecha_teorica, importe_principal')
+          .order('id').range(from, from + PAGE - 1)
+        if (!data || data.length === 0) break
+        all = all.concat(data)
+        if (data.length < PAGE) break
+        from += PAGE
+      }
+      return { data: all }
+    })(),
     supabase.from('clientes').select('id, nombre'),
     supabase.from('intermediarios').select('id, nombre'),
     supabase.from('contratos_ccp').select('prestamo_id, participe_id, importe_participacion, porcentaje_gestion, activo, participes(nombre)'),
@@ -490,19 +503,45 @@ const porIntermediario = computed(() => {
 
 // ── Por partícipe ─────────────────────────────────────────────────────────────
 const porParticipe = computed(() => {
-  const totalCapitalActivo = prestamosRaw.value.filter(p => p.estado !== 'cancelado').reduce((s, p) => s + calcCapitalActivoPrestamo(p), 0)
-  const prestamoMap   = Object.fromEntries(prestamosRaw.value.map(p => [p.id, p]))
-  const grupos        = {}
+  const prestamoMap = Object.fromEntries(prestamosRaw.value.map(p => [p.id, p]))
+  const totalCapitalActivo = ccpRaw.value
+    .filter(ccp => { const p = prestamoMap[ccp.prestamo_id]; return p && p.estado !== 'cancelado' && ccp.activo })
+    .reduce((s, ccp) => s + Number(ccp.importe_participacion || 0), 0)
+
+  const grupos = {}
   for (const ccp of ccpRaw.value) {
     const key    = ccp.participe_id
     const nombre = ccp.participes?.nombre || key
-    if (!grupos[key]) grupos[key] = { nombre, ids: new Set() }
-    grupos[key].ids.add(ccp.prestamo_id)
+    if (!grupos[key]) grupos[key] = { nombre, ccps: [] }
+    grupos[key].ccps.push(ccp)
   }
+
   return Object.values(grupos)
-    .map(({ nombre, ids }) => {
-      const ps = [...ids].map(id => prestamoMap[id]).filter(Boolean)
-      return { nombre, ...fila(ps, null, totalCapitalActivo) }
+    .map(({ nombre, ccps }) => {
+      const imp = (arr) => arr.reduce((s, ccp) => s + Number(ccp.importe_participacion || 0), 0)
+      const est = (estado) => ccps.filter(ccp => {
+        const p = prestamoMap[ccp.prestamo_id]
+        return p && estadoCalc(p) === estado && ccp.activo
+      })
+      const al_dia    = est('al_dia')
+      const retraso   = est('con_retraso')
+      const judicial  = ccps.filter(ccp => { const p = prestamoMap[ccp.prestamo_id]; return p && p.estado === 'judicializado' })
+      const cancelado = ccps.filter(ccp => { const p = prestamoMap[ccp.prestamo_id]; return p && p.estado === 'cancelado' })
+      const activos   = [...al_dia, ...retraso, ...judicial]
+      const activosImp = imp(activos)
+      const capitalActivoImp = imp(ccps.filter(ccp => {
+        const p = prestamoMap[ccp.prestamo_id]; return p && p.estado !== 'cancelado' && ccp.activo
+      }))
+      return {
+        nombre,
+        al_dia_imp:     imp(al_dia),     al_dia_n:     al_dia.length,
+        retraso_imp:    imp(retraso),     retraso_n:    retraso.length,
+        cancelado_imp:  imp(cancelado),   cancelado_n:  cancelado.length,
+        judicial_imp:   imp(judicial),    judicial_n:   judicial.length,
+        activos_imp:    activosImp,       activos_n:    activos.length,
+        capital_activo_imp: capitalActivoImp,
+        pct: totalCapitalActivo ? capitalActivoImp / totalCapitalActivo * 100 : 0,
+      }
     })
     .sort((a, b) => b.activos_imp - a.activos_imp)
 })
@@ -510,8 +549,25 @@ const porParticipe = computed(() => {
 // ── Sin partícipe ─────────────────────────────────────────────────────────────
 const sinParticipe = computed(() => {
   const totalCapitalActivo = prestamosRaw.value.filter(p => p.estado !== 'cancelado').reduce((s, p) => s + calcCapitalActivoPrestamo(p), 0)
-  const conParticipe = new Set(ccpRaw.value.map(c => c.prestamo_id))
-  const ps           = prestamosRaw.value.filter(p => !conParticipe.has(p.id))
-  return fila(ps, null, totalCapitalActivo)
+
+  // Para cada préstamo, calcular la parte NO participada
+  // = importe préstamo - suma de importe_participacion de contratos CCP activos
+  const participadoPorPrestamo = {}
+  for (const ccp of ccpRaw.value) {
+    if (!ccp.activo) continue
+    participadoPorPrestamo[ccp.prestamo_id] = (participadoPorPrestamo[ccp.prestamo_id] || 0) + Number(ccp.importe_participacion || 0)
+  }
+
+  // Construir "préstamos virtuales" con el importe no participado
+  const psVirtuales = prestamosRaw.value
+    .map(p => {
+      const participado = participadoPorPrestamo[p.id] || 0
+      const noParticipado = Math.max(0, Number(p.importe) - participado)
+      if (noParticipado < 0.01) return null
+      return { ...p, importe: noParticipado }
+    })
+    .filter(Boolean)
+
+  return fila(psVirtuales, null, totalCapitalActivo)
 })
 </script>

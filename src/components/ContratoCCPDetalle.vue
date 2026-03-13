@@ -284,13 +284,13 @@
         <table>
           <thead>
             <tr>
-              <th>Fecha Pago</th>
+              <th class="sorted-desc">Fecha Pago <span class="sort-icon">↓</span></th>
               <th style="text-align:right">Devengado</th>
               <th style="text-align:right">Gestión</th>
               <th style="text-align:right">Bruto</th>
               <th style="text-align:right">IRPF</th>
               <th style="text-align:right;color:var(--green)">Neto</th>
-              <th>Obs.</th>
+              <th v-if="!readOnly">Obs.</th>
               <th v-if="!readOnly"></th>
             </tr>
           </thead>
@@ -303,13 +303,13 @@
               <td class="td-mono td-right" style="color:var(--red)">{{ fmt(p.importe_retencion) }}</td>
               <td class="td-mono td-right" style="color:var(--green);font-weight:600">{{ fmt(p.importe_neto) }}</td>
               <td style="font-size:11px;color:var(--text3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
-                  :title="p.observaciones">{{ p.observaciones || '—' }}</td>
+                  v-if="!readOnly" :title="p.observaciones">{{ p.observaciones || '—' }}</td>
               <td v-if="!readOnly">
                 <button class="btn btn-sm btn-danger-solid" style="padding:2px 7px;font-size:13px"
                   title="Eliminar pago" @click="eliminarPagoYRecargar(p)">✕</button>
               </td>
             </tr>
-            <tr v-if="!pagosReales.length"><td :colspan="readOnly ? 7 : 8" class="table-empty">Sin pagos registrados</td></tr>
+            <tr v-if="!pagosReales.length"><td :colspan="readOnly ? 6 : 8" class="table-empty">Sin pagos registrados</td></tr>
           </tbody>
         </table>
       </div>
@@ -485,7 +485,7 @@ watch(() => props.contrato?.id, () => { tab.value = 'detalle'; cargarPagos() })
 async function cargarPagos() {
   if (!props.contrato?.id) return
   const { data } = await supabase.from('pagos_reales_participe').select('*')
-    .eq('contrato_ccp_id', props.contrato.id).order('fecha_pago_real')
+    .eq('contrato_ccp_id', props.contrato.id).order('fecha_pago_real', { ascending: false })
   pagosReales.value = data || []
 }
 

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Restablecer contraseña – PROMO CIMA</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #0f0f1a; font-family: system-ui, sans-serif; }
+    .card { width: 380px; background: #1a1a2e; border: 1px solid #2a2a3e; border-radius: 12px; padding: 36px 32px 28px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+    .logo { text-align: center; margin-bottom: 28px; }
+    .brand { font-size: 20px; font-weight: 700; letter-spacing: 0.1em; color: #7ec8a0; text-transform: uppercase; }
+    .sub { font-size: 11px; color: #666; margin-top: 4px; }
+    .form { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; }
+    label { font-size: 12px; color: #aaa; font-weight: 500; display: block; margin-bottom: 4px; }
+    input { width: 100%; padding: 10px 12px; background: #0f0f1a; border: 1px solid #2a2a3e; border-radius: 6px; color: #fff; font-size: 14px; outline: none; }
+    input:focus { border-color: #7ec8a0; }
+    button { width: 100%; padding: 10px; background: #2d6a4f; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 4px; }
+    button:hover:not(:disabled) { background: #235c42; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #f87171; border-radius: 6px; padding: 8px 12px; font-size: 12px; }
+    .success { background: rgba(45,106,79,0.15); border: 1px solid rgba(45,106,79,0.4); color: #7ec8a0; border-radius: 6px; padding: 8px 12px; font-size: 12px; }
+    .footer { text-align: center; font-size: 11px; color: #444; border-top: 1px solid #2a2a3e; padding-top: 16px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <div class="brand">PROMOCIMA</div>
+      <div class="sub">Restablecer contraseña</div>
+    </div>
+    <div class="form">
+      <div>
+        <label>Nueva contraseña</label>
+        <input type="password" id="password" placeholder="Mínimo 8 caracteres" />
+      </div>
+      <div>
+        <label>Confirmar contraseña</label>
+        <input type="password" id="confirm" placeholder="Repite la contraseña" />
+      </div>
+      <div id="msg" style="display:none"></div>
+      <button id="btn" onclick="resetear()">Establecer contraseña</button>
+    </div>
+    <div class="footer">Sistema de gestión interno · Solo acceso autorizado</div>
+  </div>
+
+  <script>
+    // Limpiar sesión anterior
+    Object.keys(localStorage).forEach(function(k) {
+      if (k.startsWith('sb-')) localStorage.removeItem(k)
+    })
+    Object.keys(sessionStorage).forEach(function(k) {
+      sessionStorage.removeItem(k)
+    })
+
+    const token = new URLSearchParams(window.location.search).get('token')
+    if (!token) {
+      showMsg('El enlace no es válido o ha expirado.', false)
+      document.getElementById('btn').disabled = true
+    }
+
+    function showMsg(text, ok) {
+      const el = document.getElementById('msg')
+      el.style.display = 'block'
+      el.className = ok ? 'success' : 'error'
+      el.textContent = text
+    }
+
+    async function resetear() {
+      const password = document.getElementById('password').value
+      const confirm  = document.getElementById('confirm').value
+      if (password.length < 8) return showMsg('La contraseña debe tener al menos 8 caracteres.', false)
+      if (password !== confirm) return showMsg('Las contraseñas no coinciden.', false)
+
+      document.getElementById('btn').disabled = true
+      document.getElementById('btn').textContent = 'Guardando...'
+
+      try {
+        const res = await fetch('/api/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accion: 'resetear', token, nuevaPassword: password })
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error)
+
+        // Login automático con las nuevas credenciales
+        showMsg('Contraseña restablecida. Iniciando sesión...', true)
+        const loginRes = await fetch('https://lsdmmnxkrrliutleyehp.supabase.co/auth/v1/token?grant_type=password', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxzZG1tbnhrcnJsaXV0bGV5ZWhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3NTUzMDAsImV4cCI6MjA4NzMzMTMwMH0.RfBENxz49du3CUkQeCbt0i3Y9mlRSQzhZqI6s34cxCM'
+          },
+          body: JSON.stringify({ email: data.email, password })
+        })
+        const loginData = await loginRes.json()
+        if (loginData.access_token) {
+          const sessionKey = 'sb-lsdmmnxkrrliutleyehp-auth-token'
+          localStorage.setItem(sessionKey, JSON.stringify({
+            access_token: loginData.access_token,
+            refresh_token: loginData.refresh_token,
+            expires_at: Math.floor(Date.now() / 1000) + loginData.expires_in,
+            token_type: 'bearer',
+            user: loginData.user
+          }))
+        }
+        setTimeout(() => window.location.replace('/'), 1000)
+      } catch (e) {
+        showMsg(e.message, false)
+        document.getElementById('btn').disabled = false
+        document.getElementById('btn').textContent = 'Establecer contraseña'
+      }
+    }
+  </script>
+</body>
+</html>

@@ -8,7 +8,6 @@
       <button class="btn btn-primary" @click="abrirInvitar">+ Invitar Usuario</button>
     </div>
 
-    <!-- Tabla -->
     <div class="table-card">
       <div class="table-header"><h3>Usuarios ({{ usuarios.length }})</h3></div>
       <table>
@@ -34,14 +33,9 @@
               <span v-else-if="u.rol === 'participe'" style="color:var(--text3)">Sin vincular</span>
               <span v-else>—</span>
             </td>
-            <td><span class="badge" :class="u.activo ? 'badge-outline-green' : 'badge-outline-gray'">{{ u.activo ? 'Activo' : 'Inactivo' }}</span></td>
+            <td><span class="badge" :class="u.activo ? 'badge-outline-green' : 'badge-outline-gray'">{{ u.activo ? 'Activo' : 'Pendiente' }}</span></td>
             <td style="display:flex;gap:6px;flex-wrap:wrap">
-              <button class="btn btn-sm btn-registrar" style="font-size:11px;padding:3px 9px"
-                @click="editar(u)">✎ Editar</button>
-              <button v-if="isAdmin" class="btn btn-sm" style="font-size:11px;padding:3px 9px;background:var(--blue);color:#fff"
-                :disabled="reenviadoId === u.id"
-                :title="'Reenviar email de invitación a ' + u.email"
-                @click="reenviarInvitacion(u)">{{ reenviadoId === u.id ? '✓ Enviado' : '✉ Reenviar' }}</button>
+              <button class="btn btn-sm btn-registrar" style="font-size:11px;padding:3px 9px" @click="editar(u)">✎ Editar</button>
               <button v-if="isAdmin" class="btn btn-sm btn-danger" style="font-size:11px;padding:3px 9px"
                 :disabled="u.id === usuarioActualId"
                 :title="u.id === usuarioActualId ? 'No puedes eliminarte a ti mismo' : 'Eliminar usuario'"
@@ -54,9 +48,6 @@
         </tbody>
       </table>
     </div>
-
-    <!-- Nota SQL -->
-
 
     <!-- Modal editar -->
     <div class="modal-overlay" v-if="modalAbierto">
@@ -103,6 +94,9 @@
               </select>
             </div>
           </div>
+          <div v-if="msgEditar" class="alert" :class="msgEditar.ok ? 'alert-success' : 'alert-danger'" style="margin-top:12px;font-size:12px">
+            {{ msgEditar.text }}
+          </div>
         </div>
         <div class="modal-footer">
           <button class="btn" @click="modalAbierto = false">Cancelar</button>
@@ -114,7 +108,7 @@
       </div>
     </div>
 
-    <!-- Modal invitar usuario -->
+    <!-- Modal invitar -->
     <div class="modal-overlay" v-if="modalInvitar">
       <div class="modal">
         <div class="modal-header">
@@ -172,12 +166,13 @@ import { ref, computed, onMounted } from 'vue'
 import { useAuth } from '../composables/useAuth.js'
 import { supabase } from '../supabase.js'
 
-const { listarUsuarios, guardarPerfil, user, isAdmin } = useAuth()
+const { listarUsuarios, user, isAdmin } = useAuth()
 
 const usuarios     = ref([])
 const participes   = ref([])
 const modalAbierto = ref(false)
 const saving       = ref(false)
+const msgEditar    = ref(null)
 const form         = ref(formVacio())
 
 function formVacio() {
@@ -196,32 +191,34 @@ function nombreParticipe(id) {
   return participes.value.find(p => p.id === id)?.nombre || id
 }
 
-function abrirNuevo() {
-  form.value = formVacio()
-  modalAbierto.value = true
-}
 function editar(u) {
   form.value = { ...u, participe_ids: [...(u.participe_ids || [])] }
+  msgEditar.value = null
   modalAbierto.value = true
 }
 
 async function guardar() {
-  if (!form.value.id) return alert('No se puede guardar: el usuario no tiene ID asignado.')
-  if (!form.value.rol) return alert('El rol es obligatorio')
+  if (!form.value.id || !form.value.rol) return
   saving.value = true
+  msgEditar.value = null
   try {
-    await guardarPerfil({
-      id: form.value.id,
-      email: form.value.email,
-      nombre: form.value.nombre,
-      rol: form.value.rol,
-      participe_ids: form.value.rol === 'participe' ? (form.value.participe_ids || []) : [],
-      activo: form.value.activo,
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch(`/api/usuarios/${form.value.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+      body: JSON.stringify({
+        nombre: form.value.nombre,
+        rol: form.value.rol,
+        activo: form.value.activo,
+        participe_ids: form.value.participe_ids
+      })
     })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error)
     modalAbierto.value = false
     await cargar()
   } catch (e) {
-    alert('Error: ' + e.message)
+    msgEditar.value = { ok: false, text: 'Error: ' + e.message }
   } finally {
     saving.value = false
   }
@@ -231,61 +228,24 @@ function rolBadge(rol) {
   return { admin: 'badge-outline-red', interno: 'badge-outline-blue', participe: 'badge-outline-yellow' }[rol] || 'badge-outline-gray'
 }
 
-// ── Eliminar usuario ──────────────────────────────────────────────────────────
 const usuarioActualId = computed(() => user.value?.id)
-
-const reenviadoId = ref(null)
-
-async function reenviarInvitacion(u) {
-  if (!confirm(`¿Reenviar invitación a "${u.email}"?`)) return
-  try {
-    const { data: { session } } = await supabase.auth.getSession()
-    const fnUrl = 'https://lsdmmnxkrrliutleyehp.supabase.co/functions/v1/invite-user'
-    const res = await fetch(fnUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session?.access_token}`
-      },
-      body: JSON.stringify({ email: u.email, nombre: u.nombre, rol: u.rol, participe_ids: u.participe_ids || [], redirectTo: window.location.origin + '/callback.html' })
-    })
-    const data = await res.json()
-    if (!res.ok || data.error) {
-      alert('Error al reenviar: ' + (data.error || 'Error desconocido'))
-    } else {
-      reenviadoId.value = u.id
-      setTimeout(() => { reenviadoId.value = null }, 3000)
-    }
-  } catch (e) {
-    alert('Error: ' + e.message)
-  }
-}
 
 async function confirmarEliminar(u) {
   if (!confirm(`¿Eliminar el usuario "${u.nombre || u.email}"?\nEsto eliminará su acceso de forma permanente.`)) return
   try {
     const { data: { session } } = await supabase.auth.getSession()
-    const fnUrl = 'https://lsdmmnxkrrliutleyehp.supabase.co/functions/v1/delete-user'
-    const res = await fetch(fnUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session?.access_token}`
-      },
-      body: JSON.stringify({ user_id: u.id })
+    const res = await fetch(`/api/usuarios/${u.id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${session.access_token}` }
     })
     const data = await res.json()
-    if (!res.ok || data.error) {
-      alert('Error al eliminar: ' + (data.error || 'Error desconocido'))
-    } else {
-      await cargar()
-    }
+    if (!res.ok) throw new Error(data.error)
+    await cargar()
   } catch (e) {
-    alert('Error: ' + e.message)
+    alert('Error al eliminar: ' + e.message)
   }
 }
 
-// ── Invitar usuario ───────────────────────────────────────────────────────────
 const modalInvitar  = ref(false)
 const savingInvitar = ref(false)
 const msgInvitar    = ref(null)
@@ -303,46 +263,25 @@ async function enviarInvitacion() {
   msgInvitar.value    = null
   try {
     const { data: { session } } = await supabase.auth.getSession()
-    const fnUrl = 'https://lsdmmnxkrrliutleyehp.supabase.co/functions/v1/invite-user'
-    const fnRes = await fetch(fnUrl, {
+    const res = await fetch('/api/invitar', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session?.access_token}`
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
       body: JSON.stringify({
         email: formInvitar.value.email,
         nombre: formInvitar.value.nombre,
         rol: formInvitar.value.rol,
-        participe_ids: formInvitar.value.rol === 'participe' ? formInvitar.value.participe_ids : [],
-        redirectTo: window.location.origin + '/callback.html'
+        participe_ids: formInvitar.value.rol === 'participe' ? formInvitar.value.participe_ids : []
       })
     })
-    const res = await fnRes.json()
-    if (!fnRes.ok || res.error) {
-      msgInvitar.value = { ok: false, text: res.error || 'Error desconocido' }
-    } else {
-      // Actualizar perfil con rol y partícipes si el usuario ya fue creado
-      const userId = res.user?.id || res.data?.user?.id
-      if (userId) {
-        await supabase.from('perfiles').upsert({
-          id: userId,
-          email: formInvitar.value.email,
-          nombre: formInvitar.value.nombre,
-          rol: formInvitar.value.rol,
-          participe_ids: formInvitar.value.rol === 'participe' ? formInvitar.value.participe_ids : [],
-          activo: true
-        })
-      }
-      msgInvitar.value = { ok: true, text: `Invitación enviada a ${formInvitar.value.email}.` }
-      formInvitar.value = { email: '', nombre: '', rol: 'interno', participe_ids: [] }
-      await cargar()
-    }
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error)
+    msgInvitar.value = { ok: true, text: `Invitación enviada a ${formInvitar.value.email}.` }
+    formInvitar.value = { email: '', nombre: '', rol: 'interno', participe_ids: [] }
+    await cargar()
   } catch (e) {
     msgInvitar.value = { ok: false, text: e.message }
   } finally {
     savingInvitar.value = false
   }
 }
-
 </script>

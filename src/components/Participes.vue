@@ -103,7 +103,7 @@
       <div class="table-card">
         <div class="table-header"><h3>{{ readOnly ? 'Participaciones' : 'Contratos CCP Asociados' }}</h3></div>
         <table>
-          <thead><tr><th>ID</th><th>Préstamo</th><th>Fecha Firma</th><th style="text-align:right">Importe</th><th>% Particip.</th><th>% Gestión</th><th>Estado préstamo</th><th style="text-align:right">Devengado/mes</th><th>Estado CCP</th></tr></thead>
+          <thead><tr><th>ID</th><th>Préstamo</th><th>Fecha Firma</th><th style="text-align:right">Importe</th><th>% Particip.</th><th>% Gestión</th><th>Estado préstamo</th><th style="text-align:right">Rentabilidad/mes</th><th>Estado CCP</th></tr></thead>
           <tbody>
             <tr v-for="c in contratosParticipe" :key="c.id" style="cursor:pointer" @click="$emit('navigate','contratos-ccp',c.id)">
               <td class="td-mono" style="color:var(--text3)">{{ c.id }}</td>
@@ -173,7 +173,13 @@
       <div class="table-card">
         <div class="table-header">
           <h3>Listado</h3>
-          <input class="search-input" :class="{'filter-active': !!busqueda}" placeholder="Buscar..." v-model="busqueda" :style="!!busqueda ? 'border-color:var(--accent);border-width:2px;color:var(--accent)' : ''">
+          <div style="display:flex;gap:8px;align-items:center">
+            <select class="form-control" style="width:130px;padding:5px 10px;font-size:12px" v-model="filtroActivoP">
+              <option value="activos">Activos</option>
+              <option value="todos">Todos</option>
+            </select>
+            <input class="search-input" :class="{'filter-active': !!busqueda}" placeholder="Buscar..." v-model="busqueda" :style="!!busqueda ? 'border-color:var(--accent);border-width:2px;color:var(--accent)' : ''">
+          </div>
         </div>
         <table>
           <thead><tr>
@@ -185,7 +191,7 @@
               <th @click="setSort('capitalParticipado')" :class="thClass('capitalParticipado')" style="text-align:right">Capital participado <span class="sort-icon">{{ thIcon('capitalParticipado') }}</span></th>
               <th @click="setSort('capitalParticipActivo')" :class="thClass('capitalParticipActivo')" style="text-align:right">Capital activo <span class="sort-icon">{{ thIcon('capitalParticipActivo') }}</span></th>
               <th @click="setSort('capitalCancelado')" :class="thClass('capitalCancelado')" style="text-align:right">Cancelado <span class="sort-icon">{{ thIcon('capitalCancelado') }}</span></th>
-              <th @click="setSort('devengadoMes')" :class="thClass('devengadoMes')" style="text-align:right">Devengado/mes <span class="sort-icon">{{ thIcon('devengadoMes') }}</span></th>
+              <th @click="setSort('devengadoMes')" :class="thClass('devengadoMes')" style="text-align:right">Rentabilidad/mes <span class="sort-icon">{{ thIcon('devengadoMes') }}</span></th>
               <th @click="setSort('activo')" :class="thClass('activo')">Estado <span class="sort-icon">{{ thIcon('activo') }}</span></th>
               <th style="width:40px"></th>
             </tr></thead>
@@ -408,10 +414,12 @@ inicializar(toRef(props, 'viewId'))
 const { sorted: participesSorted, setSort, thIcon, thClass } = useSort(items, 'centro_coste')
 const participe          = computed(() => items.value.find(p => p.id === props.viewId) || null)
 const contratosParticipe = computed(() => contratos.value.filter(c => c.participe_id === props.viewId))
+const filtroActivoP = ref('activos')
 const participesFiltrados = computed(() => {
   const q   = busqueda.value.toLowerCase()
   const cap = capitalPorParticipe.value
   return participesSorted.value
+    .filter(p => filtroActivoP.value === 'activos' ? p.activo : true)
     .filter(p => p.nombre.toLowerCase().includes(q) || (p.nif || '').toLowerCase().includes(q))
     .map(p => ({
       ...p,

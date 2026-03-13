@@ -127,13 +127,17 @@ export function useAuth() {
   const participeIds = computed(() => perfil.value?.participe_ids || [])
   const participeId  = computed(() => participeIds.value[0] || null)  // primer partícipe (compatibilidad)
 
-  async function login(email, password) {
+  async function login(email, password, recordar = false) {
     authError.value = null
     loading.value = true
     try {
       // Limpiar storage de Supabase por si quedó basura de un flujo de invitación
       Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k))
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+        options: { persistSession: recordar }
+      })
       if (error) {
         // Traducir mensajes técnicos a mensajes comprensibles
         if (error.message.includes('Invalid login credentials') || error.code === 'invalid_credentials') {

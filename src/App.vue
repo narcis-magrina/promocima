@@ -21,6 +21,14 @@
     </div>
   </div>
 
+  <!-- ── Activar cuenta (primer acceso) ────────── -->
+  <ActivarCuenta
+    v-else-if="perfil && !perfil.activo"
+    :perfil="perfil"
+    @activado="recargarPerfil"
+    @logout="logout"
+  />
+
   <!-- ── Portal Partícipe ──────────────────────── -->
   <div v-else-if="isParticipe" class="app-layout">
     <aside class="sidebar">
@@ -60,19 +68,15 @@
         <div class="topbar-title">{{ participeCcpId ? 'Detalle Contrato' : (nombresParticipes[participeActivoId] || 'Mi Perfil') }}</div>
       </div>
       <div class="content">
-        <!-- Detalle CCP seleccionado -->
         <ContratosCCP
           v-if="participeCcpId"
           :view-id="participeCcpId"
           :read-only="true"
           @navigate="onParticipeNav"
         />
-        <!-- Perfil del partícipe (KPIs + tabla CCP + editar contacto) -->
-        <Participes
+        <ParticiPePortal
           v-else
-          :view-id="participeActivoId"
-          :read-only="true"
-          :solo-editar-contacto="true"
+          :participe-id="participeActivoId"
           @navigate="onParticipeNav"
         />
       </div>
@@ -133,7 +137,6 @@
             <span class="icon">◩</span> Dirección
           </div>
         </div>
-        <!-- Administración: solo admin -->
         <div v-if="isAdmin" class="nav-section">
           <div class="nav-label">Administración</div>
           <div class="nav-item" :class="{ active: page === 'usuarios' }" @click="navigate('usuarios')">
@@ -179,12 +182,10 @@
         <Participes         v-else-if="page === 'participes'"         :view-id="id" @navigate="navigate" />
         <ContratosCCP       v-else-if="page === 'contratos-ccp'"      :view-id="id" @navigate="navigate" />
         <PagosParticipes    v-else-if="page === 'pagos-participes'"   @navigate="navigate" />
-
         <GestionUsuarios    v-else-if="page === 'usuarios' && isAdmin" />
         <Estadisticas       v-else-if="page === 'estadisticas'" />
         <Configuracion      v-else-if="page === 'configuracion' && isAdmin" />
         <Administracion     v-else-if="page === 'administracion' && isAdmin" />
-        <!-- Fallback: acceso denegado a páginas de admin para usuarios internos -->
         <div v-else class="content" style="padding:40px;color:var(--text3)">
           Página no encontrada o sin acceso.
         </div>
@@ -204,7 +205,6 @@ const participeCcpId    = ref(null)
 const participeActivoId = ref(null)
 const nombresParticipes = ref({})
 
-// Cuando cambian los partícipes del usuario, seleccionar el primero y cargar nombres
 watch(participeIds, async (ids) => {
   if (!ids.length) return
   if (!participeActivoId.value || !ids.includes(participeActivoId.value)) {
@@ -224,6 +224,15 @@ function onParticipeNav(page, id) {
 
 const rolLabel = computed(() => ({ admin: 'Administrador', interno: 'Usuario Interno', participe: 'Partícipe' }[rol.value] || rol.value))
 
+// ── Recargar perfil tras activar cuenta ────────
+async function recargarPerfil() {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (session) {
+    const { data } = await supabase.from('perfiles').select('*').eq('id', session.user.id).single()
+    if (data) perfil.value = data
+  }
+}
+
 // ── Router ─────────────────────────────────────
 import { useRouter } from './composables/useRouter.js'
 const { page, id, navigate } = useRouter()
@@ -240,13 +249,13 @@ const titles = {
   'pagos-participes': 'Pagos a Partícipes',
   estadisticas: 'Estadísticas de Dirección',
   configuracion: 'Configuración Global',
-
   usuarios: 'Gestión de Usuarios',
 }
 const pageTitle = computed(() => titles[page.value] || '')
 
 // ── Components ─────────────────────────────────
 import LoginView        from './components/LoginView.vue'
+import ActivarCuenta    from './components/ActivarCuenta.vue'
 import ParticiPePortal  from './components/ParticiPePortal.vue'
 import GestionUsuarios  from './components/GestionUsuarios.vue'
 import Dashboard        from './components/Dashboard.vue'
@@ -266,7 +275,6 @@ import { fechaReferenciaGlobal, fmtDate } from './utils.js'
 // ── Init ───────────────────────────────────────
 onMounted(async () => {
   initAuth()
-  // Cargar fecha de referencia global desde config
   const { data } = await supabase.from('config').select('fecha_referencia').eq('id', 1).single()
   if (data?.fecha_referencia) fechaReferenciaGlobal.value = data.fecha_referencia
 })
