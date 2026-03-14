@@ -24,6 +24,26 @@ export const fmtInt = (n) => {
   return `${sign}${intFormatted} €`
 }
 
+export const fmtN = (n) => {
+  if (n === null || n === undefined) return '—'
+  const num = Math.round(Number(n))
+  const sign = num < 0 ? '-' : ''
+  const abs = Math.abs(num)
+  const intFormatted = String(abs).replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  return `${sign}${intFormatted}`
+}
+
+// Igual que fmt pero sin símbolo € (para celdas de tabla donde el título ya dice "importes en €")
+export const fmtDec = (n) => {
+  if (n === null || n === undefined) return '—'
+  const num = Number(n)
+  const sign = num < 0 ? '-' : ''
+  const abs = Math.abs(num)
+  const [intPart, decPart] = abs.toFixed(2).split('.')
+  const intFormatted = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  return `${sign}${intFormatted},${decPart}`
+}
+
 export const fmtPct = (n) => Number(n).toFixed(2) + '%'
 
 export const fmtDate = (d) => {
@@ -38,9 +58,7 @@ export const uuid = () => Math.random().toString(36).substr(2, 9).toUpperCase()
 // Si se configura una fecha de referencia, se usa en lugar de la fecha real.
 // Así los estados "al día / con retraso" son comparables a un día determinado.
 import { ref } from 'vue'
-export const fechaReferenciaGlobal = ref(null)  // null = fecha real del sistema
-
-export const today = () => fechaReferenciaGlobal.value || new Date().toISOString().split('T')[0]
+export const today = () => new Date().toISOString().split('T')[0]
 
 // ── Cálculos financieros ──────────────────────
 

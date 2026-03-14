@@ -17,7 +17,7 @@
           <div class="detail-item"><div class="detail-label">Email</div><div class="detail-value">{{ intermediario.email || '—' }}</div></div>
         </div>
         <div class="table-card">
-          <div class="table-header"><h3>Préstamos Intermediados</h3></div>
+          <div class="table-header"><h3>Préstamos Intermediados <span style="font-weight:400;color:var(--text3);font-size:11px">(importes en €)</span></h3></div>
           <table>
             <thead><tr><th>ID</th><th>Alias</th><th>Cliente</th><th style="text-align:right">Importe</th><th>Estado</th></tr></thead>
             <tbody>
@@ -45,17 +45,17 @@
         <table>
           <thead><tr>
               <th @click="setSort('nombre')" :class="thClass('nombre')">Nombre <span class="sort-icon">{{ thIcon('nombre') }}</span></th>
-              <th @click="setSort('empresa')" :class="thClass('empresa')">Empresa <span class="sort-icon">{{ thIcon('empresa') }}</span></th>
-              <th>Teléfono</th><th>Email</th>
+              <th @click="setSort('empresa')" :class="thClass('empresa')" class="col-hide-mobile">Empresa <span class="sort-icon">{{ thIcon('empresa') }}</span></th>
+              <th class="col-hide-mobile">Teléfono</th><th class="col-hide-mobile">Email</th>
               <th @click="setSort('nPrestamos')" :class="thClass('nPrestamos')" style="text-align:center">Préstamos <span class="sort-icon">{{ thIcon('nPrestamos') }}</span></th>
               <th></th>
             </tr></thead>
           <tbody>
             <tr v-for="i in interOrdenados" :key="i.id" style="cursor:pointer" @click="$emit('navigate','intermediarios',i.id)">
               <td style="font-weight:500">{{ i.nombre }}</td>
-              <td>{{ i.empresa || '—' }}</td>
-              <td style="font-size:12px">{{ i.telefono || '—' }}</td>
-              <td style="font-size:12px">{{ i.email || '—' }}</td>
+              <td class="col-hide-mobile">{{ i.empresa || '—' }}</td>
+              <td style="font-size:12px" class="col-hide-mobile">{{ i.telefono || '—' }}</td>
+              <td style="font-size:12px" class="col-hide-mobile">{{ i.email || '—' }}</td>
               <td class="td-center"><span class="badge badge-gray">{{ i.nPrestamos || 0 }}</span></td>
               <td @click.stop style="display:flex;gap:4px">
                 <button class="btn btn-sm btn-ghost" @click.stop="editar(i)">✎</button>

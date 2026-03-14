@@ -17,25 +17,25 @@
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px">
         <div class="kpi-card kc-green">
           <div class="kpi-label">Capital Activo</div>
-          <div class="kpi-value">{{ fmtInt(capitalTotal) }}</div>
+          <div class="kpi-value">{{ fmtN(capitalTotal) }}</div>
           <div class="kpi-sub">Capital inicial: {{ fmtInt(prestamosConSituacion.filter(p => p.estado !== 'cancelado').reduce((s,p) => s + Number(p.importe), 0)) }}</div>
           <div class="kpi-sub">{{ prestamosConSituacion.filter(p => p.estado !== 'cancelado').length }} préstamos activos</div>
         </div>
         <div class="kpi-card kc-green">
           <div class="kpi-label">Al Día</div>
-          <div class="kpi-value">{{ fmtInt(capitalActivoAlDia) }}</div>
+          <div class="kpi-value">{{ fmtN(capitalActivoAlDia) }}</div>
           <div class="kpi-sub">Capital inicial: {{ fmtInt(capitalInicialAlDia) }}</div>
           <div class="kpi-sub">{{ nAlDia }} préstamo{{ nAlDia !== 1 ? 's' : '' }}</div>
         </div>
         <div class="kpi-card kc-orange">
           <div class="kpi-label">Con Retraso</div>
-          <div class="kpi-value">{{ fmtInt(capitalActivoRetraso) }}</div>
+          <div class="kpi-value">{{ fmtN(capitalActivoRetraso) }}</div>
           <div class="kpi-sub">Capital inicial: {{ fmtInt(capitalInicialRetraso) }}</div>
           <div class="kpi-sub">{{ nConRetraso }} préstamo{{ nConRetraso !== 1 ? 's' : '' }}</div>
         </div>
         <div class="kpi-card kc-red">
           <div class="kpi-label">Judicializados</div>
-          <div class="kpi-value">{{ fmtInt(capitalActivoJudicial) }}</div>
+          <div class="kpi-value">{{ fmtN(capitalActivoJudicial) }}</div>
           <div class="kpi-sub">Capital inicial: {{ fmtInt(capitalInicialJudicial) }}</div>
           <div class="kpi-sub">{{ nJudicializados }} préstamo{{ nJudicializados !== 1 ? 's' : '' }}</div>
         </div>
@@ -67,39 +67,39 @@
       </div>
       <div class="table-card">
         <div class="table-header">
-          <h3>Listado</h3>
+          <h3>Listado <span style="font-weight:400;color:var(--text3);font-size:11px">(importes en €)</span></h3>
           <input class="search-input" :class="{'filter-active': !!busqueda}" placeholder="Buscar préstamo..." v-model="busqueda" :style="!!busqueda ? 'border-color:var(--accent);border-width:2px;color:var(--accent)' : ''">
         </div>
         <div class="table-scroll">
           <table>
             <thead><tr>
-                <th @click="setSortP('centro_coste')" :class="thClassP('centro_coste')" style="text-align:center">CC <span class="sort-icon">{{ thIconP('centro_coste') }}</span></th>
+                <th @click="setSortP('centro_coste')" :class="thClassP('centro_coste')" style="text-align:center" class="col-hide-mobile">CC <span class="sort-icon">{{ thIconP('centro_coste') }}</span></th>
                 <th @click="setSortP('alias')" :class="thClassP('alias')">Alias <span class="sort-icon">{{ thIconP('alias') }}</span></th>
-                <th>Intermediario</th>
-                <th @click="setSortP('tipo_prestamo')" :class="thClassP('tipo_prestamo')">Tipo <span class="sort-icon">{{ thIconP('tipo_prestamo') }}</span></th>
+                <th class="col-hide-mobile">Intermediario</th>
+                <th @click="setSortP('tipo_prestamo')" :class="thClassP('tipo_prestamo')" class="col-hide-mobile">Tipo <span class="sort-icon">{{ thIconP('tipo_prestamo') }}</span></th>
                 <th @click="setSortP('importe')" :class="thClassP('importe')" style="text-align:right">Importe <span class="sort-icon">{{ thIconP('importe') }}</span></th>
                 <th style="text-align:right">Activo</th>
-                <th @click="setSortP('fecha_inicio')" :class="thClassP('fecha_inicio')">Inicio <span class="sort-icon">{{ thIconP('fecha_inicio') }}</span></th>
-                <th @click="setSortP('duracion_meses')" :class="thClassP('duracion_meses')" style="text-align:center">Meses <span class="sort-icon">{{ thIconP('duracion_meses') }}</span></th>
+                <th @click="setSortP('fecha_inicio')" :class="thClassP('fecha_inicio')" class="col-hide-mobile">Inicio <span class="sort-icon">{{ thIconP('fecha_inicio') }}</span></th>
+                <th @click="setSortP('duracion_meses')" :class="thClassP('duracion_meses')" style="text-align:center" class="col-hide-mobile">Meses <span class="sort-icon">{{ thIconP('duracion_meses') }}</span></th>
                 <th @click="setSortP('interes_ordinario')" :class="thClassP('interes_ordinario')" style="text-align:center">Interés <span class="sort-icon">{{ thIconP('interes_ordinario') }}</span></th>
-                <th style="text-align:center">LTV</th>
+                <th style="text-align:center" class="col-hide-mobile">LTV</th>
                 <th @click="setSortP('estado')" :class="thClassP('estado')">Estado <span class="sort-icon">{{ thIconP('estado') }}</span></th>
                 <th style="width:40px"></th>
               </tr></thead>
             <tbody>
               <tr v-for="p in prestamosFiltrados" :key="p.id" style="cursor:pointer" @click="$emit('navigate','prestamos',p.id)">
-                <td class="td-mono" style="color:var(--text3);text-align:center">{{ p.centro_coste || '—' }}</td>
+                <td class="td-mono td-center col-hide-mobile" style="color:var(--text3)">{{ p.centro_coste || '—' }}</td>
                 <td style="font-weight:500">{{ p.alias }}</td>
-                <td style="font-size:12px">{{ p.intermediarios?.nombre || '—' }}</td>
-                <td v-html="getTipoBadge(p.tipo_prestamo)" />
-                <td class="td-mono td-right">{{ fmtInt(p.importe) }}</td>
+                <td style="font-size:12px" class="col-hide-mobile">{{ p.intermediarios?.nombre || '—' }}</td>
+                <td v-html="getTipoBadge(p.tipo_prestamo)" class="col-hide-mobile" />
+                <td class="td-mono td-right">{{ fmtN(p.importe) }}</td>
                 <td class="td-mono td-right" style="color:var(--green)">
-                  {{ p.estado !== 'cancelado' ? fmtInt(calcCapitalActivoPrestamo(p)) : '—' }}
+                  {{ p.estado !== 'cancelado' ? fmtN(calcCapitalActivoPrestamo(p)) : '—' }}
                 </td>
-                <td style="font-size:12px">{{ fmtDateShort(p.fecha_inicio) }}</td>
-                <td class="td-center">{{ p.duracion_meses }}</td>
+                <td style="font-size:12px" class="col-hide-mobile">{{ fmtDateShort(p.fecha_inicio) }}</td>
+                <td class="td-center col-hide-mobile">{{ p.duracion_meses }}</td>
                 <td class="td-mono td-center">{{ p.interes_ordinario }}%</td>
-                <td class="td-mono td-center" :style="{ color: ltvColor(p) }">{{ ltvValor(p) }}%</td>
+                <td class="td-mono td-center col-hide-mobile" :style="{ color: ltvColor(p) }">{{ ltvValor(p) }}%</td>
                 <td v-html="getEstadoBadge(estadoVisible(p))" />
                 <td @click.stop>
                   <button
@@ -249,7 +249,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useSort } from '../composables/useSort.js'
 import { usePersistedRef } from '../composables/usePersistedRef.js'
 import { supabase } from '../supabase.js'
-import { fmt, fmtInt, fmtDate, generateCalendarioTeorico, distribuirCobros, getCuotaEstado, getEstadoBadge, getTipoBadge, uuid, today } from '../utils.js'
+import { fmt, fmtInt, fmtN, fmtDate, generateCalendarioTeorico, distribuirCobros, getCuotaEstado, getEstadoBadge, getTipoBadge, uuid, today } from '../utils.js'
 const fmtDateShort = (d) => { if (!d) return '—'; const dt = new Date(d + 'T00:00:00'); return dt.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' }) }
 import PrestamoDetalle from './PrestamoDetalle.vue'
 

@@ -34,18 +34,44 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); min-
 .content { flex: 1; overflow-y: auto; padding: 24px; }
 
 /* SIDEBAR */
-.sidebar { width: 220px; min-width: 220px; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; height: 100vh; overflow-y: auto; }
-.sidebar-logo { padding: 24px 16px 18px; border-bottom: 1px solid var(--border); }
+.sidebar { width: 220px; min-width: 220px; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; height: 100vh; overflow-y: auto; transition: width 0.2s ease, min-width 0.2s ease; overflow-x: hidden; }
+.sidebar-logo { padding: 20px 16px 14px; border-bottom: 1px solid var(--border); }
 .sidebar-logo .brand { font-weight: 700; font-size: 16px; letter-spacing: 0.08em; color: var(--accent); text-transform: uppercase; }
 .sidebar-logo .sub { font-size: 10px; color: var(--text3); letter-spacing: 0.05em; margin-top: 2px; }
+.sidebar-logo-img-wrap { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+
+/* ── SIDEBAR COLLAPSE (desktop) ─────────────────────────────────────────────── */
+.sidebar-collapse-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 4px; border: 1px solid var(--border);
+  background: var(--bg3); color: var(--text3); cursor: pointer; font-size: 11px;
+  transition: background 0.15s; margin-top: 8px;
+}
+.sidebar-collapse-btn:hover { background: var(--bg4); color: var(--text); }
+.sidebar.collapsed { width: 52px; min-width: 52px; }
+.sidebar.collapsed .sidebar-logo-text,
+.sidebar.collapsed .nav-label,
+.sidebar.collapsed .nav-item-text,
+.sidebar.collapsed .sidebar-footer-text,
+.sidebar.collapsed .user-info { display: none; }
+.sidebar.collapsed .sidebar-logo { padding: 12px 8px; display: flex; flex-direction: column; align-items: center; }
+.sidebar.collapsed .sidebar-logo-img-wrap { margin-bottom: 0; }
+.sidebar.collapsed .sidebar-collapse-btn { margin-top: 6px; width: 28px; height: 28px; font-size: 13px; }
+.sidebar.collapsed .nav-item { justify-content: center; padding: 8px; gap: 0; }
+.sidebar.collapsed .nav-item .icon { width: auto; }
+.sidebar.collapsed .sidebar-footer { padding: 10px 8px; }
+.sidebar.collapsed .sidebar-footer-inner { justify-content: center; }
+.sidebar.collapsed .user-avatar { margin: 0 auto; }
+.sidebar.collapsed .sidebar-nav { padding: 12px 4px; }
 .sidebar-nav { flex: 1; padding: 12px 8px; }
 .nav-section { margin-bottom: 4px; }
 .nav-label { font-size: 9px; letter-spacing: 0.1em; color: var(--text3); text-transform: uppercase; font-weight: 600; padding: 8px 8px 4px; }
-.nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; cursor: pointer; color: var(--text2); font-size: 13px; font-weight: 400; transition: all 0.15s; border: 1px solid transparent; margin-bottom: 1px; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; cursor: pointer; color: var(--text2); font-size: 13px; font-weight: 400; transition: all 0.15s; border: 1px solid transparent; margin-bottom: 1px; white-space: nowrap; overflow: hidden; }
 .nav-item:hover { background: var(--bg3); color: var(--text); }
 .nav-item.active { background: var(--bg4); color: var(--accent); border-color: var(--border); font-weight: 500; }
 .nav-item .icon { font-size: 14px; width: 16px; text-align: center; flex-shrink: 0; }
 .sidebar-footer { padding: 12px 16px; border-top: 1px solid var(--border); }
+.sidebar-footer-inner { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .user-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--bg4); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--accent); font-weight: 600; }
 .user-info .name { font-size: 12px; font-weight: 500; }
 .user-info .role { font-size: 10px; color: var(--text3); }
@@ -244,3 +270,124 @@ input[type="number"] { -moz-appearance: textfield; }
 
 /* ── AUTH / LOADING ─────────────────────────────────────────────────────────── */
 .loading-shell { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg); }
+
+/* ── TD COUNT (nº préstamos inline) ─────────────────────────────────────────── */
+.td-count { display: inline; font-size: 11px; color: var(--text3); margin-left: 4px; }
+
+/* ── HAMBURGER ──────────────────────────────────────────────────────────────── */
+.hamburger-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  line-height: 1;
+  margin-right: 8px;
+}
+.hamburger-btn:hover { background: var(--bg3); }
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 99;
+}
+
+/* ── RESPONSIVE (móvil) ─────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+
+  /* Layout: sidebar oculto por defecto en móvil, desliza desde la izquierda */
+  .hamburger-btn { display: flex; align-items: center; }
+  .app-layout { position: relative; }
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: 240px;
+    min-width: unset;
+    height: 100vh;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    border-right: 1px solid var(--border);
+    flex-direction: column;
+  }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-overlay { display: block; pointer-events: none; opacity: 0; transition: opacity 0.25s; }
+  .sidebar-overlay.open { pointer-events: auto; opacity: 1; }
+
+  /* Topbar más compacta */
+  .topbar { padding: 0 12px; height: 44px; min-height: 44px; }
+  .topbar-title { font-size: 13px; }
+
+  /* Contenido con menos padding */
+  .content { padding: 12px; }
+
+  /* KPI grid: 2 columnas en móvil */
+  .kpi-grid,
+  div[style*="grid-template-columns"][style*="repeat(4"],
+  div[style*="grid-template-columns"][style*="repeat(5"],
+  div[style*="grid-template-columns"][style*="repeat(6"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+    margin-bottom: 16px !important;
+  }
+  .kpi-card { padding: 12px !important; }
+  .kpi-value, div.kpi-value { font-size: 16px !important; }
+  .kpi-label { font-size: 10px !important; }
+  .kpi-sub { font-size: 10px !important; }
+
+  /* Tablas: scroll horizontal */
+  .table-card { overflow-x: auto; }
+  table { min-width: 500px; }
+
+  /* Ocultar columnas menos importantes en tablas */
+  .col-hide-mobile { display: none !important; }
+
+  /* Ocultar barras de progreso en móvil, mantener solo el % */
+  .progress-bar-hide-mobile { display: none !important; }
+
+  /* td-count en móvil: nueva línea */
+  .td-count { display: block; margin-left: 0; margin-top: 2px; font-size: 10px; }
+
+
+  /* Cuando la barra está oculta, el contenedor flex pasa a block alineado a la derecha */
+  .progress-bar-hide-mobile + span {
+    display: block;
+    text-align: right;
+    width: 100%;
+    font-size: 12px !important;
+  }
+
+  /* Modales: pantalla completa en móvil */
+  .modal { width: 100% !important; max-width: 100% !important; max-height: 95vh; margin: auto 0 0 0; border-radius: 12px 12px 0 0; }
+  .modal-overlay { align-items: flex-end; }
+
+  /* Formularios: 1 columna */
+  .form-grid { grid-template-columns: 1fr !important; }
+
+  /* Secciones */
+  .section-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .section-header button { width: 100%; justify-content: center; }
+
+  /* Detalle préstamo/CCP: 1 columna */
+  .detail-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  /* Móvil pequeño: KPIs en 1 columna */
+  .kpi-grid,
+  div[style*="grid-template-columns"][style*="repeat("] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Fuentes más pequeñas */
+  body { font-size: 12px; }
+  .kpi-value, div.kpi-value { font-size: 14px !important; }
+  .kpi-label { font-size: 9px !important; }
+  div[style*="font-size:18px"] { font-size: 14px !important; }
+  div[style*="font-size:20px"] { font-size: 16px !important; }
+}

@@ -60,7 +60,7 @@
               <input class="form-control" type="date" v-model="form.fecha_firma"
                 :min="prestamos.find(p => p.id === form.prestamo_id)?.fecha_inicio || undefined"
                 :disabled="tienePagosRealizados"
-                :style="tienePagosRealizados ? 'opacity:0.5;cursor:not-allowed' : ''">
+                :style="tienePagosRealizados ? 'opacity:1;cursor:not-allowed;color:var(--text1);-webkit-text-fill-color:var(--text1)' : ''">
               <div v-if="form.prestamo_id && prestamos.find(p => p.id === form.prestamo_id)?.fecha_inicio"
                    style="font-size:11px;color:var(--text3);margin-top:3px">
                 Mínimo: {{ prestamos.find(p => p.id === form.prestamo_id)?.fecha_inicio }}

@@ -3,7 +3,7 @@
     <div class="back-btn" @click="$emit('navigate','prestamos')">← Volver a Préstamos</div>
 
     <div class="alert alert-danger" v-if="prestamo.estado === 'judicializado'">
-      ⚖ Préstamo judicializado desde {{ fmtDate(prestamo.fecha_judicializacion) }}. Importe demanda: {{ fmt(prestamo.importe_demanda) }}.
+      ⚖ Préstamo judicializado desde {{ fmtDate(prestamo.fecha_judicializacion) }}. Importe demanda: {{ fmtDec(prestamo.importe_demanda) }}.
     </div>
     <div class="alert alert-info" v-if="prestamo.estado === 'cancelado'">
       ⊗ Préstamo cancelado el {{ fmtDate(prestamo.fecha_cancelacion) }}.
@@ -62,9 +62,9 @@
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
       <div class="kpi-card kc-green">
         <div class="kpi-label">Cuota {{ (prestamo.periodicidad || 'mensual').toUpperCase() }}</div>
-        <div style="font-family:var(--mono);font-size:20px;font-weight:700">{{ fmt(cuotaDetalle.total) }}</div>
-        <div class="kpi-sub" style="color:var(--text3)">Int: {{ fmt(cuotaDetalle.interes) }}</div>
-        <div class="kpi-sub" style="color:var(--text3)">Ppal: {{ fmt(cuotaDetalle.principal) }}</div>
+        <div style="font-family:var(--mono);font-size:20px;font-weight:700">{{ fmtDec(cuotaDetalle.total) }}</div>
+        <div class="kpi-sub" style="color:var(--text3)">Int: {{ fmtDec(cuotaDetalle.interes) }}</div>
+        <div class="kpi-sub" style="color:var(--text3)">Ppal: {{ fmtDec(cuotaDetalle.principal) }}</div>
       </div>
       <div class="kpi-card kc-purple">
         <div class="kpi-label">Total Cobrado</div>
@@ -80,9 +80,9 @@
       </div>
       <div class="kpi-card kc-red">
         <div class="kpi-label">Int. Demora</div>
-        <div style="font-family:var(--mono);font-size:20px;font-weight:700">{{ fmt(interesDemoraTotal) }}</div>
-        <div class="kpi-sub" style="color:var(--text3)">Pagados: {{ fmt(interesDemoraHistorico) }}</div>
-        <div class="kpi-sub" style="color:var(--text3)">Vencidos: {{ fmt(interesDemoraVencidas) }}</div>
+        <div style="font-family:var(--mono);font-size:20px;font-weight:700">{{ fmtDec(interesDemoraTotal) }}</div>
+        <div class="kpi-sub" style="color:var(--text3)">Pagados: {{ fmtDec(interesDemoraHistorico) }}</div>
+        <div class="kpi-sub" style="color:var(--text3)">Vencidos: {{ fmtDec(interesDemoraVencidas) }}</div>
       </div>
     </div>
 
@@ -95,30 +95,89 @@
     </div>
 
     <!-- Tab Detalle -->
-    <div v-if="tabActivo === 'detalle'" style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div v-if="tabActivo === 'detalle'" class="table-card" style="padding:24px;display:grid;gap:28px">
+
+      <!-- Condiciones -->
       <div>
-        <div style="font-size:12px;font-weight:600;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.06em">Condiciones</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div class="detail-item"><div class="detail-label">Tipo Préstamo</div><div class="detail-value">{{ prestamo.tipo_prestamo }}</div></div>
-          <div class="detail-item"><div class="detail-label">Interés Ordinario</div><div class="detail-value mono">{{ prestamo.interes_ordinario }}%</div></div>
-          <div class="detail-item"><div class="detail-label">Interés Demora</div><div class="detail-value mono">{{ prestamo.interes_demora }}%</div></div>
-          <div class="detail-item"><div class="detail-label">Comisión Apertura</div><div class="detail-value mono">{{ prestamo.comision_apertura }}%</div></div>
-          <div class="detail-item"><div class="detail-label">Fecha Inicio</div><div class="detail-value">{{ fmtDate(prestamo.fecha_inicio) }}</div></div>
-          <div class="detail-item"><div class="detail-label">Día de Cobro</div><div class="detail-value">{{ prestamo.dia_cobro }}</div></div>
-        </div>
-      </div>
-      <div>
-        <div style="font-size:12px;font-weight:600;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.06em">Partes</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div class="detail-item"><div class="detail-label">Cliente</div><div class="detail-value">{{ prestamo.clientes?.nombre || '—' }}</div></div>
-          <div class="detail-item"><div class="detail-label">Intermediario</div><div class="detail-value">{{ prestamo.intermediarios?.nombre || '—' }}</div></div>
-          <div class="detail-item" v-if="prestamo.garantia_tipo || prestamo.garantia_direccion || prestamo.garantia_tasacion" style="grid-column:span 2">
-            <div class="detail-label">Garantía</div>
-            <div class="detail-value">{{ [prestamo.garantia_tipo, prestamo.garantia_direccion].filter(Boolean).join(' · ') || '—' }}</div>
-            <div v-if="prestamo.garantia_tasacion" style="font-size:11px;color:var(--text3);margin-top:2px">Tasación: {{ fmt(prestamo.garantia_tasacion) }} | LTV: {{ ltvDetalle }}%</div>
+        <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:14px;text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid var(--border);padding-bottom:6px">Condiciones</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">Tipo préstamo</span>
+            <span style="font-size:13px;font-weight:500">{{ prestamo.tipo_prestamo }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">Periodicidad</span>
+            <span style="font-size:13px;font-weight:500;text-transform:capitalize">{{ prestamo.periodicidad }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">Interés ordinario</span>
+            <span style="font-size:13px;font-weight:500;font-family:var(--mono)">{{ prestamo.interes_ordinario }}%</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">Interés demora</span>
+            <span style="font-size:13px;font-weight:500;font-family:var(--mono)">{{ prestamo.interes_demora }}%</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">Comisión apertura</span>
+            <span style="font-size:13px;font-weight:500;font-family:var(--mono)">{{ prestamo.comision_apertura }}%</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">Fecha inicio</span>
+            <span style="font-size:13px;font-weight:500">{{ fmtDate(prestamo.fecha_inicio) }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">Duración</span>
+            <span style="font-size:13px;font-weight:500;font-family:var(--mono)">{{ prestamo.duracion_meses }} meses</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">Día de cobro</span>
+            <span style="font-size:13px;font-weight:500;font-family:var(--mono)">{{ prestamo.dia_cobro }}</span>
           </div>
         </div>
       </div>
+
+      <!-- Partes -->
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:14px;text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid var(--border);padding-bottom:6px">Partes</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">Cliente</span>
+            <span style="font-size:13px;font-weight:500">{{ prestamo.clientes?.nombre || '—' }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">Intermediario</span>
+            <span style="font-size:13px;font-weight:500">{{ prestamo.intermediarios?.nombre || '—' }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">Centro de coste</span>
+            <span style="font-size:13px;font-weight:500;font-family:var(--mono)">{{ prestamo.centro_coste || '—' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Garantía -->
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:14px;text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid var(--border);padding-bottom:6px">Garantía</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">Tipo</span>
+            <span style="font-size:13px;font-weight:500">{{ prestamo.garantia_tipo || '—' }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">Dirección</span>
+            <span style="font-size:13px;font-weight:500">{{ prestamo.garantia_direccion || '—' }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">Tasación</span>
+            <span style="font-size:13px;font-weight:500;font-family:var(--mono)">{{ prestamo.garantia_tasacion ? fmt(prestamo.garantia_tasacion) : '—' }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">LTV</span>
+            <span style="font-size:13px;font-weight:600;font-family:var(--mono)" :style="parseFloat(ltvDetalle) <= 40 ? 'color:var(--green)' : 'color:var(--orange)'">{{ ltvDetalle }}%</span>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <!-- Tab Calendario -->
@@ -146,15 +205,15 @@
                     <span v-else>{{ fmtDate(c.fecha) }}</span>
                   </td>
                   <td class="td-mono td-right">
-                    <span v-if="c.esAmortParcial" style="color:var(--text3)">{{ c.interesOrdinario > 0 ? fmt(c.interesOrdinario) : '—' }}</span>
-                    <span v-else>{{ fmt(c.interes) }}</span>
+                    <span v-if="c.esAmortParcial" style="color:var(--text3)">{{ c.interesOrdinario > 0 ? fmtDec(c.interesOrdinario) : '—' }}</span>
+                    <span v-else>{{ fmtDec(c.interes) }}</span>
                   </td>
                   <td class="td-mono td-right">
-                    <span v-if="c.esAmortParcial" style="color:var(--green);font-weight:600">{{ fmt(c.principal) }}</span>
-                    <span v-else>{{ c.principal > 0 ? fmt(c.principal) : '—' }}</span>
+                    <span v-if="c.esAmortParcial" style="color:var(--green);font-weight:600">{{ fmtDec(c.principal) }}</span>
+                    <span v-else>{{ c.principal > 0 ? fmtDec(c.principal) : '—' }}</span>
                   </td>
-                  <td class="td-mono td-right" style="font-weight:600">{{ fmt(c.total) }}</td>
-                  <td class="td-mono td-right" style="color:var(--green)">{{ fmt(c.cobrado) }}</td>
+                  <td class="td-mono td-right" style="font-weight:600">{{ fmtDec(c.total) }}</td>
+                  <td class="td-mono td-right" style="color:var(--green)">{{ fmtDec(c.cobrado) }}</td>
                   <td class="td-mono td-right" style="color:var(--text3)">—</td>
                   <td>
                     <span v-if="c.esAmortParcial" class="badge badge-blue" style="font-size:10px">⬇ Amort.</span>
@@ -167,14 +226,14 @@
                   <td class="td-mono td-right" style="color:var(--text3)">—</td>
                   <td class="td-mono td-right" style="color:var(--text3)">—</td>
                   <td class="td-mono td-right" style="font-weight:700;vertical-align:top">
-                    {{ fmt(cobroJudicial.importe) }}
+                    {{ fmtDec(cobroJudicial.importe) }}
                     <div style="margin-top:4px;font-size:10px;color:var(--text3);line-height:1.8">
-                      <div v-if="cobroJudicial.importe_principal > 0" style="display:flex;justify-content:space-between;gap:12px"><span>Principal:</span><span style="font-family:var(--mono)">{{ fmt(cobroJudicial.importe_principal) }}</span></div>
-                      <div v-if="cobroJudicial.importe_interes_ordinario > 0" style="display:flex;justify-content:space-between;gap:12px"><span>Int. ord.:</span><span style="font-family:var(--mono)">{{ fmt(cobroJudicial.importe_interes_ordinario) }}</span></div>
-                      <div v-if="cobroJudicial.importe_gastos > 0" style="display:flex;justify-content:space-between;gap:12px"><span>Gastos:</span><span style="font-family:var(--mono)">{{ fmt(cobroJudicial.importe_gastos) }}</span></div>
+                      <div v-if="cobroJudicial.importe_principal > 0" style="display:flex;justify-content:space-between;gap:12px"><span>Principal:</span><span style="font-family:var(--mono)">{{ fmtDec(cobroJudicial.importe_principal) }}</span></div>
+                      <div v-if="cobroJudicial.importe_interes_ordinario > 0" style="display:flex;justify-content:space-between;gap:12px"><span>Int. ord.:</span><span style="font-family:var(--mono)">{{ fmtDec(cobroJudicial.importe_interes_ordinario) }}</span></div>
+                      <div v-if="cobroJudicial.importe_gastos > 0" style="display:flex;justify-content:space-between;gap:12px"><span>Gastos:</span><span style="font-family:var(--mono)">{{ fmtDec(cobroJudicial.importe_gastos) }}</span></div>
                       <div v-if="demoraJudicial > 0" style="display:flex;justify-content:space-between;gap:12px;margin-top:2px;padding-top:2px;border-top:1px solid var(--border)">
                         <span>Int. Dem. ({{ diasDesdJudicializacion }}):</span>
-                        <span style="font-family:var(--mono)">{{ fmt(demoraJudicial) }}</span>
+                        <span style="font-family:var(--mono)">{{ fmtDec(demoraJudicial) }}</span>
                       </div>
                     </div>
                   </td>
@@ -213,16 +272,16 @@
                   <tr v-if="c.esAmortParcial" style="background:color-mix(in srgb, var(--blue,#3b82f6) 8%, transparent);border-left:3px solid var(--blue,#3b82f6)">
                     <td class="td-mono td-center" style="color:var(--text3)">—</td>
                     <td style="font-size:12px">{{ fmtDate(c.fecha) }}</td>
-                    <td class="td-mono td-right" style="color:var(--green);font-weight:600">{{ fmt(c.principal) }}</td>
+                    <td class="td-mono td-right" style="color:var(--green);font-weight:600">{{ fmtDec(c.principal) }}</td>
                     <td class="td-mono td-right" style="color:var(--text2)">
                       <span v-if="c.interesOrdinario > 0 || c.interesDemora > 0">
-                        {{ fmt(c.interes) }}
-                        <span v-if="c.interesDemora > 0" style="font-size:10px;color:var(--orange)"> (+{{ fmt(c.interesDemora) }} demora)</span>
+                        {{ fmtDec(c.interes) }}
+                        <span v-if="c.interesDemora > 0" style="font-size:10px;color:var(--orange)"> (+{{ fmtDec(c.interesDemora) }} demora)</span>
                       </span>
                       <span v-else>—</span>
                     </td>
-                    <td class="td-mono td-right" style="font-weight:600">{{ fmt(c.total) }}</td>
-                    <td class="td-mono td-right" style="color:var(--green)">{{ fmt(c.cobrado) }}</td>
+                    <td class="td-mono td-right" style="font-weight:600">{{ fmtDec(c.total) }}</td>
+                    <td class="td-mono td-right" style="color:var(--green)">{{ fmtDec(c.cobrado) }}</td>
                     <td class="td-mono td-right" style="color:var(--text3)">—</td>
                     <td colspan="2">
                       <span class="badge badge-blue" style="background:color-mix(in srgb,var(--blue,#3b82f6) 15%,transparent);color:var(--blue,#3b82f6);border-color:var(--blue,#3b82f6)">💰 Amort. Parcial</span>
@@ -233,11 +292,11 @@
                   <tr v-else>
                     <td class="td-mono td-center">{{ c.num }}</td>
                     <td style="font-size:12px">{{ fmtDate(c.fecha) }}</td>
-                    <td class="td-mono td-right">{{ c.principal > 0 ? fmt(c.principal) : '—' }}</td>
-                    <td class="td-mono td-right">{{ fmt(c.interes) }}</td>
-                    <td class="td-mono td-right" style="font-weight:600">{{ fmt(c.total) }}</td>
-                    <td class="td-mono td-right" style="color:var(--green)">{{ c.cobrado > 0 ? fmt(c.cobrado) : '—' }}</td>
-                    <td class="td-mono td-right" :style="{ color: c.pendiente > 0 ? 'var(--orange)' : 'var(--text3)' }">{{ c.pendiente > 0.001 ? fmt(c.pendiente) : '—' }}</td>
+                    <td class="td-mono td-right">{{ c.principal > 0 ? fmtDec(c.principal) : '—' }}</td>
+                    <td class="td-mono td-right">{{ fmtDec(c.interes) }}</td>
+                    <td class="td-mono td-right" style="font-weight:600">{{ fmtDec(c.total) }}</td>
+                    <td class="td-mono td-right" style="color:var(--green)">{{ c.cobrado > 0 ? fmtDec(c.cobrado) : '—' }}</td>
+                    <td class="td-mono td-right" :style="{ color: c.pendiente > 0 ? 'var(--orange)' : 'var(--text3)' }">{{ c.pendiente > 0.001 ? fmtDec(c.pendiente) : '—' }}</td>
                     <td>
                       <span class="badge" :class="{
                         'badge-green':  c.estado === 'cobrada',
@@ -295,7 +354,7 @@
         </div>
       </div>
       <div class="table-card">
-        <div class="table-header"><h3>Cobros Reales ({{ cobros.length }})</h3></div>
+        <div class="table-header"><h3>Cobros Reales ({{ cobros.length }}) <span style="font-weight:400;color:var(--text3);font-size:11px">(importes en €)</span></h3></div>
         <table>
           <thead>
             <tr>
@@ -310,23 +369,23 @@
             <tr v-for="c in cobrosEnriquecidos" :key="c.id">
               <td style="font-size:12px">{{ fmtDate(c.fecha_real) }}</td>
               <td class="td-mono td-right" style="font-weight:600;vertical-align:top">
-                {{ fmt(c.importe) }}
+                {{ fmtDec(c.importe) }}
                 <div v-if="c.tipo === 'amortizacion_parcial'" style="margin-top:5px;font-size:10px;color:var(--text3);line-height:1.8">
-                  <div v-if="c.importe_principal > 0">Principal: <strong>{{ fmt(c.importe_principal) }}€</strong></div>
-                  <div v-if="c.importe_interes_ordinario > 0">Int. ord.: {{ fmt(c.importe_interes_ordinario) }}€</div>
-                  <div v-if="c.importe_interes_demora > 0">Demora: {{ fmt(c.importe_interes_demora) }}€</div>
+                  <div v-if="c.importe_principal > 0">Principal: <strong>{{ fmtDec(c.importe_principal) }}</strong></div>
+                  <div v-if="c.importe_interes_ordinario > 0">Int. ord.: {{ fmtDec(c.importe_interes_ordinario) }}</div>
+                  <div v-if="c.importe_interes_demora > 0">Demora: {{ fmtDec(c.importe_interes_demora) }}</div>
                 </div>
                 <div v-if="c.tipo === 'cancelacion'" style="margin-top:5px;font-size:10px;color:var(--text3);line-height:1.8">
-                  <div v-if="c.importe_principal > 0" style="display:flex;justify-content:space-between;gap:12px"><span>Principal:</span><span style="font-family:var(--mono)">{{ fmt(c.importe_principal) }}</span></div>
-                  <div v-if="c.importe_interes_ordinario > 0" style="display:flex;justify-content:space-between;gap:12px"><span>Int. ord.:</span><span style="font-family:var(--mono)">{{ fmt(c.importe_interes_ordinario) }}</span></div>
-                  <div v-if="c.importe_interes_demora > 0" style="display:flex;justify-content:space-between;gap:12px"><span>Int. dem.:</span><span style="font-family:var(--mono)">{{ fmt(c.importe_interes_demora) }}</span></div>
-                  <div v-if="c.gastos_devengan > 0" style="display:flex;justify-content:space-between;gap:12px"><span>Gastos (dev.):</span><span style="font-family:var(--mono)">{{ fmt(c.gastos_devengan) }}</span></div>
-                  <div v-if="(c.importe_gastos - c.gastos_devengan) > 0.01" style="display:flex;justify-content:space-between;gap:12px"><span>Gastos (no dev.):</span><span style="font-family:var(--mono)">{{ fmt(c.importe_gastos - c.gastos_devengan) }}</span></div>
+                  <div v-if="c.importe_principal > 0" style="display:flex;justify-content:space-between;gap:12px"><span>Principal:</span><span style="font-family:var(--mono)">{{ fmtDec(c.importe_principal) }}</span></div>
+                  <div v-if="c.importe_interes_ordinario > 0" style="display:flex;justify-content:space-between;gap:12px"><span>Int. ord.:</span><span style="font-family:var(--mono)">{{ fmtDec(c.importe_interes_ordinario) }}</span></div>
+                  <div v-if="c.importe_interes_demora > 0" style="display:flex;justify-content:space-between;gap:12px"><span>Int. dem.:</span><span style="font-family:var(--mono)">{{ fmtDec(c.importe_interes_demora) }}</span></div>
+                  <div v-if="c.gastos_devengan > 0" style="display:flex;justify-content:space-between;gap:12px"><span>Gastos (dev.):</span><span style="font-family:var(--mono)">{{ fmtDec(c.gastos_devengan) }}</span></div>
+                  <div v-if="(c.importe_gastos - c.gastos_devengan) > 0.01" style="display:flex;justify-content:space-between;gap:12px"><span>Gastos (no dev.):</span><span style="font-family:var(--mono)">{{ fmtDec(c.importe_gastos - c.gastos_devengan) }}</span></div>
                 </div>
                 <div v-if="c.tipo === 'judicializacion'" style="margin-top:5px;font-size:10px;color:var(--text3);line-height:1.8">
-                  <div v-if="c.importe_principal > 0" style="display:flex;justify-content:space-between;gap:12px"><span>Principal:</span><span style="font-family:var(--mono)">{{ fmt(c.importe_principal) }}</span></div>
-                  <div v-if="c.importe_interes_ordinario > 0" style="display:flex;justify-content:space-between;gap:12px"><span>Int. ord.:</span><span style="font-family:var(--mono)">{{ fmt(c.importe_interes_ordinario) }}</span></div>
-                  <div v-if="c.importe_gastos > 0" style="display:flex;justify-content:space-between;gap:12px"><span>Gastos:</span><span style="font-family:var(--mono)">{{ fmt(c.importe_gastos) }}</span></div>
+                  <div v-if="c.importe_principal > 0" style="display:flex;justify-content:space-between;gap:12px"><span>Principal:</span><span style="font-family:var(--mono)">{{ fmtDec(c.importe_principal) }}</span></div>
+                  <div v-if="c.importe_interes_ordinario > 0" style="display:flex;justify-content:space-between;gap:12px"><span>Int. ord.:</span><span style="font-family:var(--mono)">{{ fmtDec(c.importe_interes_ordinario) }}</span></div>
+                  <div v-if="c.importe_gastos > 0" style="display:flex;justify-content:space-between;gap:12px"><span>Gastos:</span><span style="font-family:var(--mono)">{{ fmtDec(c.importe_gastos) }}</span></div>
                 </div>
               </td>
 
@@ -355,7 +414,7 @@
     <!-- Pestaña Participaciones -->
     <div v-if="tabActivo === 'participaciones'">
       <div class="table-card">
-        <div class="table-header"><h3>Participaciones activas ({{ ccpActivos.length }})</h3></div>
+        <div class="table-header"><h3>Participaciones activas ({{ ccpActivos.length }}) <span style="font-weight:400;color:var(--text3);font-size:11px">(importes en €)</span></h3></div>
         <div v-if="!ccpActivos.length" class="table-empty">Sin partícipes en este préstamo</div>
         <table v-else class="table">
           <thead>
@@ -398,7 +457,7 @@
           <div class="alert alert-info">
             Próxima cuota: <strong>Nº {{ cuotaSeleccionada?.num }}</strong> —
             Fecha prevista: <strong>{{ fmtDate(cuotaSeleccionada?.fecha) }}</strong> —
-            Pendiente: <strong>{{ fmt(cuotaSeleccionada?.pendiente) }}</strong>
+            Pendiente: <strong>{{ fmtDec(cuotaSeleccionada?.pendiente) }}</strong>
           </div>
           <div class="form-grid cols-1">
             <div class="form-group"><label class="form-label">Fecha Real <span class="req">*</span></label><input class="form-control" type="date" v-model="formCobro.fecha"></div>
@@ -444,7 +503,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { supabase } from '../supabase.js'
-import { fmt, fmtInt, fmtDate, generateCalendarioTeorico, getCuotaEstado, getEstadoBadge, getTipoBadge, uuid, today } from '../utils.js'
+import { fmt, fmtInt, fmtDate, generateCalendarioTeorico, getCuotaEstado, getEstadoBadge, getTipoBadge, uuid, today , fmtDec } from '../utils.js'
 import ModalCancelar from './ModalCancelar.vue'
 import ModalJudicializar from './ModalJudicializar.vue'
 import ModalAmortizacionParcial from './ModalAmortizacionParcial.vue'

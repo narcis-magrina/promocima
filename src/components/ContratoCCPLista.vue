@@ -2,29 +2,29 @@
   <div>
     <!-- KPIs -->
     <div class="kpi-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:20px">
-      <div class="kpi-card kc-yellow">
+      <div class="kpi-card kc-purple">
         <div class="kpi-label">Importe Participado Activo</div>
-        <div class="kpi-value">{{ fmtInt(kliActivo) }}</div>
+        <div class="kpi-value">{{ fmtN(kliActivo) }}</div>
         <div class="kpi-sub">{{ kliActivoN }} contrato{{ kliActivoN !== 1 ? 's' : '' }}</div>
       </div>
       <div class="kpi-card kc-green">
         <div class="kpi-label">Al Día</div>
-        <div class="kpi-value">{{ fmtInt(kliAlDia) }}</div>
+        <div class="kpi-value">{{ fmtN(kliAlDia) }}</div>
         <div class="kpi-sub">{{ kliAlDiaN }} ({{ kliAlDiaPct }}%)</div>
       </div>
       <div class="kpi-card kc-orange">
         <div class="kpi-label">Con Retraso</div>
-        <div class="kpi-value">{{ fmtInt(kliRetraso) }}</div>
+        <div class="kpi-value">{{ fmtN(kliRetraso) }}</div>
         <div class="kpi-sub">{{ kliRetrasoN }} ({{ kliRetrasoPct }}%)</div>
       </div>
       <div class="kpi-card kc-red">
         <div class="kpi-label">Judicializado</div>
-        <div class="kpi-value">{{ fmtInt(kliJudicial) }}</div>
+        <div class="kpi-value">{{ fmtN(kliJudicial) }}</div>
         <div class="kpi-sub">{{ kliJudicialN }} ({{ kliJudicialPct }}%)</div>
       </div>
       <div class="kpi-card kc-blue">
         <div class="kpi-label">Importe Cancelados</div>
-        <div class="kpi-value">{{ fmtInt(kliCancelado) }}</div>
+        <div class="kpi-value">{{ fmtN(kliCancelado) }}</div>
         <div class="kpi-sub">{{ kliCanceladoN }} préstamo{{ kliCanceladoN !== 1 ? 's' : '' }}</div>
       </div>
     </div>
@@ -51,19 +51,19 @@
 
     <!-- Tabla -->
     <div class="table-card">
-      <div class="table-header"><h3>Listado ({{ contratosFiltrados.length }})</h3></div>
+      <div class="table-header"><h3>Listado ({{ contratosFiltrados.length }}) <span style="font-weight:400;color:var(--text3);font-size:11px">(importes en €)</span></h3></div>
       <div class="table-scroll">
         <table>
           <thead>
             <tr>
               <th @click="setSort('participe_nombre')" :class="thClass('participe_nombre')">Partícipe <span class="sort-icon">{{ thIcon('participe_nombre') }}</span></th>
               <th @click="setSort('prestamo_alias')"   :class="thClass('prestamo_alias')">Préstamo <span class="sort-icon">{{ thIcon('prestamo_alias') }}</span></th>
-              <th @click="setSort('fecha_firma')"      :class="thClass('fecha_firma')">Fecha Firma <span class="sort-icon">{{ thIcon('fecha_firma') }}</span></th>
+              <th @click="setSort('fecha_firma')"      :class="thClass('fecha_firma')" class="col-hide-mobile">F. Firma <span class="sort-icon">{{ thIcon('fecha_firma') }}</span></th>
               <th @click="setSort('importe_participacion')" :class="thClass('importe_participacion')" style="text-align:right">Importe <span class="sort-icon">{{ thIcon('importe_participacion') }}</span></th>
-              <th @click="setSort('porcentaje_participacion')" :class="thClass('porcentaje_participacion')" style="text-align:center">% Part. <span class="sort-icon">{{ thIcon('porcentaje_participacion') }}</span></th>
-              <th @click="setSort('porcentaje_gestion')" :class="thClass('porcentaje_gestion')" style="text-align:center">% Gestión <span class="sort-icon">{{ thIcon('porcentaje_gestion') }}</span></th>
-              <th style="text-align:right">Bruto/mes</th>
-              <th style="text-align:right">Rentabilidad/mes</th>
+              <th @click="setSort('porcentaje_participacion')" :class="thClass('porcentaje_participacion')" style="text-align:center" class="col-hide-mobile">% Part. <span class="sort-icon">{{ thIcon('porcentaje_participacion') }}</span></th>
+              <th @click="setSort('porcentaje_gestion')" :class="thClass('porcentaje_gestion')" style="text-align:center" class="col-hide-mobile">% Gest. <span class="sort-icon">{{ thIcon('porcentaje_gestion') }}</span></th>
+              <th style="text-align:right" class="col-hide-mobile">Bruto/mes</th>
+              <th style="text-align:right">Rent./mes</th>
               <th @click="setSort('activo')" :class="thClass('activo')">Estado <span class="sort-icon">{{ thIcon('activo') }}</span></th>
               <th></th>
             </tr>
@@ -73,12 +73,12 @@
                 @click="$emit('seleccionar', c.id)">
               <td style="font-size:12px;font-weight:500">{{ c.participes?.nombre || '—' }}</td>
               <td style="font-size:12px">{{ c.prestamos?.alias || '—' }}</td>
-              <td style="font-size:12px">{{ fmtDate(c.fecha_firma) }}</td>
-              <td class="td-mono td-right">{{ fmt(c.importe_participacion) }}</td>
-              <td class="td-mono td-center">{{ c.porcentaje_participacion }}%</td>
-              <td class="td-mono td-center">{{ c.porcentaje_gestion }}%</td>
-              <td class="td-mono td-right" style="color:var(--accent)">{{ fmt(calcInteresBruto(c)) }}</td>
-              <td class="td-mono td-right" style="color:var(--green)">{{ fmt(calcInteresNeto(c)) }}</td>
+              <td style="font-size:12px" class="col-hide-mobile">{{ fmtDate(c.fecha_firma) }}</td>
+              <td class="td-mono td-right">{{ fmtDec(c.importe_participacion) }}</td>
+              <td class="td-mono td-center col-hide-mobile">{{ c.porcentaje_participacion }}%</td>
+              <td class="td-mono td-center col-hide-mobile">{{ c.porcentaje_gestion }}%</td>
+              <td class="td-mono td-right col-hide-mobile" style="color:var(--accent)">{{ fmtDec(calcInteresBruto(c)) }}</td>
+              <td class="td-mono td-right" style="color:var(--green)">{{ fmtDec(calcInteresNeto(c)) }}</td>
               <td><span class="badge" :class="c.activo ? 'badge-green' : 'badge-gray'">{{ c.activo ? 'Activo' : 'Inactivo' }}</span></td>
               <td @click.stop style="display:flex;gap:4px;align-items:center" v-if="!readOnly">
                 <button class="btn btn-sm btn-registrar" style="padding:2px 8px;font-size:12px"
@@ -98,7 +98,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useSort } from '../composables/useSort.js'
-import { fmt, fmtInt, fmtDate } from '../utils.js'
+import { fmt, fmtInt, fmtN, fmtDate , fmtDec } from '../utils.js'
 
 // ── Props / emits ──────────────────────────────
 const props = defineProps({

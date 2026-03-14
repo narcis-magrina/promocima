@@ -17,7 +17,7 @@
     <!-- Tabla contratos CCP -->
     <div class="table-card">
       <div class="table-header">
-        <h3>Contratos CCP ({{ contratosFiltered.length }})</h3>
+        <h3>Contratos CCP ({{ contratosFiltered.length }}) <span style="font-weight:400;color:var(--text3);font-size:11px">(importes en €)</span></h3>
       </div>
       <div class="table-scroll">
         <table>
@@ -39,7 +39,7 @@
               <td style="font-size:12px;font-weight:500">{{ c.participes?.nombre || '—' }}</td>
               <td style="font-size:12px">{{ c.prestamos?.alias || '—' }}</td>
               <td style="font-size:12px">{{ fmtDate(c.fecha_firma) }}</td>
-              <td class="td-mono td-right">{{ fmt(c.importe_participacion) }}</td>
+              <td class="td-mono td-right">{{ fmtDec(c.importe_participacion) }}</td>
               <td class="td-mono td-center">{{ c.porcentaje_participacion }}%</td>
               <td class="td-mono td-center">{{ c.porcentaje_gestion }}%</td>
               <td>
@@ -84,7 +84,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../supabase.js'
 import { usePersistedRef } from '../composables/usePersistedRef.js'
-import { fmt, fmtDate, today, uuid, calcularLineasCCP } from '../utils.js'
+import { fmt, fmtDate, today, uuid, calcularLineasCCP , fmtDec } from '../utils.js'
 import { eliminarPagos } from '../composables/useDevengados.js'
 
 // ── Estado ────────────────────────────────────

@@ -15,8 +15,8 @@
           <tr>
             <th>Nombre</th>
             <th>Email</th>
-            <th>Rol</th>
-            <th>Partícipe vinculado</th>
+            <th class="col-hide-mobile">Rol</th>
+            <th class="col-hide-mobile">Partícipe vinculado</th>
             <th>Estado</th>
             <th></th>
           </tr>
@@ -25,8 +25,8 @@
           <tr v-for="u in usuarios" :key="u.id">
             <td style="font-weight:500">{{ u.nombre || '—' }}</td>
             <td style="font-size:12px;color:var(--text3)">{{ u.email }}</td>
-            <td><span class="badge" :class="rolBadge(u.rol)">{{ u.rol }}</span></td>
-            <td style="font-size:12px">
+            <td class="col-hide-mobile"><span class="badge" :class="rolBadge(u.rol)">{{ u.rol }}</span></td>
+            <td style="font-size:12px" class="col-hide-mobile">
               <template v-if="u.rol === 'participe' && u.participe_ids?.length">
                 <span v-for="pid in u.participe_ids" :key="pid" class="badge badge-outline-yellow" style="font-size:10px;margin-right:3px">{{ nombreParticipe(pid) }}</span>
               </template>

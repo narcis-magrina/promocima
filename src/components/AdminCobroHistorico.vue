@@ -19,7 +19,7 @@
     <!-- Tabla préstamos -->
     <div class="table-card">
       <div class="table-header">
-        <h3>Préstamos ({{ prestamosFiltered.length }})</h3>
+        <h3>Préstamos ({{ prestamosFiltered.length }}) <span style="font-weight:400;color:var(--text3);font-size:11px">(importes en €)</span></h3>
       </div>
       <div class="table-scroll">
         <table>
@@ -43,7 +43,7 @@
               <td style="font-weight:500">{{ p.alias }}</td>
               <td style="font-size:12px">{{ p.intermediarios?.nombre || '—' }}</td>
               <td v-html="getTipoBadge(p.tipo_prestamo)" />
-              <td class="td-mono td-right">{{ fmt(p.importe) }}</td>
+              <td class="td-mono td-right">{{ fmtDec(p.importe) }}</td>
               <td style="font-size:12px">{{ fmtDate(p.fecha_inicio) }}</td>
               <td class="td-mono td-center">{{ p.duracion_meses }}</td>
               <td v-html="getEstadoBadge(p.estado)" />
@@ -86,7 +86,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../supabase.js'
 import { usePersistedRef } from '../composables/usePersistedRef.js'
-import { fmt, fmtDate, today, uuid, generateCalendarioTeorico, generateCalendarioCCP, getTipoBadge, getEstadoBadge } from '../utils.js'
+import { fmt, fmtDate, today, uuid, generateCalendarioTeorico, generateCalendarioCCP, getTipoBadge, getEstadoBadge , fmtDec } from '../utils.js'
 
 // ── Estado ────────────────────────────────────
 const prestamos      = ref([])

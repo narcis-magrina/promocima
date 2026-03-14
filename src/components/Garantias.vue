@@ -5,28 +5,28 @@
       <button class="btn btn-primary" @click="abrirModal()">+ Nueva Garantía</button>
     </div>
     <div class="table-card">
-      <div class="table-header"><h3>Listado</h3></div>
+      <div class="table-header"><h3>Listado <span style="font-weight:400;color:var(--text3);font-size:11px">(importes en €)</span></h3></div>
       <div class="table-scroll">
         <table>
           <thead>
             <tr>
               <th @click="setSort('direccion')" :class="thClass('direccion')">Dirección <span class="sort-icon">{{ thIcon('direccion') }}</span></th>
-              <th @click="setSort('tipo')" :class="thClass('tipo')">Tipo <span class="sort-icon">{{ thIcon('tipo') }}</span></th>
-              <th @click="setSort('metros')" :class="thClass('metros')" style="text-align:right">m² <span class="sort-icon">{{ thIcon('metros') }}</span></th>
-              <th @click="setSort('tasador')" :class="thClass('tasador')">Tasador <span class="sort-icon">{{ thIcon('tasador') }}</span></th>
-              <th @click="setSort('valor_tasacion')" :class="thClass('valor_tasacion')" style="text-align:right">Valor Tasación <span class="sort-icon">{{ thIcon('valor_tasacion') }}</span></th>
-              <th @click="setSort('valor_mercado')" :class="thClass('valor_mercado')" style="text-align:right">Valor Mercado <span class="sort-icon">{{ thIcon('valor_mercado') }}</span></th>
+              <th @click="setSort('tipo')" :class="thClass('tipo')" class="col-hide-mobile">Tipo <span class="sort-icon">{{ thIcon('tipo') }}</span></th>
+              <th @click="setSort('metros')" :class="thClass('metros')" style="text-align:right" class="col-hide-mobile">m² <span class="sort-icon">{{ thIcon('metros') }}</span></th>
+              <th @click="setSort('tasador')" :class="thClass('tasador')" class="col-hide-mobile">Tasador <span class="sort-icon">{{ thIcon('tasador') }}</span></th>
+              <th @click="setSort('valor_tasacion')" :class="thClass('valor_tasacion')" style="text-align:right" class="col-hide-mobile">Val. Tasación <span class="sort-icon">{{ thIcon('valor_tasacion') }}</span></th>
+              <th @click="setSort('valor_mercado')" :class="thClass('valor_mercado')" style="text-align:right">Val. Mercado <span class="sort-icon">{{ thIcon('valor_mercado') }}</span></th>
               <th style="text-align:center">LTV</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="g in garantiasSorted" :key="g.id" style="cursor:pointer" @click="verDetalle(g)">
               <td style="font-size:12px;max-width:220px">{{ g.direccion }}</td>
-              <td><span class="badge badge-blue">{{ g.tipo }}</span></td>
-              <td class="td-mono td-right">{{ Number(g.metros).toLocaleString('es-ES') }} m²</td>
-              <td style="font-size:12px">{{ g.tasador || '—' }}</td>
-              <td class="td-mono td-right">{{ fmt(g.valor_tasacion) }}</td>
-              <td class="td-mono td-right">{{ fmt(g.valor_mercado) }}</td>
+              <td class="col-hide-mobile"><span class="badge badge-blue">{{ g.tipo }}</span></td>
+              <td class="td-mono td-right col-hide-mobile">{{ Number(g.metros).toLocaleString('es-ES') }} m²</td>
+              <td style="font-size:12px" class="col-hide-mobile">{{ g.tasador || '—' }}</td>
+              <td class="td-mono td-right col-hide-mobile">{{ fmtDec(g.valor_tasacion) }}</td>
+              <td class="td-mono td-right">{{ fmtDec(g.valor_mercado) }}</td>
               <td class="td-mono td-center" :style="{ color: ltvColor(g) }"><strong>{{ ltvValor(g) }}</strong></td>
             </tr>
             <tr v-if="!items.length"><td colspan="7" class="table-empty">Sin garantías</td></tr>
@@ -109,7 +109,7 @@
 import { ref } from 'vue'
 import { useSort } from '../composables/useSort.js'
 import { useCrud } from '../composables/useCrud.js'
-import { fmt } from '../utils.js'
+import { fmt , fmtDec } from '../utils.js'
 
 const TIPOS = ['Solar', 'Local Comercial', 'Nave Industrial', 'Edificio', 'Vivienda', 'Parking', 'Otro']
 

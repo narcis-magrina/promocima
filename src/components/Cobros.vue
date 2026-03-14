@@ -4,18 +4,18 @@
     <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
       <div class="kpi-card kc-green">
         <div class="kpi-label">Total Cobrado</div>
-        <div class="kpi-value">{{ fmtInt(totalCobrado) }}</div>
+        <div class="kpi-value">{{ fmtN(totalCobrado) }}</div>
       </div>
       <div class="kpi-card kc-blue">
         <div class="kpi-label">Cobros Último Mes</div>
-        <div class="kpi-value">{{ fmtInt(cobrosUltimos30imp) }}</div>
+        <div class="kpi-value">{{ fmtN(cobrosUltimos30imp) }}</div>
         <div class="kpi-sub">{{ cobrosUltimos30n }} recibo{{ cobrosUltimos30n !== 1 ? 's' : '' }} · {{ cobrosRangoLabel }}</div>
       </div>
       <div class="kpi-card kc-orange">
         <div class="kpi-label">Con Retraso</div>
-        <div class="kpi-value">{{ fmtInt(totalPendienteGlobal) }}</div>
+        <div class="kpi-value">{{ fmtN(totalPendienteGlobal) }}</div>
         <div class="kpi-sub">{{ cuotasPendientes.length }} cuota{{ cuotasPendientes.length !== 1 ? 's' : '' }}</div>
-        <div class="kpi-sub" v-if="totalJudicialGlobal > 0" style="color:var(--red)">Judicializados: {{ fmtInt(totalJudicialGlobal) }}</div>
+        <div class="kpi-sub" v-if="totalJudicialGlobal > 0" style="color:var(--red)">Judicializados: {{ fmtN(totalJudicialGlobal) }}</div>
       </div>
     </div>
 
@@ -33,7 +33,7 @@
       <div v-if="loadingProximos" style="padding:40px;text-align:center;color:var(--text3)">Calculando cuotas pendientes…</div>
       <div v-else class="table-card">
         <div class="table-header">
-          <h3>Cuotas con retraso ({{ cuotasFiltradas.length }})</h3>
+          <h3>Cuotas con retraso ({{ cuotasFiltradas.length }}) <span style="font-weight:400;color:var(--text3);font-size:11px">(importes en €)</span></h3>
           <div style="display:flex;gap:8px;align-items:center">
             <span class="filter-label">Filtros</span>
             <select class="form-control" :class="{'filter-active': !!filtroPrestamosPrev}" style="width:160px;padding:5px 10px;font-size:12px" v-model="filtroPrestamosPrev" :style="!!filtroPrestamosPrev ? 'border-color:var(--accent);border-width:2px;color:var(--accent)' : ''">
@@ -57,23 +57,23 @@
               <option :value="false">Vista plana</option>
               <option :value="true">Agrupar por préstamo</option>
             </select>
-            <span style="font-size:12px;color:var(--text3)">Total: {{ fmtInt(totalPendiente) }} €</span>
+            <span style="font-size:12px;color:var(--text3)">Total: {{ fmtN(totalPendiente) }}</span>
           </div>
         </div>
         <div class="table-scroll">
           <table>
             <thead>
               <tr>
-                <th @click="setSortPrev('centro_coste')" :class="thClassPrev('centro_coste')">CC <span class="sort-icon">{{ thIconPrev('centro_coste') }}</span></th>
+                <th @click="setSortPrev('centro_coste')" :class="thClassPrev('centro_coste')" class="col-hide-mobile">CC <span class="sort-icon">{{ thIconPrev('centro_coste') }}</span></th>
                 <th @click="setSortPrev('alias')" :class="thClassPrev('alias')">Préstamo <span class="sort-icon">{{ thIconPrev('alias') }}</span></th>
-                <th>Cliente</th>
-                <th>Intermediario</th>
-                <th>Estado</th>
+                <th class="col-hide-mobile">Cliente</th>
+                <th class="col-hide-mobile">Intermediario</th>
+                <th class="col-hide-mobile">Estado</th>
                 <th style="text-align:center">Cuota</th>
-                <th @click="setSortPrev('fecha')" :class="thClassPrev('fecha')">Fecha teórica <span class="sort-icon">{{ thIconPrev('fecha') }}</span></th>
+                <th @click="setSortPrev('fecha')" :class="thClassPrev('fecha')" class="col-hide-mobile">Fecha teórica <span class="sort-icon">{{ thIconPrev('fecha') }}</span></th>
                 <th style="text-align:right">Importe</th>
-                <th @click="setSortPrev('diasRetraso')" :class="thClassPrev('diasRetraso')" style="text-align:right">Días retraso <span class="sort-icon">{{ thIconPrev('diasRetraso') }}</span></th>
-                <th style="text-align:center">Fecha cobro</th>
+                <th @click="setSortPrev('diasRetraso')" :class="thClassPrev('diasRetraso')" style="text-align:right" class="col-hide-mobile">Días<br>retraso <span class="sort-icon">{{ thIconPrev('diasRetraso') }}</span></th>
+                <th style="text-align:center" class="col-hide-mobile">Fecha cobro</th>
                 <th></th>
               </tr>
             </thead>
@@ -81,24 +81,24 @@
               <!-- Vista plana -->
               <template v-if="!vistaAgrupada">
                 <tr v-for="c in cuotasFiltradas" :key="c._key" :style="c.esJudicial ? 'background:rgba(239,68,68,0.06)' : ''">
-                  <td style="font-size:12px;font-weight:600;text-align:center">{{ c.centro_coste }}</td>
+                  <td class="td-mono td-center col-hide-mobile" style="font-weight:600">{{ c.centro_coste }}</td>
                   <td style="font-size:12px;font-weight:500;cursor:pointer" @click="$emit('navigate','prestamos',c.prestamo_id)">{{ c.alias }}</td>
-                  <td style="font-size:12px">{{ c.cliente }}</td>
-                  <td style="font-size:12px">{{ c.intermediario }}</td>
-                  <td><span class="badge" :class="c.estado === 'judicializado' ? 'badge-red' : 'badge-green'">{{ c.estado === 'judicializado' ? 'Judicializado' : 'Activo' }}</span></td>
+                  <td style="font-size:12px" class="col-hide-mobile">{{ c.cliente }}</td>
+                  <td style="font-size:12px" class="col-hide-mobile">{{ c.intermediario }}</td>
+                  <td class="col-hide-mobile"><span class="badge" :class="c.estado === 'judicializado' ? 'badge-red' : 'badge-green'">{{ c.estado === 'judicializado' ? 'Judicializado' : 'Activo' }}</span></td>
                   <td class="td-mono td-center" :style="c.esJudicial ? 'color:var(--red);font-weight:700' : ''">{{ c.num }}</td>
-                  <td style="font-size:12px;color:var(--orange)">{{ fmtDate(c.fecha) }}</td>
+                  <td style="font-size:12px;color:var(--orange)" class="col-hide-mobile">{{ fmtDate(c.fecha) }}</td>
                   <td class="td-mono td-right" style="font-weight:600;vertical-align:top">
-                    {{ fmt(c.total) }}
+                    {{ fmtDec(c.total) }}
                     <div v-if="c.esJudicial" style="margin-top:3px;font-size:10px;color:var(--text3);line-height:1.8;min-width:220px">
-                      <div v-if="c.principal > 0" style="display:flex;justify-content:space-between;gap:8px;white-space:nowrap"><span>Principal:</span><span style="font-family:var(--mono)">{{ fmt(c.principal) }}</span></div>
-                      <div v-if="c.interes_ordinario > 0" style="display:flex;justify-content:space-between;gap:8px;white-space:nowrap"><span>Int. ord.:</span><span style="font-family:var(--mono)">{{ fmt(c.interes_ordinario) }}</span></div>
-                      <div v-if="c.gastos > 0" style="display:flex;justify-content:space-between;gap:8px;white-space:nowrap"><span>Gastos:</span><span style="font-family:var(--mono)">{{ fmt(c.gastos) }}</span></div>
-                      <div v-if="c.demora > 0" style="display:flex;justify-content:space-between;gap:8px;white-space:nowrap;border-top:1px solid var(--border);padding-top:2px"><span>Int. dem. ({{ c.diasRetraso }}d):</span><span style="font-family:var(--mono)">{{ fmt(c.demora) }}</span></div>
+                      <div v-if="c.principal > 0" style="display:flex;justify-content:space-between;gap:8px;white-space:nowrap"><span>Principal:</span><span style="font-family:var(--mono)">{{ fmtDec(c.principal) }}</span></div>
+                      <div v-if="c.interes_ordinario > 0" style="display:flex;justify-content:space-between;gap:8px;white-space:nowrap"><span>Int. ord.:</span><span style="font-family:var(--mono)">{{ fmtDec(c.interes_ordinario) }}</span></div>
+                      <div v-if="c.gastos > 0" style="display:flex;justify-content:space-between;gap:8px;white-space:nowrap"><span>Gastos:</span><span style="font-family:var(--mono)">{{ fmtDec(c.gastos) }}</span></div>
+                      <div v-if="c.demora > 0" style="display:flex;justify-content:space-between;gap:8px;white-space:nowrap;border-top:1px solid var(--border);padding-top:2px"><span>Int. dem. ({{ c.diasRetraso }}d):</span><span style="font-family:var(--mono)">{{ fmtDec(c.demora) }}</span></div>
                     </div>
                   </td>
-                  <td class="td-mono td-right" style="color:var(--orange)">{{ c.diasRetraso }}</td>
-                  <td style="text-align:center">
+                  <td class="td-mono td-right col-hide-mobile" style="color:var(--orange)">{{ c.diasRetraso }}</td>
+                  <td style="text-align:center" class="col-hide-mobile">
                     <input v-if="!c.esJudicial" type="date" class="form-control" style="width:140px;padding:3px 8px;font-size:12px;display:inline-block" v-model="c.fechaEfectiva">
                   </td>
                   <td>
@@ -118,28 +118,28 @@
                       <span style="font-size:11px;color:var(--text3);font-weight:400;margin-left:6px">{{ grupo.cliente }}</span>
                       <span style="font-size:11px;color:var(--text3);font-weight:400;margin-left:8px">· {{ grupo.lineas.length }} cuota{{ grupo.lineas.length !== 1 ? 's' : '' }}</span>
                     </td>
-                    <td class="td-mono td-right" style="font-weight:700;color:var(--orange);font-size:13px">{{ fmt(grupo.totalPendiente) }}</td>
+                    <td class="td-mono td-right" style="font-weight:700;color:var(--orange);font-size:13px">{{ fmtDec(grupo.totalPendiente) }}</td>
                     <td colspan="3"></td>
                   </tr>
                   <!-- Líneas del cliente -->
                   <tr v-for="c in grupo.lineas" :key="c._key" :style="c.esJudicial ? 'background:rgba(239,68,68,0.06)' : 'background:color-mix(in srgb,var(--accent) 3%,transparent)'">
                     <td style="font-size:12px;font-weight:500;cursor:pointer;padding-left:24px" @click="$emit('navigate','prestamos',c.prestamo_id)">{{ c.alias }}</td>
-                    <td style="font-size:12px;color:var(--text3)">—</td>
-                    <td style="font-size:12px">{{ c.intermediario }}</td>
-                    <td><span class="badge" :class="c.estado === 'judicializado' ? 'badge-red' : 'badge-green'">{{ c.estado === 'judicializado' ? 'Judicializado' : 'Activo' }}</span></td>
+                    <td style="font-size:12px;color:var(--text3)" class="col-hide-mobile">—</td>
+                    <td style="font-size:12px" class="col-hide-mobile">{{ c.intermediario }}</td>
+                    <td class="col-hide-mobile"><span class="badge" :class="c.estado === 'judicializado' ? 'badge-red' : 'badge-green'">{{ c.estado === 'judicializado' ? 'Judicializado' : 'Activo' }}</span></td>
                     <td class="td-mono td-center" :style="c.esJudicial ? 'color:var(--red);font-weight:700' : ''">{{ c.num }}</td>
-                    <td style="font-size:12px;color:var(--orange)">{{ fmtDate(c.fecha) }}</td>
+                    <td style="font-size:12px;color:var(--orange)" class="col-hide-mobile">{{ fmtDate(c.fecha) }}</td>
                     <td class="td-mono td-right" style="font-weight:600;vertical-align:top">
-                      {{ fmt(c.total) }}
+                      {{ fmtDec(c.total) }}
                       <div v-if="c.esJudicial" style="margin-top:3px;font-size:10px;color:var(--text3);line-height:1.8;min-width:220px">
-                        <div v-if="c.principal > 0" style="display:flex;justify-content:space-between;gap:8px;white-space:nowrap"><span>Principal:</span><span style="font-family:var(--mono)">{{ fmt(c.principal) }}</span></div>
-                        <div v-if="c.interes_ordinario > 0" style="display:flex;justify-content:space-between;gap:8px;white-space:nowrap"><span>Int. ord.:</span><span style="font-family:var(--mono)">{{ fmt(c.interes_ordinario) }}</span></div>
-                        <div v-if="c.gastos > 0" style="display:flex;justify-content:space-between;gap:8px;white-space:nowrap"><span>Gastos:</span><span style="font-family:var(--mono)">{{ fmt(c.gastos) }}</span></div>
-                        <div v-if="c.demora > 0" style="display:flex;justify-content:space-between;gap:8px;white-space:nowrap;border-top:1px solid var(--border);padding-top:2px"><span>Int. dem. ({{ c.diasRetraso }}d):</span><span style="font-family:var(--mono)">{{ fmt(c.demora) }}</span></div>
+                        <div v-if="c.principal > 0" style="display:flex;justify-content:space-between;gap:8px;white-space:nowrap"><span>Principal:</span><span style="font-family:var(--mono)">{{ fmtDec(c.principal) }}</span></div>
+                        <div v-if="c.interes_ordinario > 0" style="display:flex;justify-content:space-between;gap:8px;white-space:nowrap"><span>Int. ord.:</span><span style="font-family:var(--mono)">{{ fmtDec(c.interes_ordinario) }}</span></div>
+                        <div v-if="c.gastos > 0" style="display:flex;justify-content:space-between;gap:8px;white-space:nowrap"><span>Gastos:</span><span style="font-family:var(--mono)">{{ fmtDec(c.gastos) }}</span></div>
+                        <div v-if="c.demora > 0" style="display:flex;justify-content:space-between;gap:8px;white-space:nowrap;border-top:1px solid var(--border);padding-top:2px"><span>Int. dem. ({{ c.diasRetraso }}d):</span><span style="font-family:var(--mono)">{{ fmtDec(c.demora) }}</span></div>
                       </div>
                     </td>
-                    <td class="td-mono td-right" style="color:var(--orange)">{{ c.diasRetraso }}</td>
-                    <td style="text-align:center">
+                    <td class="td-mono td-right col-hide-mobile" style="color:var(--orange)">{{ c.diasRetraso }}</td>
+                    <td style="text-align:center" class="col-hide-mobile">
                       <input v-if="!c.esJudicial" type="date" class="form-control" style="width:140px;padding:3px 8px;font-size:12px;display:inline-block" v-model="c.fechaEfectiva">
                     </td>
                     <td>
@@ -162,7 +162,7 @@
     <!-- ── HISTÓRICO ────────────────────────────────────────────── -->
     <div v-if="seccion === 'historico'" class="table-card">
       <div class="table-header">
-        <h3>Historial de Cobros ({{ cobrosFiltrados.length }})</h3>
+        <h3>Historial de Cobros ({{ cobrosFiltrados.length }}) <span style="font-weight:400;color:var(--text3);font-size:11px">(importes en €)</span></h3>
         <div style="display:flex;gap:8px;align-items:center">
           <span class="filter-label">Filtros</span>
           <select class="form-control" :class="{'filter-active': !!filtroPrestamo}" style="width:180px;padding:5px 10px;font-size:12px" v-model="filtroPrestamo" :style="!!filtroPrestamo ? 'border-color:var(--accent);border-width:2px;color:var(--accent)' : ''">
@@ -177,26 +177,26 @@
           <thead>
             <tr>
               <th @click="setSort('prestamo_alias')" :class="thClass('prestamo_alias')">Préstamo <span class="sort-icon">{{ thIcon('prestamo_alias') }}</span></th>
-              <th>Cliente</th>
-              <th @click="setSort('cuota_num')" :class="thClass('cuota_num')" style="text-align:center">Cuota Nº <span class="sort-icon">{{ thIcon('cuota_num') }}</span></th>
-              <th @click="setSort('fecha_teorica')" :class="thClass('fecha_teorica')">Fecha Teórica <span class="sort-icon">{{ thIcon('fecha_teorica') }}</span></th>
-              <th @click="setSort('fecha_real')" :class="thClass('fecha_real')">Fecha Real <span class="sort-icon">{{ thIcon('fecha_real') }}</span></th>
+              <th class="col-hide-mobile">Cliente</th>
+              <th @click="setSort('cuota_num')" :class="thClass('cuota_num')" style="text-align:center" class="col-hide-mobile">Cuota<br>Nº <span class="sort-icon">{{ thIcon('cuota_num') }}</span></th>
+              <th @click="setSort('fecha_teorica')" :class="thClass('fecha_teorica')" class="col-hide-mobile">F. Teórica <span class="sort-icon">{{ thIcon('fecha_teorica') }}</span></th>
+              <th @click="setSort('fecha_real')" :class="thClass('fecha_real')">F. Real <span class="sort-icon">{{ thIcon('fecha_real') }}</span></th>
               <th @click="setSort('importe')" :class="thClass('importe')" style="text-align:right">Importe <span class="sort-icon">{{ thIcon('importe') }}</span></th>
-              <th>Tipo</th>
-              <th>Notas</th>
+              <th class="col-hide-mobile">Tipo</th>
+              <th class="col-hide-mobile">Notas</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="c in cobrosFiltrados" :key="c.id">
               <td style="font-size:12px;font-weight:500">{{ c.prestamos?.alias || '—' }}</td>
-              <td style="font-size:12px">{{ c.prestamos?.clientes?.nombre || '—' }}</td>
-              <td class="td-mono td-center">{{ c.cuota_num }}</td>
-              <td style="font-size:12px">{{ fmtDate(c.fecha_teorica) }}</td>
+              <td style="font-size:12px" class="col-hide-mobile">{{ c.prestamos?.clientes?.nombre || '—' }}</td>
+              <td class="td-mono td-center col-hide-mobile">{{ c.cuota_num }}</td>
+              <td style="font-size:12px" class="col-hide-mobile">{{ fmtDate(c.fecha_teorica) }}</td>
               <td style="font-size:12px">{{ fmtDate(c.fecha_real) }}</td>
-              <td class="td-mono td-right" style="font-weight:600">{{ fmt(c.importe) }}</td>
-              <td><span class="badge" :class="c.tipo === 'cancelacion' ? 'badge-red' : 'badge-green'">{{ c.tipo === 'cancelacion' ? 'Cancelación' : 'Pago cuota' }}</span></td>
-              <td style="font-size:11px;color:var(--text3)">{{ c.notas || '—' }}</td>
+              <td class="td-mono td-right" style="font-weight:600">{{ fmtDec(c.importe) }}</td>
+              <td class="col-hide-mobile"><span class="badge" :class="c.tipo === 'cancelacion' ? 'badge-red' : 'badge-green'">{{ c.tipo === 'cancelacion' ? 'Cancelación' : 'Pago cuota' }}</span></td>
+              <td style="font-size:11px;color:var(--text3)" class="col-hide-mobile">{{ c.notas || '—' }}</td>
               <td>
                 <button class="btn btn-sm btn-danger-solid" style="padding:2px 7px;font-size:13px" title="Eliminar cobro" @click="eliminarCobro(c)">✕</button>
               </td>
@@ -214,7 +214,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useSort } from '../composables/useSort.js'
 import { usePersistedRef } from '../composables/usePersistedRef.js'
 import { supabase } from '../supabase.js'
-import { fmt, fmtInt, fmtDate, today, uuid, generateCalendarioTeorico, distribuirCobros } from '../utils.js'
+import { fmt, fmtInt, fmtN, fmtDate, today, uuid, generateCalendarioTeorico, distribuirCobros , fmtDec } from '../utils.js'
 
 defineEmits(['navigate'])
 

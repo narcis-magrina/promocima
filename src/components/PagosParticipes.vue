@@ -11,20 +11,20 @@
     <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
       <div class="kpi-card kc-green">
         <div class="kpi-label">Total Pagado (neto)</div>
-        <div class="kpi-value">{{ fmt(totalPagado) }}</div>
+        <div class="kpi-value">{{ fmtDec(totalPagado) }}</div>
         <div class="kpi-sub">{{ realizados.length }} pago{{ realizados.length !== 1 ? 's' : '' }} registrado{{ realizados.length !== 1 ? 's' : '' }}</div>
       </div>
       <div class="kpi-card kc-red">
         <div class="kpi-label">Retenciones IRPF</div>
-        <div class="kpi-value">{{ fmt(totalRetenciones) }}</div>
+        <div class="kpi-value">{{ fmtDec(totalRetenciones) }}</div>
       </div>
       <div class="kpi-card kc-blue">
         <div class="kpi-label">Neto Pagado</div>
-        <div class="kpi-value">{{ fmt(totalPagado) }}</div>
+        <div class="kpi-value">{{ fmtDec(totalPagado) }}</div>
       </div>
       <div class="kpi-card kc-orange">
         <div class="kpi-label">Devengado Pendiente</div>
-        <div class="kpi-value">{{ fmt(totalDevengadoPendiente) }}</div>
+        <div class="kpi-value">{{ fmtDec(totalDevengadoPendiente) }}</div>
         <div class="kpi-sub">{{ devengadosPendientes.length }} línea{{ devengadosPendientes.length !== 1 ? 's' : '' }}</div>
       </div>
     </div>
@@ -42,7 +42,7 @@
     <!-- Pestaña Devengados -->
     <div v-if="tabActivo === 'devengados'" class="table-card">
       <div class="table-header">
-        <h3>Pagos Devengados ({{ devengadosFiltrados.length }})</h3>
+        <h3>Pagos Devengados ({{ devengadosFiltrados.length }}) <span style="font-weight:400;color:var(--text3);font-size:11px">(importes en €)</span></h3>
         <div style="display:flex;gap:8px;align-items:center">
           <span class="filter-label">Filtros</span>
           <select class="form-control" v-model="filtroParticipeDev" style="width:170px;padding:5px 10px;font-size:12px" :style="filtroParticipeDev ? 'border-color:var(--accent);border-width:2px;color:var(--accent)' : ''">
@@ -62,7 +62,7 @@
             <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:rgba(59,130,246,0.30);border:1px solid rgba(59,130,246,0.55);display:inline-block"></span>Próximo pago</span>
             <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:rgba(34,197,94,0.25);border:1px solid rgba(34,197,94,0.5);display:inline-block"></span>Posterior</span>
           </div>
-          <span style="font-size:12px;color:var(--text3)">Total: {{ fmt(totalDevFiltrado) }} €</span>
+          <span style="font-size:12px;color:var(--text3)">Total: {{ fmtDec(totalDevFiltrado) }}</span>
         </div>
       </div>
       <div class="table-scroll">
@@ -70,15 +70,15 @@
           <thead>
             <tr>
               <th>Préstamo</th>
-              <th>Partícipe</th>
+              <th class="col-hide-mobile">Partícipe</th>
               <th style="text-align:right">Devengado</th>
-              <th style="text-align:right">Gestión</th>
-              <th style="text-align:right">Bruto</th>
-              <th style="text-align:right;color:var(--red)">IRPF</th>
+              <th style="text-align:right" class="col-hide-mobile">Gestión</th>
+              <th style="text-align:right" class="col-hide-mobile">Bruto</th>
+              <th style="text-align:right;color:var(--red)" class="col-hide-mobile">IRPF</th>
               <th style="text-align:right;color:var(--green)">Neto</th>
-              <th>Cobro préstamo</th>
-              <th>Fecha teórica</th>
-              <th>Fecha pago</th>
+              <th class="col-hide-mobile">Cobro préstamo</th>
+              <th class="col-hide-mobile">F. teórica</th>
+              <th class="col-hide-mobile">F. pago</th>
               <th style="text-align:center;white-space:nowrap">
                 <button
                   v-if="devengadosFiltrados.some(d => calcEstadoPago(d.fechaPagoEfectiva) === 'proximo')"
@@ -97,15 +97,15 @@
             <template v-if="!vistaAgrupada">
               <tr v-for="d in devengadosFiltrados" :key="d._key" :style="rowStyle(d)">
                 <td style="font-size:12px;font-weight:500">{{ d.prestamo_alias }}</td>
-                <td style="font-size:12px">{{ d.participe_nombre }}</td>
-                <td class="td-mono td-right">{{ fmt(d.beneficio) }}</td>
-                <td class="td-mono td-right" style="color:var(--orange)">{{ fmt(d.gestion) }}</td>
-                <td class="td-mono td-right">{{ fmt(d.bruto) }}</td>
-                <td class="td-mono td-right" style="color:var(--red)">{{ fmt(d.irpf) }}</td>
-                <td class="td-mono td-right" style="color:var(--green);font-weight:600">{{ fmt(d.neto) }}</td>
-                <td style="font-size:12px;color:var(--text3)">{{ d.fecha_cobro_prestamo ? fmtDate(d.fecha_cobro_prestamo) : '—' }}</td>
-                <td style="font-size:12px;color:var(--text3)">{{ fmtDate(d.fecha_cobro) }}</td>
-                <td style="text-align:center">
+                <td style="font-size:12px" class="col-hide-mobile">{{ d.participe_nombre }}</td>
+                <td class="td-mono td-right">{{ fmtDec(d.beneficio) }}</td>
+                <td class="td-mono td-right col-hide-mobile" style="color:var(--orange)">{{ fmtDec(d.gestion) }}</td>
+                <td class="td-mono td-right col-hide-mobile">{{ fmtDec(d.bruto) }}</td>
+                <td class="td-mono td-right col-hide-mobile" style="color:var(--red)">{{ fmtDec(d.irpf) }}</td>
+                <td class="td-mono td-right" style="color:var(--green);font-weight:600">{{ fmtDec(d.neto) }}</td>
+                <td style="font-size:12px;color:var(--text3)" class="col-hide-mobile">{{ d.fecha_cobro_prestamo ? fmtDate(d.fecha_cobro_prestamo) : '—' }}</td>
+                <td style="font-size:12px;color:var(--text3)" class="col-hide-mobile">{{ fmtDate(d.fecha_cobro) }}</td>
+                <td style="text-align:center" class="col-hide-mobile">
                   <input type="date" class="form-control" style="width:140px;padding:3px 8px;font-size:12px;display:inline-block" v-model="d.fechaPagoEfectiva">
                 </td>
                 <td>
@@ -124,21 +124,21 @@
                     👤 {{ grupo.participe_nombre }}
                     <span style="font-size:11px;color:var(--text3);font-weight:400;margin-left:8px">{{ grupo.lineas.length }} cuota{{ grupo.lineas.length !== 1 ? 's' : '' }}</span>
                   </td>
-                  <td class="td-mono td-right" style="font-weight:700;color:var(--green);font-size:13px">{{ fmt(grupo.totalNeto) }}</td>
+                  <td class="td-mono td-right" style="font-weight:700;color:var(--green);font-size:13px">{{ fmtDec(grupo.totalNeto) }}</td>
                   <td colspan="3"></td>
                 </tr>
                 <!-- Líneas del partícipe -->
                 <tr v-for="d in grupo.lineas" :key="d._key" :style="rowStyle(d)">
                   <td style="font-size:12px;font-weight:500;padding-left:24px">{{ d.prestamo_alias }}</td>
-                  <td style="font-size:12px;color:var(--text3)">—</td>
-                  <td class="td-mono td-right">{{ fmt(d.beneficio) }}</td>
-                  <td class="td-mono td-right" style="color:var(--orange)">{{ fmt(d.gestion) }}</td>
-                  <td class="td-mono td-right">{{ fmt(d.bruto) }}</td>
-                  <td class="td-mono td-right" style="color:var(--red)">{{ fmt(d.irpf) }}</td>
-                  <td class="td-mono td-right" style="color:var(--green);font-weight:600">{{ fmt(d.neto) }}</td>
-                  <td style="font-size:12px;color:var(--text3)">{{ d.fecha_cobro_prestamo ? fmtDate(d.fecha_cobro_prestamo) : '—' }}</td>
-                  <td style="font-size:12px;color:var(--text3)">{{ fmtDate(d.fecha_cobro) }}</td>
-                  <td style="text-align:center">
+                  <td style="font-size:12px;color:var(--text3)" class="col-hide-mobile">—</td>
+                  <td class="td-mono td-right">{{ fmtDec(d.beneficio) }}</td>
+                  <td class="td-mono td-right col-hide-mobile" style="color:var(--orange)">{{ fmtDec(d.gestion) }}</td>
+                  <td class="td-mono td-right col-hide-mobile">{{ fmtDec(d.bruto) }}</td>
+                  <td class="td-mono td-right col-hide-mobile" style="color:var(--red)">{{ fmtDec(d.irpf) }}</td>
+                  <td class="td-mono td-right" style="color:var(--green);font-weight:600">{{ fmtDec(d.neto) }}</td>
+                  <td style="font-size:12px;color:var(--text3)" class="col-hide-mobile">{{ d.fecha_cobro_prestamo ? fmtDate(d.fecha_cobro_prestamo) : '—' }}</td>
+                  <td style="font-size:12px;color:var(--text3)" class="col-hide-mobile">{{ fmtDate(d.fecha_cobro) }}</td>
+                  <td style="text-align:center" class="col-hide-mobile">
                     <input type="date" class="form-control" style="width:140px;padding:3px 8px;font-size:12px;display:inline-block" v-model="d.fechaPagoEfectiva">
                   </td>
                   <td>
@@ -160,7 +160,7 @@
     <!-- Tabla pagos realizados -->
     <div v-if="tabActivo === 'realizados'" class="table-card">
       <div class="table-header">
-        <h3>Pagos Registrados ({{ realizados.length }})</h3>
+        <h3>Pagos Registrados ({{ realizados.length }}) <span style="font-weight:400;color:var(--text3);font-size:11px">(importes en €)</span></h3>
         <div style="display:flex;gap:8px;align-items:center">
           <span class="filter-label">Filtros</span>
           <select class="form-control" v-model="filtroParticipeReg" style="width:170px;padding:5px 10px;font-size:12px" :style="filtroParticipeReg ? 'border-color:var(--accent);border-width:2px;color:var(--accent)' : ''">
@@ -179,14 +179,14 @@
           <thead>
             <tr>
               <th>Partícipe</th>
-              <th>Préstamo</th>
-              <th @click="setSort('fecha_pago_real')" :class="thClass('fecha_pago_real')">Fecha Pago <span class="sort-icon">{{ thIcon('fecha_pago_real') }}</span></th>
+              <th class="col-hide-mobile">Préstamo</th>
+              <th @click="setSort('fecha_pago_real')" :class="thClass('fecha_pago_real')">F. Pago <span class="sort-icon">{{ thIcon('fecha_pago_real') }}</span></th>
               <th style="text-align:right">Devengado</th>
-              <th style="text-align:right">Gestión</th>
-              <th style="text-align:right">Bruto</th>
-              <th style="text-align:right">IRPF</th>
+              <th style="text-align:right" class="col-hide-mobile">Gestión</th>
+              <th style="text-align:right" class="col-hide-mobile">Bruto</th>
+              <th style="text-align:right" class="col-hide-mobile">IRPF</th>
               <th style="text-align:right;color:var(--green)">Neto</th>
-              <th style="text-align:center;white-space:nowrap">
+              <th style="text-align:center;white-space:nowrap" class="col-hide-mobile">
                 <button
                   v-if="devengadosFiltrados.some(d => calcEstadoPago(d.fechaPagoEfectiva) === 'proximo')"
                   class="btn btn-sm btn-registrar"
@@ -202,13 +202,13 @@
           <tbody>
             <tr v-for="p in realizados" :key="p.id">
               <td style="font-size:12px;font-weight:500">{{ p.contratos_ccp?.participes?.nombre || '—' }}</td>
-              <td style="font-size:12px">{{ p.contratos_ccp?.prestamos?.alias || '—' }}</td>
+              <td style="font-size:12px" class="col-hide-mobile">{{ p.contratos_ccp?.prestamos?.alias || '—' }}</td>
               <td style="font-size:12px">{{ fmtDate(p.fecha_pago_real) }}</td>
-              <td class="td-mono td-right">{{ fmt(p.importe_devengado) }}</td>
-              <td class="td-mono td-right" style="color:var(--orange)">{{ fmt(p.importe_gestion) }}</td>
-              <td class="td-mono td-right">{{ fmt(p.importe_bruto) }}</td>
-              <td class="td-mono td-right" style="color:var(--red)">{{ fmt(p.importe_retencion) }}</td>
-              <td class="td-mono td-right" style="color:var(--green);font-weight:600">{{ fmt(p.importe_neto) }}</td>
+              <td class="td-mono td-right">{{ fmtDec(p.importe_devengado) }}</td>
+              <td class="td-mono td-right col-hide-mobile" style="color:var(--orange)">{{ fmtDec(p.importe_gestion) }}</td>
+              <td class="td-mono td-right col-hide-mobile">{{ fmtDec(p.importe_bruto) }}</td>
+              <td class="td-mono td-right col-hide-mobile" style="color:var(--red)">{{ fmtDec(p.importe_retencion) }}</td>
+              <td class="td-mono td-right" style="color:var(--green);font-weight:600">{{ fmtDec(p.importe_neto) }}</td>
               <td>
                 <button class="btn btn-sm btn-danger-solid" style="padding:2px 7px;font-size:13px"
                   title="Eliminar pago" @click="eliminarPagoYRecargar(p)">✕</button>
@@ -282,7 +282,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useSort } from '../composables/useSort.js'
 import { usePersistedRef } from '../composables/usePersistedRef.js'
 import { supabase } from '../supabase.js'
-import { fmt, fmtDate, today, uuid, calcularLineasCCP, fechaReferenciaGlobal } from '../utils.js'
+import { fmt, fmtDate, today, uuid, calcularLineasCCP, fmtDec } from '../utils.js'
 import { eliminarPago } from '../composables/useDevengados.js'
 
 defineEmits(['navigate'])
@@ -348,7 +348,7 @@ async function cargar() {
 }
 
 function calcEstadoPago(fechaPago) {
-  const ref = fechaReferenciaGlobal.value || today()
+  const ref = today()
   const fc  = fechaPago || ''
   if (!fc || fc <= ref) return 'vencido'
   const [ry, rm] = ref.split('-').map(Number)

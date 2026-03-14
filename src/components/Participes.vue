@@ -22,27 +22,27 @@
         <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:14px">
           <div class="kpi-card kc-purple">
             <div class="kpi-label">Préstamos Participados</div>
-            <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--purple)">{{ fmtInt(kpartActivo) }}</div>
+            <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--purple)">{{ fmtN(kpartActivo) }}</div>
             <div class="kpi-sub">{{ kpartActivoN }} préstamo{{ kpartActivoN!==1?'s':''}} activo{{ kpartActivoN!==1?'s':'' }}</div>
           </div>
           <div class="kpi-card kc-green">
             <div class="kpi-label">Al Día</div>
-            <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--green)">{{ fmtInt(kpartAlDia) }}</div>
+            <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--green)">{{ fmtN(kpartAlDia) }}</div>
             <div class="kpi-sub">{{ kpartAlDiaN }} préstamo{{ kpartAlDiaN!==1?'s':''  }}</div>
           </div>
           <div class="kpi-card kc-orange">
             <div class="kpi-label">Con Retraso</div>
-            <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--orange)">{{ fmtInt(kpartRetraso) }}</div>
+            <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--orange)">{{ fmtN(kpartRetraso) }}</div>
             <div class="kpi-sub">{{ kpartRetrasoN }} préstamo{{ kpartRetrasoN!==1?'s':''  }}</div>
           </div>
           <div class="kpi-card kc-red">
             <div class="kpi-label">Judicializados</div>
-            <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--red)">{{ fmtInt(kpartJudicial) }}</div>
+            <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--red)">{{ fmtN(kpartJudicial) }}</div>
             <div class="kpi-sub">{{ kpartJudicialN }} préstamo{{ kpartJudicialN!==1?'s':''  }}</div>
           </div>
           <div class="kpi-card kc-gray-dim">
             <div class="kpi-label">Cancelados</div>
-            <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--text3)">{{ fmtInt(kpartCancelado) }}</div>
+            <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--text3)">{{ fmtN(kpartCancelado) }}</div>
             <div class="kpi-sub">{{ kpartCanceladoN }} préstamo{{ kpartCanceladoN!==1?'s':''  }}</div>
           </div>
         </div>
@@ -66,7 +66,7 @@
           <!-- Rentabilidad/mes -->
           <div class="kpi-card kc-yellow" style="grid-column:span 2">
             <div class="kpi-label">Rentabilidad Partícipe / mes</div>
-            <div style="font-family:var(--mono);font-size:20px;font-weight:700">{{ fmt(kpartBrutoMes) }}</div>
+            <div style="font-family:var(--mono);font-size:20px;font-weight:700">{{ fmtDec(kpartBrutoMes) }}</div>
             <div class="kpi-sub" style="margin-top:4px">Restados los gastos de gestión</div>
             <div class="kpi-sub">Antes de impuestos</div>
           </div>
@@ -79,7 +79,7 @@
           <!-- Bruto Devengado (inline, solo si hay) -->
           <div class="kpi-card kc-yellow" style="grid-column:span 2" v-if="kpartBrutoDevengado > 0">
             <div class="kpi-label">Bruto Devengado</div>
-            <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--accent)">{{ fmt(kpartBrutoDevengado) }}</div>
+            <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--accent)">{{ fmtDec(kpartBrutoDevengado) }}</div>
             <div class="kpi-sub">{{ kpartDevengados.length }} pago{{ kpartDevengados.length !== 1 ? 's' : '' }} pendiente{{ kpartDevengados.length !== 1 ? 's' : '' }}</div>
           </div>
         </div>
@@ -101,29 +101,25 @@
         </div>
       </div>
       <div class="table-card">
-        <div class="table-header"><h3>{{ readOnly ? 'Participaciones' : 'Contratos CCP Asociados' }}</h3></div>
+        <div class="table-header"><h3>{{ readOnly ? 'Participaciones' : 'Contratos CCP Asociados' }} <span style="font-weight:400;color:var(--text3);font-size:11px">(importes en €)</span></h3></div>
         <table>
-          <thead><tr><th>ID</th><th>Préstamo</th><th>Fecha Firma</th><th style="text-align:right">Importe</th><th>% Particip.</th><th>% Gestión</th><th>Estado préstamo</th><th style="text-align:right">Rentabilidad/mes</th><th>Estado CCP</th></tr></thead>
+          <thead><tr><th class="col-hide-mobile">ID</th><th>Préstamo</th><th class="col-hide-mobile">Fecha Firma</th><th style="text-align:right">Importe</th><th class="col-hide-mobile">% Particip.</th><th class="col-hide-mobile">% Gestión</th><th class="col-hide-mobile">Estado préstamo</th><th style="text-align:right">Rent./mes</th><th>Estado CCP</th></tr></thead>
           <tbody>
             <tr v-for="c in contratosParticipe" :key="c.id" style="cursor:pointer" @click="$emit('navigate','contratos-ccp',c.id)">
-              <td class="td-mono" style="color:var(--text3)">{{ c.id }}</td>
+              <td class="td-mono col-hide-mobile" style="color:var(--text3)">{{ c.id }}</td>
               <td>{{ c.prestamos?.alias || '—' }}</td>
-              <td style="font-size:12px">{{ fmtDate(c.fecha_firma) }}</td>
-              <td class="td-mono td-right">{{ fmt(c.importe_participacion) }}</td>
-              <td class="td-mono td-center">{{ c.porcentaje_participacion }}%</td>
-              <td class="td-mono td-center">{{ c.porcentaje_gestion }}%</td>
-              <td>
-                <span class="badge" :class="{
-                  'badge-green':  c.prestamos?.estado === 'activo' && c.prestamos?.situacion === 'al_dia',
-                  'badge-orange': c.prestamos?.estado === 'activo' && c.prestamos?.situacion === 'con_retraso',
-                  'badge-red':    c.prestamos?.estado === 'judicializado',
-                  'badge-gray':   c.prestamos?.estado === 'cancelado'
-                }">
-                  {{ c.prestamos?.estado === 'cancelado' ? 'Cancelado' : c.prestamos?.estado === 'judicializado' ? 'Judicializado' : c.prestamos?.situacion === 'con_retraso' ? 'Con retraso' : 'Al día' }}
-                </span>
+              <td style="font-size:12px" class="col-hide-mobile">{{ fmtDate(c.fecha_firma) }}</td>
+              <td class="td-mono td-right">{{ fmtDec(c.importe_participacion) }}</td>
+              <td class="td-mono td-center col-hide-mobile">{{ c.porcentaje_participacion }}%</td>
+              <td class="td-mono td-center col-hide-mobile">{{ c.porcentaje_gestion }}%</td>
+              <td class="col-hide-mobile">
+                <span v-if="c.prestamos?.estado === 'cancelado'" class="badge badge-gray">Cancelado</span>
+                <span v-else-if="c.prestamos?.estado === 'judicializado'" class="badge badge-red">Judicializado</span>
+                <span v-else-if="c.prestamos?.situacion === 'con_retraso'" class="badge badge-orange">Con retraso</span>
+                <span v-else class="badge badge-green">Al día</span>
               </td>
               <td class="td-mono td-right" style="color:var(--orange)">
-                {{ c.activo && c.prestamos?.estado !== 'cancelado' ? fmt(c.importe_participacion * c.prestamos?.interes_ordinario / 100 / 12) : '—' }}
+                {{ c.activo && c.prestamos?.estado !== 'cancelado' ? fmtDec(c.importe_participacion * c.prestamos?.interes_ordinario / 100 / 12) : '—' }}
               </td>
               <td>
                 <span class="badge" :class="c.activo ? 'badge-green' : 'badge-gray'">
@@ -143,7 +139,7 @@
       <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
         <div class="kpi-card kc-purple">
           <div class="kpi-label">Importe Participación Activa</div>
-          <div class="kpi-value" style="color:var(--purple)">{{ fmtInt(kpiImporteParticipado) }}</div>
+          <div class="kpi-value" style="color:var(--purple)">{{ fmtN(kpiImporteParticipado) }}</div>
         </div>
         <div class="kpi-card kc-green">
           <div class="kpi-label">Préstamos Participados Activos</div>
@@ -159,7 +155,7 @@
         </div>
         <div class="kpi-card kc-gray-dim">
           <div class="kpi-label">Participación Cancelada</div>
-          <div class="kpi-value" style="color:var(--text3)">{{ fmtInt(kpiImporteCanceladoParticipado) }}</div>
+          <div class="kpi-value" style="color:var(--text3)">{{ fmtN(kpiImporteCanceladoParticipado) }}</div>
           <div class="kpi-sub">{{ kpiNCancelados }} préstamo{{ kpiNCancelados !== 1 ? 's' : '' }} cancelados</div>
         </div>
       </div>
@@ -172,7 +168,7 @@
       </div>
       <div class="table-card">
         <div class="table-header">
-          <h3>Listado</h3>
+          <h3>Listado <span style="font-weight:400;color:var(--text3);font-size:11px">(importes en €)</span></h3>
           <div style="display:flex;gap:8px;align-items:center">
             <select class="form-control" style="width:130px;padding:5px 10px;font-size:12px" v-model="filtroActivoP">
               <option value="activos">Activos</option>
@@ -183,30 +179,30 @@
         </div>
         <table>
           <thead><tr>
-              <th @click="setSort('centro_coste')" :class="thClass('centro_coste')" style="text-align:center">CC <span class="sort-icon">{{ thIcon('centro_coste') }}</span></th>
+              <th @click="setSort('centro_coste')" :class="thClass('centro_coste')" style="text-align:center" class="col-hide-mobile">CC <span class="sort-icon">{{ thIcon('centro_coste') }}</span></th>
               <th @click="setSort('nombre')" :class="thClass('nombre')">Nombre <span class="sort-icon">{{ thIcon('nombre') }}</span></th>
-              <th @click="setSort('tipo')" :class="thClass('tipo')">Tipo <span class="sort-icon">{{ thIcon('tipo') }}</span></th>
-              <th>NIF</th><th>Email</th>
+              <th @click="setSort('tipo')" :class="thClass('tipo')" class="col-hide-mobile">Tipo <span class="sort-icon">{{ thIcon('tipo') }}</span></th>
+              <th class="col-hide-mobile">NIF</th><th class="col-hide-mobile">Email</th>
               <th @click="setSort('nContratos')" :class="thClass('nContratos')" style="text-align:center">Contratos <span class="sort-icon">{{ thIcon('nContratos') }}</span></th>
-              <th @click="setSort('capitalParticipado')" :class="thClass('capitalParticipado')" style="text-align:right">Capital participado <span class="sort-icon">{{ thIcon('capitalParticipado') }}</span></th>
-              <th @click="setSort('capitalParticipActivo')" :class="thClass('capitalParticipActivo')" style="text-align:right">Capital activo <span class="sort-icon">{{ thIcon('capitalParticipActivo') }}</span></th>
-              <th @click="setSort('capitalCancelado')" :class="thClass('capitalCancelado')" style="text-align:right">Cancelado <span class="sort-icon">{{ thIcon('capitalCancelado') }}</span></th>
-              <th @click="setSort('devengadoMes')" :class="thClass('devengadoMes')" style="text-align:right">Rentabilidad/mes <span class="sort-icon">{{ thIcon('devengadoMes') }}</span></th>
-              <th @click="setSort('activo')" :class="thClass('activo')">Estado <span class="sort-icon">{{ thIcon('activo') }}</span></th>
+              <th @click="setSort('capitalParticipado')" :class="thClass('capitalParticipado')" style="text-align:right" class="col-hide-mobile">Capital<br>participado <span class="sort-icon">{{ thIcon('capitalParticipado') }}</span></th>
+              <th @click="setSort('capitalParticipActivo')" :class="thClass('capitalParticipActivo')" style="text-align:right">Capital<br>activo <span class="sort-icon">{{ thIcon('capitalParticipActivo') }}</span></th>
+              <th @click="setSort('capitalCancelado')" :class="thClass('capitalCancelado')" style="text-align:right" class="col-hide-mobile">Cancelado <span class="sort-icon">{{ thIcon('capitalCancelado') }}</span></th>
+              <th @click="setSort('devengadoMes')" :class="thClass('devengadoMes')" style="text-align:right" class="col-hide-mobile">Rent./mes <span class="sort-icon">{{ thIcon('devengadoMes') }}</span></th>
+              <th @click="setSort('activo')" :class="thClass('activo')" class="col-hide-mobile">Estado <span class="sort-icon">{{ thIcon('activo') }}</span></th>
               <th style="width:40px"></th>
             </tr></thead>
           <tbody>
             <tr v-for="p in participesFiltrados" :key="p.id" style="cursor:pointer" @click="$emit('navigate','participes',p.id)">
-              <td class="td-mono td-center" style="color:var(--text3)">{{ p.centro_coste || '—' }}</td>
+              <td class="td-mono td-center col-hide-mobile" style="color:var(--text3)">{{ p.centro_coste || '—' }}</td>
               <td style="font-weight:500">{{ p.nombre }}</td>
-              <td><span class="badge" :class="p.tipo === 'empresa' ? 'badge-green' : 'badge-blue'">{{ p.tipo }}</span></td>
-              <td class="td-mono" style="font-size:12px">{{ p.nif }}</td>
-              <td style="font-size:12px">{{ p.email || '—' }}</td>
+              <td class="col-hide-mobile"><span class="badge" :class="p.tipo === 'empresa' ? 'badge-green' : 'badge-blue'">{{ p.tipo }}</span></td>
+              <td class="td-mono col-hide-mobile" style="font-size:12px">{{ p.nif }}</td>
+              <td style="font-size:12px" class="col-hide-mobile">{{ p.email || '—' }}</td>
               <td class="td-center"><span class="badge badge-gray">{{ p.nContratos || 0 }}</span></td>
-              <td class="td-mono td-right" style="color:var(--violet)">{{ p.capitalParticipado ? fmtInt(p.capitalParticipado) : '—' }}</td>
-              <td class="td-mono td-right" style="color:var(--green)">{{ p.capitalParticipActivo ? fmtInt(p.capitalParticipActivo) : '—' }}</td>
-              <td class="td-mono td-right" style="color:var(--text3)">{{ p.capitalCancelado ? fmtInt(p.capitalCancelado) : '—' }}</td>
-              <td class="td-mono td-right" style="color:var(--orange)">{{ p.devengadoMes ? fmt(p.devengadoMes) : '—' }}</td>
+              <td class="td-mono td-right col-hide-mobile" style="color:var(--violet)">{{ p.capitalParticipado ? fmtN(p.capitalParticipado) : '—' }}</td>
+              <td class="td-mono td-right" style="color:var(--green)">{{ p.capitalParticipActivo ? fmtN(p.capitalParticipActivo) : '—' }}</td>
+              <td class="td-mono td-right col-hide-mobile" style="color:var(--text3)">{{ p.capitalCancelado ? fmtN(p.capitalCancelado) : '—' }}</td>
+              <td class="td-mono td-right col-hide-mobile" style="color:var(--orange)">{{ p.devengadoMes ? fmtDec(p.devengadoMes) : '—' }}</td>
               <td><span class="badge" :class="p.activo ? 'badge-green' : 'badge-gray'">{{ p.activo ? 'Activo' : 'Inactivo' }}</span></td>
               <td @click.stop>
                 <button
@@ -277,7 +273,7 @@ import { ref, computed, toRef, onMounted, watch } from 'vue'
 import { usePersistedRef } from '../composables/usePersistedRef.js'
 import { useSort } from '../composables/useSort.js'
 import { useCrud } from '../composables/useCrud.js'
-import { fmt, fmtInt, fmtDate, today , generateCalendarioTeorico, distribuirCobros, calcSituacionPrestamo } from '../utils.js'
+import { fmt, fmtInt, fmtN, fmtDate, today , generateCalendarioTeorico, distribuirCobros, calcSituacionPrestamo , fmtDec } from '../utils.js'
 import { supabase } from '../supabase.js'
 
 const props = defineProps({

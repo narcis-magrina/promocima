@@ -58,7 +58,7 @@
 
         <!-- Préstamos -->
         <div class="table-card">
-          <div class="table-header"><h3>Préstamos Asociados</h3></div>
+          <div class="table-header"><h3>Préstamos Asociados <span style="font-weight:400;color:var(--text3);font-size:11px">(importes en €)</span></h3></div>
           <table>
             <thead><tr><th>ID</th><th>Alias</th><th style="text-align:right">Importe</th><th>Estado</th></tr></thead>
             <tbody>
@@ -103,29 +103,29 @@
       </div>
       <div class="table-card">
         <div class="table-header">
-          <h3>Listado</h3>
+          <h3>Listado <span style="font-weight:400;color:var(--text3);font-size:11px">(importes en €)</span></h3>
           <input class="search-input" :class="{'filter-active': !!busqueda}" placeholder="Buscar..." v-model="busqueda" :style="!!busqueda ? 'border-color:var(--accent);border-width:2px;color:var(--accent)' : ''">
         </div>
         <table>
           <thead><tr>
             <th @click="setSort('nombre')" :class="thClass('nombre')">Nombre <span class="sort-icon">{{ thIcon('nombre') }}</span></th>
-            <th @click="setSort('tipo')" :class="thClass('tipo')">Tipo <span class="sort-icon">{{ thIcon('tipo') }}</span></th>
-            <th @click="setSort('cif')" :class="thClass('cif')">CIF/NIF <span class="sort-icon">{{ thIcon('cif') }}</span></th>
-            <th>Teléfono</th>
-            <th>Email</th>
+            <th @click="setSort('tipo')" :class="thClass('tipo')" class="col-hide-mobile">Tipo <span class="sort-icon">{{ thIcon('tipo') }}</span></th>
+            <th @click="setSort('cif')" :class="thClass('cif')" class="col-hide-mobile">CIF/NIF <span class="sort-icon">{{ thIcon('cif') }}</span></th>
+            <th class="col-hide-mobile">Teléfono</th>
+            <th class="col-hide-mobile">Email</th>
             <th @click="setSort('nPrestamos')" :class="thClass('nPrestamos')" style="text-align:center">Préstamos <span class="sort-icon">{{ thIcon('nPrestamos') }}</span></th>
-            <th style="text-align:center">CIRBE</th>
+            <th style="text-align:center" class="col-hide-mobile">CIRBE</th>
             <th style="width:40px"></th>
           </tr></thead>
           <tbody>
             <tr v-for="c in clientesFiltrados" :key="c.id" style="cursor:pointer" @click="$emit('navigate','clientes',c.id)">
               <td style="font-weight:500">{{ c.nombre }}</td>
-              <td><span class="badge" :class="c.tipo === 'empresa' ? 'badge-green' : 'badge-blue'">{{ c.tipo }}</span></td>
-              <td class="td-mono" style="font-size:12px">{{ c.cif || '—' }}</td>
-              <td style="font-size:12px">{{ c.telefono || '—' }}</td>
-              <td style="font-size:12px">{{ c.email || '—' }}</td>
+              <td class="col-hide-mobile"><span class="badge" :class="c.tipo === 'empresa' ? 'badge-green' : 'badge-blue'">{{ c.tipo }}</span></td>
+              <td class="td-mono col-hide-mobile" style="font-size:12px">{{ c.cif || '—' }}</td>
+              <td style="font-size:12px" class="col-hide-mobile">{{ c.telefono || '—' }}</td>
+              <td style="font-size:12px" class="col-hide-mobile">{{ c.email || '—' }}</td>
               <td class="td-center"><span class="badge badge-gray">{{ c.nPrestamos || 0 }}</span></td>
-              <td class="td-center">
+              <td class="td-center col-hide-mobile">
                 <span v-if="c.cirbe" class="badge badge-blue">Sí</span>
                 <span v-else style="color:var(--text3)">—</span>
               </td>

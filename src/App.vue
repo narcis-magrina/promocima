@@ -31,7 +31,8 @@
 
   <!-- ── Portal Partícipe ──────────────────────── -->
   <div v-else-if="isParticipe" class="app-layout">
-    <aside class="sidebar">
+    <div class="sidebar-overlay" :class="{open: sidebarOpen}" @click="sidebarOpen = false"></div>
+    <aside class="sidebar" :class="{open: sidebarOpen}">
       <div class="sidebar-logo">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
           <img src="/src/logo.png" class="sidebar-logo-img" alt="Logo">
@@ -65,6 +66,7 @@
     </aside>
     <main class="main">
       <div class="topbar">
+        <button class="hamburger-btn" @click="sidebarOpen = !sidebarOpen" aria-label="Menú">☰</button>
         <div class="topbar-title">{{ participeCcpId ? 'Detalle Contrato' : (nombresParticipes[participeActivoId] || 'Mi Perfil') }}</div>
       </div>
       <div class="content">
@@ -74,9 +76,11 @@
           :read-only="true"
           @navigate="onParticipeNav"
         />
-        <ParticiPePortal
+        <Participes
           v-else
-          :participe-id="participeActivoId"
+          :view-id="participeActivoId"
+          :read-only="true"
+          :solo-editar-contacto="true"
           @navigate="onParticipeNav"
         />
       </div>
@@ -85,93 +89,86 @@
 
   <!-- ── App completa (admin + interno) ─────────── -->
   <div v-else class="app-layout">
+    <div class="sidebar-overlay" :class="{open: sidebarOpen}" @click="sidebarOpen = false"></div>
     <!-- SIDEBAR -->
-    <aside class="sidebar">
+    <aside class="sidebar" :class="{open: sidebarOpen, collapsed: sidebarCollapsed}">
       <div class="sidebar-logo">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+        <div class="sidebar-logo-img-wrap">
           <img src="/src/logo.png" class="sidebar-logo-img" alt="Logo">
-          <div class="brand">PROMOCIMA</div>
+          <div class="brand sidebar-logo-text">PROMOCIMA</div>
         </div>
-        <div class="sub">Capital Privado · Gestión Interna</div>
+        <div class="sub sidebar-logo-text">Capital Privado · Gestión Interna</div>
+        <button class="sidebar-collapse-btn" @click="toggleCollapse" :title="sidebarCollapsed ? 'Expandir menú' : 'Colapsar menú'">
+          {{ sidebarCollapsed ? '»' : '«' }}
+        </button>
       </div>
       <nav class="sidebar-nav">
         <div class="nav-section">
           <div class="nav-label">Principal</div>
-          <div class="nav-item" :class="{ active: page === 'dashboard' }" @click="navigate('dashboard')">
-            <span class="icon">▦</span> Dashboard
+          <div class="nav-item" :class="{ active: page === 'dashboard' }" @click="sidebarOpen=false; navigate('dashboard')" :title="sidebarCollapsed ? 'Dashboard' : ''">
+            <span class="icon">▦</span><span class="nav-item-text"> Dashboard</span>
           </div>
         </div>
         <div class="nav-section">
           <div class="nav-label">Entidades</div>
-          <div class="nav-item" :class="{ active: page === 'clientes' }" @click="navigate('clientes')">
-            <span class="icon">◫</span> Clientes
+          <div class="nav-item" :class="{ active: page === 'clientes' }" @click="sidebarOpen=false; navigate('clientes')" :title="sidebarCollapsed ? 'Clientes' : ''">
+            <span class="icon">◫</span><span class="nav-item-text"> Clientes</span>
           </div>
-          <div class="nav-item" :class="{ active: page === 'intermediarios' }" @click="navigate('intermediarios')">
-            <span class="icon">⧉</span> Intermediarios
+          <div class="nav-item" :class="{ active: page === 'intermediarios' }" @click="sidebarOpen=false; navigate('intermediarios')" :title="sidebarCollapsed ? 'Intermediarios' : ''">
+            <span class="icon">⧉</span><span class="nav-item-text"> Intermediarios</span>
           </div>
         </div>
         <div class="nav-section">
           <div class="nav-label">Operaciones</div>
-          <div class="nav-item" :class="{ active: page === 'prestamos' }" @click="navigate('prestamos')">
-            <span class="icon">◎</span> Préstamos
+          <div class="nav-item" :class="{ active: page === 'prestamos' }" @click="sidebarOpen=false; navigate('prestamos')" :title="sidebarCollapsed ? 'Préstamos' : ''">
+            <span class="icon">◎</span><span class="nav-item-text"> Préstamos</span>
           </div>
-          <div class="nav-item" :class="{ active: page === 'cobros' }" @click="navigate('cobros')">
-            <span class="icon">◐</span> Cobros
+          <div class="nav-item" :class="{ active: page === 'cobros' }" @click="sidebarOpen=false; navigate('cobros')" :title="sidebarCollapsed ? 'Cobros' : ''">
+            <span class="icon">◐</span><span class="nav-item-text"> Cobros</span>
           </div>
         </div>
         <div class="nav-section">
           <div class="nav-label">Participación</div>
-          <div class="nav-item" :class="{ active: page === 'participes' }" @click="navigate('participes')">
-            <span class="icon">👥</span> Partícipes
+          <div class="nav-item" :class="{ active: page === 'participes' }" @click="sidebarOpen=false; navigate('participes')" :title="sidebarCollapsed ? 'Partícipes' : ''">
+            <span class="icon">👥</span><span class="nav-item-text"> Partícipes</span>
           </div>
-          <div class="nav-item" :class="{ active: page === 'contratos-ccp' }" @click="navigate('contratos-ccp')">
-            <span class="icon">📋</span> Contratos CCP
+          <div class="nav-item" :class="{ active: page === 'contratos-ccp' }" @click="sidebarOpen=false; navigate('contratos-ccp')" :title="sidebarCollapsed ? 'Contratos CCP' : ''">
+            <span class="icon">📋</span><span class="nav-item-text"> Contratos CCP</span>
           </div>
-          <div class="nav-item" :class="{ active: page === 'pagos-participes' }" @click="navigate('pagos-participes')">
-            <span class="icon">💸</span> Pagos
-          </div>
-        </div>
-        <div class="nav-section">
-          <div class="nav-label">Análisis</div>
-          <div class="nav-item" :class="{ active: page === 'estadisticas' }" @click="navigate('estadisticas')">
-            <span class="icon">◩</span> Dirección
+          <div class="nav-item" :class="{ active: page === 'pagos-participes' }" @click="sidebarOpen=false; navigate('pagos-participes')" :title="sidebarCollapsed ? 'Pagos' : ''">
+            <span class="icon">💸</span><span class="nav-item-text"> Pagos</span>
           </div>
         </div>
         <div v-if="isAdmin" class="nav-section">
           <div class="nav-label">Administración</div>
-          <div class="nav-item" :class="{ active: page === 'usuarios' }" @click="navigate('usuarios')">
-            <span class="icon">👤</span> Usuarios
+          <div class="nav-item" :class="{ active: page === 'usuarios' }" @click="sidebarOpen=false; navigate('usuarios')" :title="sidebarCollapsed ? 'Usuarios' : ''">
+            <span class="icon">👤</span><span class="nav-item-text"> Usuarios</span>
           </div>
-          <div class="nav-item" :class="{ active: page === 'configuracion' }" @click="navigate('configuracion')">
-            <span class="icon">⊙</span> Configuración
+          <div class="nav-item" :class="{ active: page === 'configuracion' }" @click="sidebarOpen=false; navigate('configuracion')" :title="sidebarCollapsed ? 'Configuración' : ''">
+            <span class="icon">⊙</span><span class="nav-item-text"> Configuración</span>
           </div>
-          <div class="nav-item" :class="{ active: page === 'administracion' }" @click="navigate('administracion')">
-            <span class="icon">🛠</span> Administración
+          <div class="nav-item" :class="{ active: page === 'administracion' }" @click="sidebarOpen=false; navigate('administracion')" :title="sidebarCollapsed ? 'Administración' : ''">
+            <span class="icon">🛠</span><span class="nav-item-text"> Administración</span>
           </div>
         </div>
       </nav>
       <div class="sidebar-footer">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <div class="sidebar-footer-inner">
           <div class="user-avatar">{{ initiales }}</div>
           <div class="user-info">
             <div class="name">{{ nombre }}</div>
             <div class="role">{{ rolLabel }}</div>
           </div>
         </div>
-        <button class="btn btn-sm" style="width:100%;justify-content:center" @click="logout">
-          Cerrar sesión
-        </button>
       </div>
     </aside>
 
     <!-- MAIN -->
     <main class="main">
       <div class="topbar">
+        <button class="hamburger-btn" @click="sidebarOpen = !sidebarOpen" aria-label="Menú">☰</button>
         <div class="topbar-title">{{ pageTitle }}</div>
-        <div style="font-size:12px;color:var(--text3);display:flex;align-items:center;gap:6px">
-          <span style="opacity:0.5">Fecha ref.</span>
-          <span style="font-family:var(--mono);color:var(--text2)">{{ fechaReferenciaGlobal ? fmtDate(fechaReferenciaGlobal) : 'hoy' }}</span>
-        </div>
+        <button class="btn btn-sm" @click="logout">Cerrar sesión</button>
       </div>
       <div class="content">
         <Dashboard          v-if="page === 'dashboard'"       @navigate="navigate" />
@@ -183,7 +180,6 @@
         <ContratosCCP       v-else-if="page === 'contratos-ccp'"      :view-id="id" @navigate="navigate" />
         <PagosParticipes    v-else-if="page === 'pagos-participes'"   @navigate="navigate" />
         <GestionUsuarios    v-else-if="page === 'usuarios' && isAdmin" />
-        <Estadisticas       v-else-if="page === 'estadisticas'" />
         <Configuracion      v-else-if="page === 'configuracion' && isAdmin" />
         <Administracion     v-else-if="page === 'administracion' && isAdmin" />
         <div v-else class="content" style="padding:40px;color:var(--text3)">
@@ -201,6 +197,12 @@ import './styles.css'
 // ── Auth ───────────────────────────────────────
 import { initAuth, useAuth } from './composables/useAuth.js'
 const { user, perfil, loading, nombre, initiales, isAdmin, isInterno, isParticipe, participeId, participeIds, rol, logout, isRecoveryMode } = useAuth()
+const sidebarOpen = ref(false)
+const sidebarCollapsed = ref(localStorage.getItem('sidebarCollapsed') === 'true')
+function toggleCollapse() {
+  sidebarCollapsed.value = !sidebarCollapsed.value
+  localStorage.setItem('sidebarCollapsed', sidebarCollapsed.value)
+}
 const participeCcpId    = ref(null)
 const participeActivoId = ref(null)
 const nombresParticipes = ref({})
@@ -247,7 +249,6 @@ const titles = {
   participes: 'Gestión de Partícipes',
   'contratos-ccp': 'Contratos Cuenta Partícipe',
   'pagos-participes': 'Pagos a Partícipes',
-  estadisticas: 'Estadísticas de Dirección',
   configuracion: 'Configuración Global',
   usuarios: 'Gestión de Usuarios',
 }
@@ -266,16 +267,12 @@ import Cobros           from './components/Cobros.vue'
 import Participes       from './components/Participes.vue'
 import ContratosCCP     from './components/ContratosCCP.vue'
 import PagosParticipes  from './components/PagosParticipes.vue'
-import Estadisticas     from './components/Estadisticas.vue'
 import Configuracion    from './components/Configuracion.vue'
 import Administracion   from './components/Administracion.vue'
 import { supabase }     from './supabase.js'
-import { fechaReferenciaGlobal, fmtDate } from './utils.js'
 
 // ── Init ───────────────────────────────────────
-onMounted(async () => {
+onMounted(() => {
   initAuth()
-  const { data } = await supabase.from('config').select('fecha_referencia').eq('id', 1).single()
-  if (data?.fecha_referencia) fechaReferenciaGlobal.value = data.fecha_referencia
 })
 </script>

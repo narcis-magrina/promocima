@@ -9,6 +9,7 @@
         <div style="font-size:12px;color:var(--text3);margin-top:4px">
           {{ contrato.participes?.nombre }} · {{ contrato.prestamos?.alias }}
         </div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px">Firma: {{ fmtDate(contrato.fecha_firma) }}</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
         <button v-if="!readOnly" class="btn btn-sm btn-registrar" @click="$emit('editar', contrato)">✎ Editar</button>
@@ -20,11 +21,11 @@
 
     <!-- KPIs -->
     <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:20px">
-      <div class="kpi-card kc-yellow">
+      <div class="kpi-card kc-purple">
         <div class="kpi-label">Importe Participación</div>
-        <div style="font-family:var(--mono);font-size:18px;font-weight:700">{{ fmt(contrato.importe_participacion) }}</div>
-        <div class="kpi-sub" style="color:var(--green)">Activo: {{ fmt(participacionActiva) }}</div>
-        <div class="kpi-sub" style="color:var(--orange)" v-if="participacionAmortizada > 0">Amortizado: {{ fmt(participacionAmortizada) }}</div>
+        <div style="font-family:var(--mono);font-size:18px;font-weight:700">{{ fmtDec(contrato.importe_participacion) }}</div>
+        <div class="kpi-sub" style="color:var(--green)">Activo: {{ fmtDec(participacionActiva) }}</div>
+        <div class="kpi-sub" style="color:var(--orange)" v-if="participacionAmortizada > 0">Amortizado: {{ fmtDec(participacionAmortizada) }}</div>
         <div class="kpi-sub" style="color:var(--text3)">{{ contrato.porcentaje_participacion }}% del préstamo</div>
       </div>
       <div class="kpi-card kc-blue">
@@ -33,22 +34,22 @@
       </div>
       <div class="kpi-card kc-green">
         <div class="kpi-label">Rentabilidad Habitual/mes</div>
-        <div style="font-family:var(--mono);font-size:18px;font-weight:700">{{ fmt(rentabilidadMes) }}</div>
+        <div style="font-family:var(--mono);font-size:18px;font-weight:700">{{ fmtDec(rentabilidadMes) }}</div>
         <div class="kpi-sub">Bruto · antes de IRPF</div>
       </div>
       <div class="kpi-card kc-purple">
         <div class="kpi-label">Total Pagado</div>
-        <div style="font-family:var(--mono);font-size:18px;font-weight:700">{{ fmt(totalPagadoNeto) }}</div>
+        <div style="font-family:var(--mono);font-size:18px;font-weight:700">{{ fmtDec(totalPagadoNeto) }}</div>
         <div class="kpi-sub">{{ pagosReales.length }} pago{{ pagosReales.length !== 1 ? 's' : '' }} registrado{{ pagosReales.length !== 1 ? 's' : '' }}</div>
       </div>
       <div class="kpi-card kc-orange">
         <div class="kpi-label">Devengado Pendiente</div>
-        <div style="font-family:var(--mono);font-size:18px;font-weight:700">{{ fmt(totalDevengadoNeto) }}</div>
+        <div style="font-family:var(--mono);font-size:18px;font-weight:700">{{ fmtDec(totalDevengadoNeto) }}</div>
         <div class="kpi-sub">{{ nLineasDevengadas }} cuota{{ nLineasDevengadas !== 1 ? 's' : '' }} por cobrar</div>
       </div>
       <div class="kpi-card kc-red">
         <div class="kpi-label">Pendiente</div>
-        <div style="font-family:var(--mono);font-size:18px;font-weight:700">{{ fmt(totalPendienteNeto) }}</div>
+        <div style="font-family:var(--mono);font-size:18px;font-weight:700">{{ fmtDec(totalPendienteNeto) }}</div>
         <div class="kpi-sub">cuotas no vencidas</div>
       </div>
     </div>
@@ -61,38 +62,75 @@
     </div>
 
     <!-- Tab Detalle -->
-    <div v-if="tab === 'detalle'">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
-        <div>
-          <div style="font-size:12px;font-weight:600;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.06em">Condiciones</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <div class="detail-item"><div class="detail-label">Fecha Firma</div><div class="detail-value">{{ fmtDate(contrato.fecha_firma) }}</div></div>
-            <div class="detail-item"><div class="detail-label">Importe Participación</div><div class="detail-value mono">{{ fmt(contrato.importe_participacion) }}</div></div>
-            <div class="detail-item"><div class="detail-label">% Participación</div><div class="detail-value mono">{{ contrato.porcentaje_participacion }}%</div></div>
-            <div class="detail-item"><div class="detail-label">% Gestión</div><div class="detail-value mono">{{ contrato.porcentaje_gestion }}%</div></div>
-            <div class="detail-item"><div class="detail-label">% Apertura</div><div class="detail-value mono">{{ contrato.porcentaje_apertura }}%</div></div>
-            <div class="detail-item"><div class="detail-label">Estado</div>
-              <div><span class="badge" :class="contrato.activo ? 'badge-green' : 'badge-gray'">{{ contrato.activo ? 'Activo' : 'Inactivo' }}</span></div>
-            </div>
+    <div v-if="tab === 'detalle'" style="display:grid;gap:16px">
+
+      <!-- Tarjeta préstamo -->
+      <div class="table-card" style="padding:24px">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:14px;text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid var(--border);padding-bottom:6px">Préstamo vinculado</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">Alias</span>
+            <span style="font-size:13px;font-weight:500">{{ contrato.prestamos?.alias || '—' }}</span>
           </div>
-        </div>
-        <div>
-          <div style="font-size:12px;font-weight:600;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.06em">Partes</div>
-          <div style="display:grid;grid-template-columns:1fr;gap:10px">
-            <div class="detail-item">
-              <div class="detail-label">Partícipe</div>
-              <div class="detail-value">{{ contrato.participes?.nombre || '—' }}</div>
-            </div>
-            <div class="detail-item">
-              <div class="detail-label">Préstamo</div>
-              <div class="detail-value">{{ contrato.prestamos?.alias || '—' }}</div>
-              <div v-if="prestamoDetalle" style="font-size:11px;color:var(--text3);margin-top:3px">
-                {{ fmt(prestamoDetalle.importe) }} · {{ prestamoDetalle.interes_ordinario }}% · Día cobro: {{ prestamoDetalle.dia_cobro }}
-              </div>
-            </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">Importe</span>
+            <span style="font-size:13px;font-weight:500;font-family:var(--mono)">{{ prestamoDetalle ? fmt(prestamoDetalle.importe) : '—' }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">Tipo préstamo</span>
+            <span style="font-size:13px;font-weight:500">{{ prestamoDetalle?.tipo_prestamo || '—' }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">Periodicidad</span>
+            <span style="font-size:13px;font-weight:500;text-transform:capitalize">{{ prestamoDetalle?.periodicidad || '—' }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">Interés ordinario</span>
+            <span style="font-size:13px;font-weight:500;font-family:var(--mono)">{{ prestamoDetalle?.interes_ordinario || '—' }}%</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">Interés demora</span>
+            <span style="font-size:13px;font-weight:500;font-family:var(--mono)">{{ prestamoDetalle?.interes_demora || '—' }}%</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">Día de cobro</span>
+            <span style="font-size:13px;font-weight:500;font-family:var(--mono)">{{ prestamoDetalle?.dia_cobro || '—' }}</span>
           </div>
         </div>
       </div>
+
+      <!-- Tarjeta condiciones CCP -->
+      <div class="table-card" style="padding:24px">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:14px;text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid var(--border);padding-bottom:6px">Condiciones del contrato</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">Fecha firma</span>
+            <span style="font-size:13px;font-weight:500">{{ fmtDate(contrato.fecha_firma) }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">Estado</span>
+            <span class="badge" :class="contrato.activo ? 'badge-green' : 'badge-gray'">{{ contrato.activo ? 'Activo' : 'Inactivo' }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">Importe participación</span>
+            <span style="font-size:13px;font-weight:500;font-family:var(--mono)">{{ fmtDec(contrato.importe_participacion) }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">% Participación</span>
+            <span style="font-size:13px;font-weight:500;font-family:var(--mono)">{{ contrato.porcentaje_participacion }}%</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">% Gestión</span>
+            <span style="font-size:13px;font-weight:500;font-family:var(--mono)">{{ contrato.porcentaje_gestion }}%</span>
+          </div>
+          <div v-if="Number(contrato.porcentaje_apertura) > 0" style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">% Apertura</span>
+            <span style="font-size:13px;font-weight:500;font-family:var(--mono)">{{ contrato.porcentaje_apertura }}%</span>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <!-- Tab Calendario -->
@@ -185,67 +223,67 @@
               <td class="td-mono td-right">
                 <span v-if="c.esJudicial" style="color:var(--text3)">—</span>
                 <span v-else-if="c.tipo === 'amortizacion_parcial'" style="color:var(--text3)">—</span>
-                <template v-else>{{ fmt(c.beneficio) }}</template>
+                <template v-else>{{ fmtDec(c.beneficio) }}</template>
               </td>
               <!-- Neto con tooltip (normal) / importe demanda (judicial) -->
               <td class="td-mono td-right" style="white-space:nowrap">
                 <template v-if="c.esJudicial">
-                  <span style="color:var(--red);font-weight:700;font-family:var(--mono);vertical-align:top">{{ fmt(c.neto) }}</span>
+                  <span style="color:var(--red);font-weight:700;font-family:var(--mono);vertical-align:top">{{ fmtDec(c.neto) }}</span>
                   <div style="margin-top:4px;font-size:10px;color:var(--text3);line-height:1.8">
-                    <div v-if="c.principal_J > 0" style="display:flex;justify-content:space-between;gap:12px"><span>Principal:</span><span style="font-family:var(--mono)">{{ fmt(c.principal_J) }}</span></div>
-                    <div v-if="c.interes_ordinario_J > 0" style="display:flex;justify-content:space-between;gap:12px"><span>Int. ord.:</span><span style="font-family:var(--mono)">{{ fmt(c.interes_ordinario_J) }}</span></div>
-                    <div v-if="c.gastos_J > 0" style="display:flex;justify-content:space-between;gap:12px"><span>Gastos:</span><span style="font-family:var(--mono)">{{ fmt(c.gastos_J) }}</span></div>
+                    <div v-if="c.principal_J > 0" style="display:flex;justify-content:space-between;gap:12px"><span>Principal:</span><span style="font-family:var(--mono)">{{ fmtDec(c.principal_J) }}</span></div>
+                    <div v-if="c.interes_ordinario_J > 0" style="display:flex;justify-content:space-between;gap:12px"><span>Int. ord.:</span><span style="font-family:var(--mono)">{{ fmtDec(c.interes_ordinario_J) }}</span></div>
+                    <div v-if="c.gastos_J > 0" style="display:flex;justify-content:space-between;gap:12px"><span>Gastos:</span><span style="font-family:var(--mono)">{{ fmtDec(c.gastos_J) }}</span></div>
                     <div v-if="c.demora_J > 0" style="display:flex;justify-content:space-between;gap:12px;margin-top:2px;padding-top:2px;border-top:1px solid var(--border)">
                       <span>Int. Dem. ({{ c.diasDemora }}d):</span>
-                      <span style="font-family:var(--mono)">{{ fmt(c.demora_J) }}</span>
+                      <span style="font-family:var(--mono)">{{ fmtDec(c.demora_J) }}</span>
                     </div>
                   </div>
                 </template>
                 <!-- Fila AP: desglose principal (sin retenciones) + intereses netos -->
                 <span v-else-if="c.tipo === 'amortizacion_parcial'" class="ccp-neto-wrap">
-                  <span style="color:var(--green);font-weight:600">{{ fmt(c.principal_part + c.neto) }}</span>
+                  <span style="color:var(--green);font-weight:600">{{ fmtDec(c.principal_part + c.neto) }}</span>
                   <span class="ccp-info-btn" tabindex="0">i
                     <span class="ccp-tooltip">
-                      <span class="ccp-tt-row"><span class="ccp-tt-label">Principal devuelto</span><span class="ccp-tt-val ccp-green">{{ fmt(c.principal_part) }}</span></span>
+                      <span class="ccp-tt-row"><span class="ccp-tt-label">Principal devuelto</span><span class="ccp-tt-val ccp-green">{{ fmtDec(c.principal_part) }}</span></span>
                       <span class="ccp-tt-divider"></span>
-                      <span class="ccp-tt-row"><span class="ccp-tt-label">Int. ordinarios</span><span class="ccp-tt-val">{{ fmt(c.beneficio) }}</span></span>
-                      <span class="ccp-tt-row ccp-tt-sub"><span class="ccp-tt-label">− Gestión ({{ contrato.porcentaje_gestion }}%)</span><span class="ccp-tt-val ccp-orange">{{ fmt(c.gestion) }}</span></span>
-                      <span class="ccp-tt-row ccp-tt-res"><span class="ccp-tt-label">= Bruto</span><span class="ccp-tt-val">{{ fmt(c.bruto) }}</span></span>
-                      <span class="ccp-tt-row ccp-tt-sub"><span class="ccp-tt-label">− IRPF ({{ pctIRPF }}%)</span><span class="ccp-tt-val ccp-red">{{ fmt(c.irpf) }}</span></span>
-                      <span class="ccp-tt-row ccp-tt-res"><span class="ccp-tt-label">= Neto intereses</span><span class="ccp-tt-val ccp-green">{{ fmt(c.neto) }}</span></span>
+                      <span class="ccp-tt-row"><span class="ccp-tt-label">Int. ordinarios</span><span class="ccp-tt-val">{{ fmtDec(c.beneficio) }}</span></span>
+                      <span class="ccp-tt-row ccp-tt-sub"><span class="ccp-tt-label">− Gestión ({{ contrato.porcentaje_gestion }}%)</span><span class="ccp-tt-val ccp-orange">{{ fmtDec(c.gestion) }}</span></span>
+                      <span class="ccp-tt-row ccp-tt-res"><span class="ccp-tt-label">= Bruto</span><span class="ccp-tt-val">{{ fmtDec(c.bruto) }}</span></span>
+                      <span class="ccp-tt-row ccp-tt-sub"><span class="ccp-tt-label">− IRPF ({{ pctIRPF }}%)</span><span class="ccp-tt-val ccp-red">{{ fmtDec(c.irpf) }}</span></span>
+                      <span class="ccp-tt-row ccp-tt-res"><span class="ccp-tt-label">= Neto intereses</span><span class="ccp-tt-val ccp-green">{{ fmtDec(c.neto) }}</span></span>
                       <span class="ccp-tt-divider"></span>
-                      <span class="ccp-tt-row ccp-tt-total"><span class="ccp-tt-label">= Total neto</span><span class="ccp-tt-val ccp-green">{{ fmt(c.principal_part + c.neto) }}</span></span>
+                      <span class="ccp-tt-row ccp-tt-total"><span class="ccp-tt-label">= Total neto</span><span class="ccp-tt-val ccp-green">{{ fmtDec(c.principal_part + c.neto) }}</span></span>
                     </span>
                   </span>
                 </span>
                 <!-- Cuota normal -->
                 <span v-else class="ccp-neto-wrap">
-                  <span style="color:var(--green);font-weight:600">{{ fmt(c.neto) }}</span>
+                  <span style="color:var(--green);font-weight:600">{{ fmtDec(c.neto) }}</span>
                   <span class="ccp-info-btn" tabindex="0">i
                     <span class="ccp-tooltip">
-                      <span class="ccp-tt-row"><span class="ccp-tt-label">Beneficio</span><span class="ccp-tt-val">{{ fmt(c.beneficio) }}</span></span>
-                      <span class="ccp-tt-row ccp-tt-sub"><span class="ccp-tt-label">− Gestión ({{ contrato.porcentaje_gestion }}%)</span><span class="ccp-tt-val ccp-orange">{{ fmt(c.gestion) }}</span></span>
-                      <span class="ccp-tt-row ccp-tt-res"><span class="ccp-tt-label">= Bruto</span><span class="ccp-tt-val">{{ fmt(c.bruto) }}</span></span>
-                      <span class="ccp-tt-row ccp-tt-sub"><span class="ccp-tt-label">− IRPF ({{ pctIRPF }}%)</span><span class="ccp-tt-val ccp-red">{{ fmt(c.irpf) }}</span></span>
+                      <span class="ccp-tt-row"><span class="ccp-tt-label">Beneficio</span><span class="ccp-tt-val">{{ fmtDec(c.beneficio) }}</span></span>
+                      <span class="ccp-tt-row ccp-tt-sub"><span class="ccp-tt-label">− Gestión ({{ contrato.porcentaje_gestion }}%)</span><span class="ccp-tt-val ccp-orange">{{ fmtDec(c.gestion) }}</span></span>
+                      <span class="ccp-tt-row ccp-tt-res"><span class="ccp-tt-label">= Bruto</span><span class="ccp-tt-val">{{ fmtDec(c.bruto) }}</span></span>
+                      <span class="ccp-tt-row ccp-tt-sub"><span class="ccp-tt-label">− IRPF ({{ pctIRPF }}%)</span><span class="ccp-tt-val ccp-red">{{ fmtDec(c.irpf) }}</span></span>
                       <span class="ccp-tt-divider"></span>
-                      <span class="ccp-tt-row ccp-tt-total"><span class="ccp-tt-label">= Neto</span><span class="ccp-tt-val ccp-green">{{ fmt(c.neto) }}</span></span>
+                      <span class="ccp-tt-row ccp-tt-total"><span class="ccp-tt-label">= Neto</span><span class="ccp-tt-val ccp-green">{{ fmtDec(c.neto) }}</span></span>
                     </span>
                   </span>
                 </span>
               </td>
               <!-- col_pagado -->
               <td class="td-mono td-right" style="color:var(--green);font-weight:600">
-                {{ c.col_pagado > 0.005 ? fmt(c.col_pagado) : '—' }}
+                {{ c.col_pagado > 0.005 ? fmtDec(c.col_pagado) : '—' }}
               </td>
               <!-- col_devengado -->
               <td class="td-mono td-right"
                   :style="{ color: c.col_devengado > 0.005 ? 'var(--orange)' : 'var(--text3)' }"
                   :title="!c.cuota_completa && c.col_devengado > 0.005 ? 'Cobro parcial (' + Math.round((c.ratio||0)*100) + '%)' : ''">
-                {{ c.col_devengado > 0.005 ? fmt(c.col_devengado) : '—' }}
+                {{ c.col_devengado > 0.005 ? fmtDec(c.col_devengado) : '—' }}
               </td>
               <!-- col_pendiente -->
               <td class="td-mono td-right" :style="{ color: c.esJudicial && c.col_pendiente > 0.005 ? 'var(--red)' : 'var(--text3)' }">
-                {{ c.col_pendiente > 0.005 ? fmt(c.col_pendiente) : '—' }}
+                {{ c.col_pendiente > 0.005 ? fmtDec(c.col_pendiente) : '—' }}
               </td>
               <!-- Estado -->
               <td class="td-center">
@@ -256,7 +294,7 @@
                 <span v-else-if="c.estado === 'pagado'"       class="badge badge-green" style="font-size:10px">Pagado</span>
                 <span v-else-if="c.estado === 'devengado'"    class="badge badge-outline-yellow" style="font-size:10px">Devengado</span>
                 <span v-else-if="c.estado === 'anticipado'"   class="badge" style="font-size:10px;background:#fff;color:var(--red);border:1px solid var(--red);font-weight:700">⚠ Anticipo</span>
-                <span v-else class="badge" style="font-size:10px;background:rgba(99,102,241,0.12);color:var(--accent);border:1px solid rgba(99,102,241,0.3)" :title="'Pagado: ' + fmt(c.col_pagado) + ' · Dev: ' + fmt(c.col_devengado) + ' · Pend: ' + fmt(c.col_pendiente)">Mixto</span>
+                <span v-else class="badge" style="font-size:10px;background:rgba(99,102,241,0.12);color:var(--accent);border:1px solid rgba(99,102,241,0.3)" :title="'Pagado: ' + fmtDec(c.col_pagado) + ' · Dev: ' + fmtDec(c.col_devengado) + ' · Pend: ' + fmtDec(c.col_pendiente)">Mixto</span>
               </td>
             </tr>
           </tbody>
@@ -264,9 +302,9 @@
           <tfoot>
             <tr style="font-weight:600;border-top:2px solid var(--border)">
               <td colspan="6" style="font-size:12px;color:var(--text3);padding-top:8px">Totales</td>
-              <td class="td-mono td-right" style="color:var(--green);padding-top:8px">{{ fmt(totalColPagado) }}</td>
-              <td class="td-mono td-right" style="color:var(--orange);padding-top:8px">{{ fmt(totalColDevengado) }}</td>
-              <td class="td-mono td-right" style="color:var(--text3);padding-top:8px">{{ fmt(totalColPendiente) }}</td>
+              <td class="td-mono td-right" style="color:var(--green);padding-top:8px">{{ fmtDec(totalColPagado) }}</td>
+              <td class="td-mono td-right" style="color:var(--orange);padding-top:8px">{{ fmtDec(totalColDevengado) }}</td>
+              <td class="td-mono td-right" style="color:var(--text3);padding-top:8px">{{ fmtDec(totalColPendiente) }}</td>
               <td></td>
             </tr>
           </tfoot>
@@ -280,7 +318,7 @@
         <button class="btn btn-sm btn-registrar" @click="abrirRegistrarPago">+ Registrar Pago</button>
       </div>
       <div class="table-card">
-        <div class="table-header"><h3>Pagos Registrados ({{ pagosReales.length }})</h3></div>
+        <div class="table-header"><h3>Pagos Registrados ({{ pagosReales.length }}) <span style="font-weight:400;color:var(--text3);font-size:11px">(importes en €)</span></h3></div>
         <table>
           <thead>
             <tr>
@@ -290,26 +328,26 @@
               <th style="text-align:right">Bruto</th>
               <th style="text-align:right">IRPF</th>
               <th style="text-align:right;color:var(--green)">Neto</th>
-              <th v-if="!readOnly">Obs.</th>
+              <th>Obs.</th>
               <th v-if="!readOnly"></th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="p in pagosReales" :key="p.id">
               <td style="font-size:12px;font-weight:500">{{ fmtDate(p.fecha_pago_real) }}</td>
-              <td class="td-mono td-right">{{ fmt(p.importe_devengado) }}</td>
-              <td class="td-mono td-right" style="color:var(--orange)">{{ fmt(p.importe_gestion) }}</td>
-              <td class="td-mono td-right">{{ fmt(p.importe_bruto) }}</td>
-              <td class="td-mono td-right" style="color:var(--red)">{{ fmt(p.importe_retencion) }}</td>
-              <td class="td-mono td-right" style="color:var(--green);font-weight:600">{{ fmt(p.importe_neto) }}</td>
+              <td class="td-mono td-right">{{ fmtDec(p.importe_devengado) }}</td>
+              <td class="td-mono td-right" style="color:var(--orange)">{{ fmtDec(p.importe_gestion) }}</td>
+              <td class="td-mono td-right">{{ fmtDec(p.importe_bruto) }}</td>
+              <td class="td-mono td-right" style="color:var(--red)">{{ fmtDec(p.importe_retencion) }}</td>
+              <td class="td-mono td-right" style="color:var(--green);font-weight:600">{{ fmtDec(p.importe_neto) }}</td>
               <td style="font-size:11px;color:var(--text3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
-                  v-if="!readOnly" :title="p.observaciones">{{ p.observaciones || '—' }}</td>
+                  :title="p.observaciones">{{ p.observaciones || '—' }}</td>
               <td v-if="!readOnly">
                 <button class="btn btn-sm btn-danger-solid" style="padding:2px 7px;font-size:13px"
                   title="Eliminar pago" @click="eliminarPagoYRecargar(p)">✕</button>
               </td>
             </tr>
-            <tr v-if="!pagosReales.length"><td :colspan="readOnly ? 6 : 8" class="table-empty">Sin pagos registrados</td></tr>
+            <tr v-if="!pagosReales.length"><td :colspan="readOnly ? 7 : 8" class="table-empty">Sin pagos registrados</td></tr>
           </tbody>
         </table>
       </div>
@@ -324,7 +362,7 @@
         </div>
         <div class="modal-body">
           <div v-if="totalDevengadoNeto > 0" class="alert alert-info" style="margin-bottom:12px">
-            Devengado pendiente de cobrar: <strong>{{ fmt(totalDevengadoNeto) }}</strong> neto
+            Devengado pendiente de cobrar: <strong>{{ fmtDec(totalDevengadoNeto) }}</strong> neto
           </div>
           <div class="form-grid cols-1">
             <div class="form-group">
@@ -378,7 +416,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { supabase } from '../supabase.js'
-import { fmt, fmtDate, today, uuid, calcularLineasCCP } from '../utils.js'
+import { fmt, fmtDate, today, uuid, calcularLineasCCP , fmtDec } from '../utils.js'
 import { eliminarPago } from '../composables/useDevengados.js'
 
 const props = defineProps({
