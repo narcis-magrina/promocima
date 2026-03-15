@@ -3,27 +3,27 @@
     <!-- KPIs -->
     <div class="kpi-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:20px">
       <div class="kpi-card kc-purple">
-        <div class="kpi-label">Importe Participado Activo</div>
-        <div class="kpi-value">{{ fmtN(kliActivo) }}</div>
-        <div class="kpi-sub">{{ kliActivoN }} contrato{{ kliActivoN !== 1 ? 's' : '' }}</div>
+        <div class="kpi-label">Importe Participado En Curso <HelpTip :texto="help.participacion_en_curso" /></div>
+        <div class="kpi-value">{{ fmtN(kliEnCurso) }}</div>
+        <div class="kpi-sub">{{ kliEnCursoN }} contrato{{ kliEnCursoN !== 1 ? 's' : '' }}</div>
       </div>
       <div class="kpi-card kc-green">
-        <div class="kpi-label">Al Día</div>
+        <div class="kpi-label">Al Día <HelpTip :texto="help.al_dia" /></div>
         <div class="kpi-value">{{ fmtN(kliAlDia) }}</div>
         <div class="kpi-sub">{{ kliAlDiaN }} ({{ kliAlDiaPct }}%)</div>
       </div>
       <div class="kpi-card kc-orange">
-        <div class="kpi-label">Con Retraso</div>
+        <div class="kpi-label">Con Retraso <HelpTip :texto="help.con_retraso" /></div>
         <div class="kpi-value">{{ fmtN(kliRetraso) }}</div>
         <div class="kpi-sub">{{ kliRetrasoN }} ({{ kliRetrasoPct }}%)</div>
       </div>
       <div class="kpi-card kc-red">
-        <div class="kpi-label">Judicializado</div>
+        <div class="kpi-label">Judicializado <HelpTip :texto="help.judicializado" /></div>
         <div class="kpi-value">{{ fmtN(kliJudicial) }}</div>
         <div class="kpi-sub">{{ kliJudicialN }} ({{ kliJudicialPct }}%)</div>
       </div>
       <div class="kpi-card kc-blue">
-        <div class="kpi-label">Importe Cancelados</div>
+        <div class="kpi-label">Importe Cancelados <HelpTip :texto="help.cancelado" /></div>
         <div class="kpi-value">{{ fmtN(kliCancelado) }}</div>
         <div class="kpi-sub">{{ kliCanceladoN }} préstamo{{ kliCanceladoN !== 1 ? 's' : '' }}</div>
       </div>
@@ -98,6 +98,8 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useSort } from '../composables/useSort.js'
+import HelpTip from './HelpTip.vue'
+import { help } from '../helpTexts.js'
 import { fmt, fmtInt, fmtN, fmtDate , fmtDec } from '../utils.js'
 
 // ── Props / emits ──────────────────────────────
@@ -134,21 +136,21 @@ const kliEnriquecidos = computed(() =>
     return { ...c, estadoPrestamo }
   })
 )
-const kliActivos     = computed(() => kliEnriquecidos.value.filter(c => c.activo && c.estadoPrestamo !== 'cancelado'))
-const kliActivo      = computed(() => kliActivos.value.reduce((s, c) => s + Number(c.importe_participacion), 0))
-const kliActivoN     = computed(() => kliActivos.value.length)
-const kliAlDiaArr    = computed(() => kliActivos.value.filter(c => c.estadoPrestamo === 'al_dia'))
+const kliEnCursos     = computed(() => kliEnriquecidos.value.filter(c => c.activo && c.estadoPrestamo !== 'cancelado'))
+const kliEnCurso      = computed(() => kliEnCursos.value.reduce((s, c) => s + Number(c.importe_participacion), 0))
+const kliEnCursoN     = computed(() => kliEnCursos.value.length)
+const kliAlDiaArr    = computed(() => kliEnCursos.value.filter(c => c.estadoPrestamo === 'al_dia'))
 const kliAlDia       = computed(() => kliAlDiaArr.value.reduce((s, c) => s + Number(c.importe_participacion), 0))
 const kliAlDiaN      = computed(() => kliAlDiaArr.value.length)
-const kliAlDiaPct    = computed(() => kliActivo.value ? (kliAlDia.value  / kliActivo.value * 100).toFixed(1) : '0.0')
-const kliRetrasoArr  = computed(() => kliActivos.value.filter(c => c.estadoPrestamo === 'con_retraso'))
+const kliAlDiaPct    = computed(() => kliEnCurso.value ? (kliAlDia.value  / kliEnCurso.value * 100).toFixed(1) : '0.0')
+const kliRetrasoArr  = computed(() => kliEnCursos.value.filter(c => c.estadoPrestamo === 'con_retraso'))
 const kliRetraso     = computed(() => kliRetrasoArr.value.reduce((s, c) => s + Number(c.importe_participacion), 0))
 const kliRetrasoN    = computed(() => kliRetrasoArr.value.length)
-const kliRetrasoPct  = computed(() => kliActivo.value ? (kliRetraso.value / kliActivo.value * 100).toFixed(1) : '0.0')
-const kliJudicialArr = computed(() => kliActivos.value.filter(c => c.estadoPrestamo === 'judicializado'))
+const kliRetrasoPct  = computed(() => kliEnCurso.value ? (kliRetraso.value / kliEnCurso.value * 100).toFixed(1) : '0.0')
+const kliJudicialArr = computed(() => kliEnCursos.value.filter(c => c.estadoPrestamo === 'judicializado'))
 const kliJudicial    = computed(() => kliJudicialArr.value.reduce((s, c) => s + Number(c.importe_participacion), 0))
 const kliJudicialN   = computed(() => kliJudicialArr.value.length)
-const kliJudicialPct = computed(() => kliActivo.value ? (kliJudicial.value / kliActivo.value * 100).toFixed(1) : '0.0')
+const kliJudicialPct = computed(() => kliEnCurso.value ? (kliJudicial.value / kliEnCurso.value * 100).toFixed(1) : '0.0')
 const kliCancelados  = computed(() => kliEnriquecidos.value.filter(c => c.estadoPrestamo === 'cancelado'))
 const kliCancelado   = computed(() => kliCancelados.value.reduce((s, c) => s + Number(c.importe_participacion), 0))
 const kliCanceladoN  = computed(() => new Set(kliCancelados.value.map(c => c.prestamo_id)).size)

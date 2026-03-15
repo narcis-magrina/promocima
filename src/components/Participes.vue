@@ -2,7 +2,7 @@
   <div>
     <!-- DETALLE -->
     <template v-if="viewId && participe">
-      <div class="back-btn" @click="$emit('navigate','participes')">← Volver a Partícipes</div>
+      <div v-if="!esPortalParticipe" class="back-btn" @click="$emit('navigate','participes')">← Volver a Partícipes</div>
       <div class="section-header">
         <div>
           <div class="section-title">{{ participe.nombre }}</div>
@@ -21,27 +21,27 @@
         <!-- Fila 1: Estado préstamos -->
         <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:14px">
           <div class="kpi-card kc-purple">
-            <div class="kpi-label">Préstamos Participados</div>
-            <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--purple)">{{ fmtN(kpartActivo) }}</div>
-            <div class="kpi-sub">{{ kpartActivoN }} préstamo{{ kpartActivoN!==1?'s':''}} activo{{ kpartActivoN!==1?'s':'' }}</div>
+            <div class="kpi-label">Capital En Curso <HelpTip :texto="help.capital_en_curso" pos="right" /></div>
+            <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--purple)">{{ fmtN(kpartEnCurso) }}</div>
+            <div class="kpi-sub">{{ kpartEnCursoN }} préstamo{{ kpartEnCursoN!==1?'s':''}} en curso</div>
           </div>
           <div class="kpi-card kc-green">
-            <div class="kpi-label">Al Día</div>
+            <div class="kpi-label">Al Día <HelpTip :texto="help.al_dia" pos="right" /></div>
             <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--green)">{{ fmtN(kpartAlDia) }}</div>
             <div class="kpi-sub">{{ kpartAlDiaN }} préstamo{{ kpartAlDiaN!==1?'s':''  }}</div>
           </div>
           <div class="kpi-card kc-orange">
-            <div class="kpi-label">Con Retraso</div>
+            <div class="kpi-label">Con Retraso <HelpTip :texto="help.con_retraso" pos="right" /></div>
             <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--orange)">{{ fmtN(kpartRetraso) }}</div>
             <div class="kpi-sub">{{ kpartRetrasoN }} préstamo{{ kpartRetrasoN!==1?'s':''  }}</div>
           </div>
           <div class="kpi-card kc-red">
-            <div class="kpi-label">Judicializados</div>
+            <div class="kpi-label">Judicializados <HelpTip :texto="help.judicializado" pos="right" /></div>
             <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--red)">{{ fmtN(kpartJudicial) }}</div>
             <div class="kpi-sub">{{ kpartJudicialN }} préstamo{{ kpartJudicialN!==1?'s':''  }}</div>
           </div>
           <div class="kpi-card kc-gray-dim">
-            <div class="kpi-label">Cancelados</div>
+            <div class="kpi-label">Cancelados <HelpTip :texto="help.cancelado" pos="right" /></div>
             <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--text3)">{{ fmtN(kpartCancelado) }}</div>
             <div class="kpi-sub">{{ kpartCanceladoN }} préstamo{{ kpartCanceladoN!==1?'s':''  }}</div>
           </div>
@@ -138,11 +138,11 @@
       <!-- KPIs -->
       <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
         <div class="kpi-card kc-purple">
-          <div class="kpi-label">Importe Participación Activa</div>
+          <div class="kpi-label">Importe Participación En Curso <HelpTip :texto="help.participacion_en_curso" /></div>
           <div class="kpi-value" style="color:var(--purple)">{{ fmtN(kpiImporteParticipado) }}</div>
         </div>
         <div class="kpi-card kc-green">
-          <div class="kpi-label">Préstamos Participados Activos</div>
+          <div class="kpi-label">Préstamos En Curso <HelpTip :texto="help.prestamos_en_curso" /></div>
           <div class="kpi-value">{{ kpiNPrestamosActivos }}</div>
           <div class="kpi-sub">
             Al día: {{ kpiAlDia }} · Retraso: {{ kpiConRetraso }} · Judicial: {{ kpiJudicializados }}
@@ -273,6 +273,8 @@ import { ref, computed, toRef, onMounted, watch } from 'vue'
 import { usePersistedRef } from '../composables/usePersistedRef.js'
 import { useSort } from '../composables/useSort.js'
 import { useCrud } from '../composables/useCrud.js'
+import HelpTip from './HelpTip.vue'
+import { help } from '../helpTexts.js'
 import { fmt, fmtInt, fmtN, fmtDate, today , generateCalendarioTeorico, distribuirCobros, calcSituacionPrestamo , fmtDec } from '../utils.js'
 import { supabase } from '../supabase.js'
 
@@ -281,6 +283,7 @@ const props = defineProps({
   readOnly: { type: Boolean, default: false },       // oculta botones de acción
   soloEditarContacto: { type: Boolean, default: false }, // modal solo edita tel/email/dir
   vistaContratos: { type: Boolean, default: false },  // muestra solo la tabla de contratos
+  esPortalParticipe: { type: Boolean, default: false }, // oculta navegación interna (back-btn)
 })
 const emit = defineEmits(['navigate'])
 
@@ -504,8 +507,8 @@ const kpiPartEnr = computed(() =>
 
 // Por estado de préstamo — suma importe_participacion como proxy del principal
 const kpiPartActivos    = computed(() => kpiPartEnr.value.filter(c => c.activo && c.estadoPrestamo !== 'cancelado'))
-const kpartActivo       = computed(() => kpiPartActivos.value.reduce((s, c) => s + Number(c.importe_participacion), 0))
-const kpartActivoN      = computed(() => kpiPartActivos.value.length)
+const kpartEnCurso       = computed(() => kpiPartActivos.value.reduce((s, c) => s + Number(c.importe_participacion), 0))
+const kpartEnCursoN      = computed(() => kpiPartActivos.value.length)
 const kpartAlDiaN       = computed(() => kpiPartActivos.value.filter(c => c.estadoPrestamo === 'al_dia').length)
 const kpartAlDia        = computed(() => kpiPartActivos.value.filter(c => c.estadoPrestamo === 'al_dia').reduce((s,c)=>s+Number(c.importe_participacion),0))
 const kpartRetrasoN     = computed(() => kpiPartActivos.value.filter(c => c.estadoPrestamo === 'con_retraso').length)
@@ -541,8 +544,8 @@ const kpartBrutoMes = computed(() => {
 const kpartIrpfMes  = computed(() => Math.round(kpartBrutoMes.value * (kpartIrpf.value / 100) * 100) / 100)
 const kpartNetoMes  = computed(() => Math.round((kpartBrutoMes.value - kpartIrpfMes.value) * 100) / 100)
 const kpartRentPct  = computed(() => {
-  if (!kpartActivo.value) return '0.00'
-  return (kpartBrutoMes.value * 12 / kpartActivo.value * 100).toFixed(2)
+  if (!kpartEnCurso.value) return '0.00'
+  return (kpartBrutoMes.value * 12 / kpartEnCurso.value * 100).toFixed(2)
 })
 
 // Acumulados — todos los registros son pagos reales en nueva arquitectura

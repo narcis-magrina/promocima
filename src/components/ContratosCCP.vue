@@ -8,6 +8,7 @@
       :prestamo-detalle="prestamoDetalle"
       :cobros-prestamo="cobrosPrestamo"
       :read-only="readOnly"
+      :es-portal-participe="esPortalParticipe"
       @navigate="(page, id) => $emit('navigate', page, id)"
       @editar="editarContrato"
     />
@@ -104,7 +105,11 @@ import ContratoCCPDetalle from './ContratoCCPDetalle.vue'
 import ContratoCCPLista   from './ContratoCCPLista.vue'
 
 // ── Props / emits ──────────────────────────────
-const props = defineProps({ viewId: String, readOnly: { type: Boolean, default: false } })
+const props = defineProps({
+  viewId:            String,
+  readOnly:          { type: Boolean, default: false },
+  esPortalParticipe: { type: Boolean, default: false }, // se pasa al detalle para ocultar back-btn
+})
 const emit  = defineEmits(['navigate'])
 
 // ── Estado ─────────────────────────────────────

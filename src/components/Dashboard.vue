@@ -3,29 +3,29 @@
     <!-- KPIs -->
     <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
 
-      <!-- KPI 1: Capital Desplegado -->
+      <!-- KPI 1: Capital En Curso -->
       <div class="kpi-card kc-green">
-        <div class="kpi-label">Capital Desplegado</div>
-        <div class="kpi-value">{{ fmtN(capitalActivo) }}</div>
+        <div class="kpi-label">Capital En Curso <HelpTip :texto="help.capital_en_curso" /></div>
+        <div class="kpi-value">{{ fmtN(capitalEnCurso) }}</div>
         <div style="margin-top:10px;display:grid;gap:5px">
           <div style="display:flex;justify-content:space-between;font-size:11px">
-            <span style="color:var(--text3)">Capital activo (vivo)</span>
-            <span style="font-family:var(--mono);color:var(--green)">{{ fmtInt(capitalActivoReal) }}</span>
+            <span style="color:var(--text3)">Capital Activo <HelpTip :texto="help.capital_activo" pos="right" /></span>
+            <span style="font-family:var(--mono);color:var(--green)">{{ fmtInt(capitalActivo) }}</span>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:11px">
-            <span style="color:var(--text3)">Capital participado activo</span>
+            <span style="color:var(--text3)">Capital participado activo <HelpTip :texto="help.capital_participado" pos="right" /></span>
             <span style="font-family:var(--mono);color:var(--purple)">{{ fmtInt(capitalParticipado) }}</span>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:11px">
             <span style="color:var(--text3)">Promocima activo</span>
-            <span style="font-family:var(--mono);color:var(--blue)">{{ fmtInt(capitalActivoReal - capitalParticipado) }}</span>
+            <span style="font-family:var(--mono);color:var(--blue)">{{ fmtInt(capitalEnCurso - capitalParticipado) }}</span>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:11px;margin-top:2px;padding-top:5px;border-top:1px solid var(--border)">
             <span style="color:var(--text3)">Rentabilidad media</span>
             <span style="font-family:var(--mono);color:var(--accent)">{{ rentabilidadMedia }}%</span>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:11px">
-            <span style="color:var(--text3)">LTV medio cartera</span>
+            <span style="color:var(--text3)">LTV medio cartera <HelpTip :texto="help.ltv" pos="right" /></span>
             <span style="font-family:var(--mono)" :style="parseFloat(ltvMedio) <= 40 ? 'color:var(--green)' : 'color:var(--orange)'">{{ ltvMedio }}%</span>
           </div>
         </div>
@@ -61,12 +61,12 @@
         <div class="kpi-value">{{ incidencias }}</div>
         <div style="margin-top:10px;display:grid;gap:5px">
           <div style="display:flex;justify-content:space-between;font-size:11px">
-            <span style="color:var(--text3)">Con retraso</span>
-            <span style="font-family:var(--mono);color:var(--orange)">{{ fmtInt(importeRetraso) }} <span style="color:var(--text3)">({{ enRetraso }})</span></span>
+            <span style="color:var(--text3)">Con retraso <HelpTip :texto="help.con_retraso" pos="right" /></span>
+            <span style="font-family:var(--mono);color:var(--orange)">{{ fmtInt(importeRetraso) }} <span style="color:var(--text3)">({{ nConRetraso }})</span></span>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:11px">
-            <span style="color:var(--text3)">Judicializados</span>
-            <span style="font-family:var(--mono);color:var(--red)">{{ fmtInt(importeJudicial) }} <span style="color:var(--text3)">({{ judicializados }})</span></span>
+            <span style="color:var(--text3)">Judicializados <HelpTip :texto="help.judicializado" pos="right" /></span>
+            <span style="font-family:var(--mono);color:var(--red)">{{ fmtInt(importeJudicial) }} <span style="color:var(--text3)">({{ nJudicializados }})</span></span>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:11px;margin-top:2px;padding-top:5px;border-top:1px solid var(--border)">
             <span style="color:var(--text3)">% incidencias (importe)</span>
@@ -120,7 +120,7 @@
         </tbody>
         <tfoot>
           <tr style="border-top:2px solid var(--border);background:var(--bg2)">
-            <td style="text-align:left;font-weight:700;font-size:13px;padding:10px 12px">Total activos</td>
+            <td style="text-align:left;font-weight:700;font-size:13px;padding:10px 12px">Total en curso</td>
             <td style="text-align:center;font-size:13px;padding:10px 12px">{{ resumenEstados.filter(r => r.est !== 'cancelado').reduce((s,r) => s + r.count, 0) }}</td>
             <td style="text-align:right;font-family:var(--mono);font-size:12px;padding:10px 12px" class="col-hide-mobile">{{ fmtN(resumenEstados.filter(r => r.est !== 'cancelado').reduce((s,r) => s + r.capital, 0)) }}</td>
             <td style="padding:10px 12px" class="col-hide-mobile"></td>
@@ -168,8 +168,8 @@
               <span class="td-count">({{ row.judicial_n }})</span>
             </td>
             <td class="td-mono td-right col-hide-mobile" style="font-weight:600">
-              {{ fmtN(row.activos_imp) }}
-              <span class="td-count">({{ row.activos_n }})</span>
+              {{ fmtN(row.en_curso_imp) }}
+              <span class="td-count">({{ row.en_curso_n }})</span>
             </td>
             <td class="td-mono td-right" style="color:var(--green);font-weight:600">
               {{ fmtN(row.capital_activo_imp) }}
@@ -194,7 +194,7 @@
             <td style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--orange);padding:10px 12px">{{ fmtN(porIntermediario.reduce((s,r) => s + r.retraso_imp, 0)) }} <span style="color:var(--text3);font-size:11px">({{ porIntermediario.reduce((s,r) => s + r.retraso_n, 0) }})</span></td>
             <td style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--text3);padding:10px 12px" class="col-hide-mobile">{{ fmtN(porIntermediario.reduce((s,r) => s + r.cancelado_imp, 0)) }} <span style="color:var(--text3);font-size:11px">({{ porIntermediario.reduce((s,r) => s + r.cancelado_n, 0) }})</span></td>
             <td style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--red);padding:10px 12px">{{ fmtN(porIntermediario.reduce((s,r) => s + r.judicial_imp, 0)) }} <span style="color:var(--text3);font-size:11px">({{ porIntermediario.reduce((s,r) => s + r.judicial_n, 0) }})</span></td>
-            <td style="text-align:right;font-family:var(--mono);font-size:12px;padding:10px 12px" class="col-hide-mobile">{{ fmtN(porIntermediario.reduce((s,r) => s + r.activos_imp, 0)) }} <span style="color:var(--text3);font-size:11px">({{ porIntermediario.reduce((s,r) => s + r.activos_n, 0) }})</span></td>
+            <td style="text-align:right;font-family:var(--mono);font-size:12px;padding:10px 12px" class="col-hide-mobile">{{ fmtN(porIntermediario.reduce((s,r) => s + r.en_curso_imp, 0)) }} <span style="color:var(--text3);font-size:11px">({{ porIntermediario.reduce((s,r) => s + r.en_curso_n, 0) }})</span></td>
             <td style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--green);padding:10px 12px">{{ fmtN(porIntermediario.reduce((s,r) => s + r.capital_activo_imp, 0)) }}</td>
             <td style="padding:10px 12px"></td>
           </tr>
@@ -239,8 +239,8 @@
               <span class="td-count">({{ row.judicial_n }})</span>
             </td>
             <td class="td-mono td-right col-hide-mobile" style="font-weight:600">
-              {{ fmtN(row.activos_imp) }}
-              <span class="td-count">({{ row.activos_n }})</span>
+              {{ fmtN(row.en_curso_imp) }}
+              <span class="td-count">({{ row.en_curso_n }})</span>
             </td>
             <td class="td-mono td-right" style="color:var(--green);font-weight:600">
               {{ fmtN(row.capital_activo_imp) }}
@@ -255,7 +255,7 @@
             </td>
           </tr>
           <!-- Préstamos sin partícipe (no compartidos con ningún partícipe) -->
-          <tr v-if="sinParticipe.activos_n > 0 || sinParticipe.cancelado_n > 0" style="border-top:2px solid var(--border)">
+          <tr v-if="sinParticipe.en_curso_n > 0 || sinParticipe.cancelado_n > 0" style="border-top:2px solid var(--border)">
             <td style="font-style:italic;color:var(--text3)">Sin partícipe</td>
             <td class="td-mono td-right">
               <span style="color:var(--text3)">{{ fmtN(sinParticipe.al_dia_imp) }}</span>
@@ -274,8 +274,8 @@
               <span class="td-count">({{ sinParticipe.judicial_n }})</span>
             </td>
             <td class="td-mono td-right" style="font-weight:600;color:var(--text3)">
-              {{ fmtN(sinParticipe.activos_imp) }}
-              <span style="font-size:11px"> ({{ sinParticipe.activos_n }})</span>
+              {{ fmtN(sinParticipe.en_curso_imp) }}
+              <span style="font-size:11px"> ({{ sinParticipe.en_curso_n }})</span>
             </td>
             <td class="td-mono td-right" style="color:var(--green);font-weight:600">
               {{ fmtN(sinParticipe.capital_activo_imp) }}
@@ -293,14 +293,14 @@
             <td colspan="8" class="table-empty">Sin datos</td>
           </tr>
         </tbody>
-        <tfoot v-if="porParticipe.length || (sinParticipe && sinParticipe.activos_n > 0)">
+        <tfoot v-if="porParticipe.length || (sinParticipe && sinParticipe.en_curso_n > 0)">
           <tr style="border-top:2px solid var(--border);background:var(--bg2)">
             <td style="text-align:left;font-weight:700;font-size:13px;padding:10px 12px">Total</td>
             <td style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--green);padding:10px 12px">{{ fmtN([...porParticipe, ...(sinParticipe ? [sinParticipe] : [])].reduce((s,r) => s + r.al_dia_imp, 0)) }} <span style="color:var(--text3);font-size:11px">({{ [...porParticipe, ...(sinParticipe ? [sinParticipe] : [])].reduce((s,r) => s + r.al_dia_n, 0) }})</span></td>
             <td style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--orange);padding:10px 12px">{{ fmtN([...porParticipe, ...(sinParticipe ? [sinParticipe] : [])].reduce((s,r) => s + r.retraso_imp, 0)) }} <span style="color:var(--text3);font-size:11px">({{ [...porParticipe, ...(sinParticipe ? [sinParticipe] : [])].reduce((s,r) => s + r.retraso_n, 0) }})</span></td>
             <td style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--text3);padding:10px 12px" class="col-hide-mobile">{{ fmtN([...porParticipe, ...(sinParticipe ? [sinParticipe] : [])].reduce((s,r) => s + r.cancelado_imp, 0)) }} <span style="color:var(--text3);font-size:11px">({{ [...porParticipe, ...(sinParticipe ? [sinParticipe] : [])].reduce((s,r) => s + r.cancelado_n, 0) }})</span></td>
             <td style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--red);padding:10px 12px">{{ fmtN([...porParticipe, ...(sinParticipe ? [sinParticipe] : [])].reduce((s,r) => s + r.judicial_imp, 0)) }} <span style="color:var(--text3);font-size:11px">({{ [...porParticipe, ...(sinParticipe ? [sinParticipe] : [])].reduce((s,r) => s + r.judicial_n, 0) }})</span></td>
-            <td style="text-align:right;font-family:var(--mono);font-size:12px;padding:10px 12px" class="col-hide-mobile">{{ fmtN([...porParticipe, ...(sinParticipe ? [sinParticipe] : [])].reduce((s,r) => s + r.activos_imp, 0)) }} <span style="color:var(--text3);font-size:11px">({{ [...porParticipe, ...(sinParticipe ? [sinParticipe] : [])].reduce((s,r) => s + r.activos_n, 0) }})</span></td>
+            <td style="text-align:right;font-family:var(--mono);font-size:12px;padding:10px 12px" class="col-hide-mobile">{{ fmtN([...porParticipe, ...(sinParticipe ? [sinParticipe] : [])].reduce((s,r) => s + r.en_curso_imp, 0)) }} <span style="color:var(--text3);font-size:11px">({{ [...porParticipe, ...(sinParticipe ? [sinParticipe] : [])].reduce((s,r) => s + r.en_curso_n, 0) }})</span></td>
             <td style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--green);padding:10px 12px">{{ fmtN([...porParticipe, ...(sinParticipe ? [sinParticipe] : [])].reduce((s,r) => s + r.capital_activo_imp, 0)) }}</td>
             <td style="padding:10px 12px"></td>
           </tr>
@@ -314,6 +314,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../supabase.js'
 import { fmt, fmtInt, fmtN, calcInteresOrdinario, getEstadoBadge, generateCalendarioTeorico, today , distribuirCobros } from '../utils.js'
+import HelpTip from './HelpTip.vue'
+import { help } from '../helpTexts.js'
 
 defineEmits(['navigate'])
 
@@ -378,27 +380,27 @@ function tieneRetraso(p) {
   })
 }
 
-function estadoCalc(p) {
+function calcEstadoPrestamo(p) {
   if (p.estado === 'cancelado')     return 'cancelado'
   if (p.estado === 'judicializado') return 'judicializado'
   return tieneRetraso(p) ? 'con_retraso' : 'al_dia'
 }
 
 // ── KPIs ─────────────────────────────────────────────────────────────────────
-const prestamosActivos = computed(() => prestamosRaw.value.filter(p => p.estado !== 'cancelado'))
-const capitalActivo    = computed(() => prestamosActivos.value.reduce((s, p) => s + Number(p.importe), 0))
-const enRetraso        = computed(() => prestamosActivos.value.filter(p => tieneRetraso(p)).length)
-const judicializados   = computed(() => prestamosActivos.value.filter(p => p.estado === 'judicializado').length)
-const incidencias      = computed(() => enRetraso.value + judicializados.value)
+const prestamosEnCurso = computed(() => prestamosRaw.value.filter(p => p.estado !== 'cancelado'))
+const capitalEnCurso   = computed(() => prestamosEnCurso.value.reduce((s, p) => s + Number(p.importe), 0))
+const nConRetraso        = computed(() => prestamosEnCurso.value.filter(p => tieneRetraso(p)).length)
+const nJudicializados   = computed(() => prestamosEnCurso.value.filter(p => p.estado === 'judicializado').length)
+const incidencias      = computed(() => nConRetraso.value + nJudicializados.value)
 
 const interesesMes = computed(() =>
-  prestamosActivos.value
+  prestamosEnCurso.value
     .filter(p => p.estado !== 'judicializado')
     .reduce((s, p) => s + calcInteresOrdinario(Number(p.importe), Number(p.interes_ordinario)), 0)
 )
 
 const ltvMedio = computed(() => {
-  const vals = prestamosActivos.value
+  const vals = prestamosEnCurso.value
     .filter(p => p.garantia_tasacion)
     .map(p => Number(p.importe) / Number(p.garantia_tasacion) * 100)
   if (!vals.length) return 0
@@ -408,25 +410,25 @@ const ltvMedio = computed(() => {
 // Capital participado: suma real de importe_participacion de contratos CCP activos en préstamos activos
 const prestamosConCCP = computed(() => {
   const ids = new Set(ccpRaw.value.map(c => c.prestamo_id))
-  return prestamosActivos.value.filter(p => ids.has(p.id))
+  return prestamosEnCurso.value.filter(p => ids.has(p.id))
 })
 const capitalParticipado = computed(() =>
   ccpRaw.value
-    .filter(c => prestamosActivos.value.some(p => p.id === c.prestamo_id))
+    .filter(c => prestamosEnCurso.value.some(p => p.id === c.prestamo_id))
     .reduce((s, c) => s + Number(c.importe_participacion || 0), 0)
 )
 const nParticipados = computed(() => prestamosConCCP.value.length)
 
 // Capital activo real (descuenta principal ya amortizado en préstamos franceses)
-const capitalActivoReal = computed(() =>
-  prestamosActivos.value
+const capitalActivo = computed(() =>
+  prestamosEnCurso.value
     .reduce((s, p) => s + calcCapitalActivoPrestamo(p), 0)
 )
 
 // Intereses devengados a partícipes = importe_participacion × tasa_mensual (bruto, sin IRPF ni gestión)
 const pagosParticipesMes = computed(() =>
   ccpRaw.value.reduce((s, ccp) => {
-    const prestamo = prestamosActivos.value.find(p => p.id === ccp.prestamo_id)
+    const prestamo = prestamosEnCurso.value.find(p => p.id === ccp.prestamo_id)
     if (!prestamo || prestamo.estado === 'judicializado') return s
     const tasa = Number(prestamo.interes_ordinario) / 100 / 12
     return s + Number(ccp.importe_participacion) * tasa
@@ -436,7 +438,7 @@ const pagosParticipesMes = computed(() =>
 // Ingresos por gestión = importe_participacion × % gestión / 12
 const ingresosGestionMes = computed(() =>
   ccpRaw.value.reduce((s, ccp) => {
-    const prestamo = prestamosActivos.value.find(p => p.id === ccp.prestamo_id)
+    const prestamo = prestamosEnCurso.value.find(p => p.id === ccp.prestamo_id)
     if (!prestamo || prestamo.estado === 'judicializado') return s
     return s + Number(ccp.importe_participacion) * (Number(ccp.porcentaje_gestion || 0) / 100) / 12
   }, 0)
@@ -448,24 +450,24 @@ const netoPromocima = computed(() =>
 )
 
 const rentabilidadMedia = computed(() => {
-  const activos = prestamosActivos.value.filter(p => p.estado !== 'judicializado')
+  const activos = prestamosEnCurso.value.filter(p => p.estado !== 'judicializado')
   if (!activos.length) return '0.0'
   const media = activos.reduce((s, p) => s + Number(p.interes_ordinario), 0) / activos.length
   return media.toFixed(1)
 })
 
 const rentabilidadPromocima = computed(() => {
-  const capitalPropioActivo = capitalActivoReal.value - capitalParticipado.value
+  const capitalPropioActivo = capitalActivo.value - capitalParticipado.value
   if (!capitalPropioActivo) return '0.0'
   return (netoPromocima.value / capitalPropioActivo * 100 * 12).toFixed(1)
 })
 
 const importeRetraso = computed(() =>
-  prestamosActivos.value.filter(p => tieneRetraso(p)).reduce((s, p) => s + Number(p.importe), 0)
+  prestamosEnCurso.value.filter(p => tieneRetraso(p)).reduce((s, p) => s + Number(p.importe), 0)
 )
 
 const importeJudicial = computed(() =>
-  prestamosActivos.value.filter(p => p.estado === 'judicializado').reduce((s, p) => s + Number(p.importe), 0)
+  prestamosEnCurso.value.filter(p => p.estado === 'judicializado').reduce((s, p) => s + Number(p.importe), 0)
 )
 
 const pctIncidencias = computed(() => {
@@ -498,8 +500,8 @@ const resumenEstados = computed(() => {
   const totalCapital  = todos.reduce((s, p) => s + Number(p.importe), 0)
   const activosCapital = todos.filter(p => p.estado !== 'cancelado').reduce((s, p) => s + Number(p.importe), 0)
   function filtrar(est) {
-    if (est === 'con_retraso') return todos.filter(p => estadoCalc(p) === 'con_retraso')
-    if (est === 'al_dia')      return todos.filter(p => estadoCalc(p) === 'al_dia')
+    if (est === 'con_retraso') return todos.filter(p => calcEstadoPrestamo(p) === 'con_retraso')
+    if (est === 'al_dia')      return todos.filter(p => calcEstadoPrestamo(p) === 'al_dia')
     return todos.filter(p => p.estado === est)
   }
   return [
@@ -524,7 +526,7 @@ const resumenEstados = computed(() => {
 
 // ── Helper: agrega un array de préstamos en una fila de resumen ───────────────
 function fila(ps, totalActivosCartera, totalCapitalActivoCartera) {
-  const est      = e => ps.filter(p => estadoCalc(p) === e)
+  const est      = e => ps.filter(p => calcEstadoPrestamo(p) === e)
   const imp      = arr => arr.reduce((s, p) => s + Number(p.importe), 0)
   const al_dia   = est('al_dia')
   const retraso  = est('con_retraso')
@@ -538,7 +540,7 @@ function fila(ps, totalActivosCartera, totalCapitalActivoCartera) {
     retraso_imp: imp(retraso),    retraso_n: retraso.length,
     cancelado_imp: imp(cancelado),cancelado_n: cancelado.length,
     judicial_imp: imp(judicial),  judicial_n: judicial.length,
-    activos_imp: activosImp,      activos_n: activosArr.length,
+    en_curso_imp: activosImp,      en_curso_n: activosArr.length,
     capital_activo_imp: capitalActivoImp,
     pct: totalCapitalActivoCartera ? capitalActivoImp / totalCapitalActivoCartera * 100 : 0,
   }
@@ -559,7 +561,7 @@ const porIntermediario = computed(() => {
       nombre: key === '__sin__' ? 'Sin intermediario' : (interMap[key] || key),
       ...fila(ps, null, totalCapitalActivo),
     }))
-    .sort((a, b) => b.activos_imp - a.activos_imp)
+    .sort((a, b) => b.en_curso_imp - a.en_curso_imp)
 })
 
 // ── Por partícipe ─────────────────────────────────────────────────────────────
@@ -622,19 +624,19 @@ const porParticipe = computed(() => {
       }
     }
 
-    const activos_imp = al_dia_imp + retraso_imp + judicial_imp
-    const activos_n   = al_dia_n + retraso_n + judicial_n
+    const en_curso_imp = al_dia_imp + retraso_imp + judicial_imp
+    const en_curso_n   = al_dia_n + retraso_n + judicial_n
     return {
       nombre,
       al_dia_imp, al_dia_n,
       retraso_imp, retraso_n,
       cancelado_imp, cancelado_n,
       judicial_imp, judicial_n,
-      activos_imp, activos_n,
+      en_curso_imp, en_curso_n,
       capital_activo_imp,
       pct: totalCapitalActivo ? capital_activo_imp / totalCapitalActivo * 100 : 0,
     }
-  }).sort((a, b) => b.activos_imp - a.activos_imp)
+  }).sort((a, b) => b.en_curso_imp - a.en_curso_imp)
 })
 
 // ── Sin partícipe ─────────────────────────────────────────────────────────────
@@ -679,17 +681,17 @@ const sinParticipe = computed(() => {
     }
   }
 
-  const activos_imp = al_dia_imp + retraso_imp + judicial_imp
-  const activos_n   = al_dia_n + retraso_n + judicial_n
+  const en_curso_imp = al_dia_imp + retraso_imp + judicial_imp
+  const en_curso_n   = al_dia_n + retraso_n + judicial_n
   return {
     al_dia_imp, al_dia_n,
     retraso_imp, retraso_n,
     cancelado_imp, cancelado_n,
     judicial_imp, judicial_n,
-    activos_imp, activos_n,
+    en_curso_imp, en_curso_n,
     capital_activo_imp,
     pct: totalCapitalActivo ? capital_activo_imp / totalCapitalActivo * 100 : 0,
-    total_n: activos_n + cancelado_n,
+    total_n: en_curso_n + cancelado_n,
   }
 })
 </script>

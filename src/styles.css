@@ -274,6 +274,30 @@ input[type="number"] { -moz-appearance: textfield; }
 /* ── TD COUNT (nº préstamos inline) ─────────────────────────────────────────── */
 .td-count { display: inline; font-size: 11px; color: var(--text3); margin-left: 4px; }
 
+/* ── HELP TIP ────────────────────────────────────────────────────────────────── */
+.help-tip { position: relative; display: inline-flex; align-items: center; margin-left: 5px; vertical-align: middle; }
+.help-tip-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--bg3); border: 1px solid var(--border2);
+  color: var(--text3); font-size: 9px; font-weight: 700;
+  cursor: default; line-height: 1; user-select: none;
+  transition: background 0.15s, color 0.15s;
+}
+.help-tip:hover .help-tip-icon { background: var(--bg4); color: var(--text2); }
+.help-tip-bubble {
+  position: absolute; z-index: 200;
+  background: var(--bg); border: 1px solid var(--border2);
+  border-radius: 6px; padding: 8px 10px;
+  font-size: 12px; color: var(--text2); font-weight: 400;
+  line-height: 1.5; white-space: normal;
+  width: 220px; pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+.help-tip-bubble.bottom { top: calc(100% + 6px); left: 50%; transform: translateX(-50%); }
+.help-tip-bubble.top    { bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); }
+.help-tip-bubble.right  { left: calc(100% + 6px); top: 50%; transform: translateY(-50%); }
+
 /* ── HAMBURGER ──────────────────────────────────────────────────────────────── */
 .hamburger-btn {
   display: none;

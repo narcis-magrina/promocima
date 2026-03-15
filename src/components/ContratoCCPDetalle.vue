@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="back-btn" @click="$emit('navigate','contratos-ccp')">← Volver a Contratos CCP</div>
+    <div v-if="!esPortalParticipe" class="back-btn" @click="$emit('navigate','contratos-ccp')">← Volver a Contratos CCP</div>
 
     <!-- Cabecera -->
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px">
@@ -420,10 +420,11 @@ import { fmt, fmtDate, today, uuid, calcularLineasCCP , fmtDec } from '../utils.
 import { eliminarPago } from '../composables/useDevengados.js'
 
 const props = defineProps({
-  contrato:        { type: Object, required: true },
-  prestamoDetalle: { type: Object, default: null },
-  cobrosPrestamo:  { type: Array,  default: () => [] },
-  readOnly:        { type: Boolean, default: false },
+  contrato:          { type: Object, required: true },
+  prestamoDetalle:   { type: Object, default: null },
+  cobrosPrestamo:    { type: Array,  default: () => [] },
+  readOnly:          { type: Boolean, default: false },
+  esPortalParticipe: { type: Boolean, default: false }, // oculta navegación interna (back-btn)
 })
 const emit = defineEmits(['navigate', 'recargar', 'editar'])
 

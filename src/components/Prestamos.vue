@@ -16,26 +16,26 @@
     <template v-else-if="!viewId">
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px">
         <div class="kpi-card kc-green">
-          <div class="kpi-label">Capital Activo</div>
-          <div class="kpi-value">{{ fmtN(capitalTotal) }}</div>
+          <div class="kpi-label">Capital En Curso <HelpTip :texto="help.capital_en_curso" /></div>
+          <div class="kpi-value">{{ fmtN(capitalEnCurso) }}</div>
           <div class="kpi-sub">Capital inicial: {{ fmtInt(prestamosConSituacion.filter(p => p.estado !== 'cancelado').reduce((s,p) => s + Number(p.importe), 0)) }}</div>
-          <div class="kpi-sub">{{ prestamosConSituacion.filter(p => p.estado !== 'cancelado').length }} préstamos activos</div>
+          <div class="kpi-sub">{{ prestamosConSituacion.filter(p => p.estado !== 'cancelado').length }} préstamos en curso</div>
         </div>
         <div class="kpi-card kc-green">
-          <div class="kpi-label">Al Día</div>
-          <div class="kpi-value">{{ fmtN(capitalActivoAlDia) }}</div>
+          <div class="kpi-label">Al Día <HelpTip :texto="help.al_dia" /></div>
+          <div class="kpi-value">{{ fmtN(capitalAlDia) }}</div>
           <div class="kpi-sub">Capital inicial: {{ fmtInt(capitalInicialAlDia) }}</div>
           <div class="kpi-sub">{{ nAlDia }} préstamo{{ nAlDia !== 1 ? 's' : '' }}</div>
         </div>
         <div class="kpi-card kc-orange">
-          <div class="kpi-label">Con Retraso</div>
-          <div class="kpi-value">{{ fmtN(capitalActivoRetraso) }}</div>
+          <div class="kpi-label">Con Retraso <HelpTip :texto="help.con_retraso" /></div>
+          <div class="kpi-value">{{ fmtN(capitalConRetraso) }}</div>
           <div class="kpi-sub">Capital inicial: {{ fmtInt(capitalInicialRetraso) }}</div>
           <div class="kpi-sub">{{ nConRetraso }} préstamo{{ nConRetraso !== 1 ? 's' : '' }}</div>
         </div>
         <div class="kpi-card kc-red">
-          <div class="kpi-label">Judicializados</div>
-          <div class="kpi-value">{{ fmtN(capitalActivoJudicial) }}</div>
+          <div class="kpi-label">Judicializados <HelpTip :texto="help.judicializado" /></div>
+          <div class="kpi-value">{{ fmtN(capitalJudicializado) }}</div>
           <div class="kpi-sub">Capital inicial: {{ fmtInt(capitalInicialJudicial) }}</div>
           <div class="kpi-sub">{{ nJudicializados }} préstamo{{ nJudicializados !== 1 ? 's' : '' }}</div>
         </div>
@@ -249,6 +249,8 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useSort } from '../composables/useSort.js'
 import { usePersistedRef } from '../composables/usePersistedRef.js'
 import { supabase } from '../supabase.js'
+import HelpTip from './HelpTip.vue'
+import { help } from '../helpTexts.js'
 import { fmt, fmtInt, fmtN, fmtDate, generateCalendarioTeorico, distribuirCobros, getCuotaEstado, getEstadoBadge, getTipoBadge, uuid, today } from '../utils.js'
 const fmtDateShort = (d) => { if (!d) return '—'; const dt = new Date(d + 'T00:00:00'); return dt.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' }) }
 import PrestamoDetalle from './PrestamoDetalle.vue'
@@ -367,7 +369,7 @@ function calcCapitalActivoPrestamo(p) {
   return Math.max(0, Math.round((Number(p.importe) - totalAmort - amortCuotas) * 100) / 100)
 }
 
-const capitalTotal = computed(() =>
+const capitalEnCurso = computed(() =>
   prestamosConSituacion.value
     .filter(p => p.estado !== 'cancelado')
     .reduce((s, p) => s + calcCapitalActivoPrestamo(p), 0)
@@ -381,9 +383,9 @@ const alDiaArr        = computed(() => activos.value.filter(p => p.situacion ===
 const retrasoArr      = computed(() => activos.value.filter(p => p.situacion === 'con_retraso'))
 const judicialArr     = computed(() => prestamosConSituacion.value.filter(p => p.estado === 'judicializado'))
 
-const capitalActivoAlDia    = computed(() => alDiaArr.value.reduce((s,p) => s + calcCapitalActivoPrestamo(p), 0))
-const capitalActivoRetraso  = computed(() => retrasoArr.value.reduce((s,p) => s + calcCapitalActivoPrestamo(p), 0))
-const capitalActivoJudicial = computed(() => judicialArr.value.reduce((s,p) => s + calcCapitalActivoPrestamo(p), 0))
+const capitalAlDia    = computed(() => alDiaArr.value.reduce((s,p) => s + calcCapitalActivoPrestamo(p), 0))
+const capitalConRetraso  = computed(() => retrasoArr.value.reduce((s,p) => s + calcCapitalActivoPrestamo(p), 0))
+const capitalJudicializado = computed(() => judicialArr.value.reduce((s,p) => s + calcCapitalActivoPrestamo(p), 0))
 
 const capitalInicialAlDia    = computed(() => alDiaArr.value.reduce((s,p) => s + Number(p.importe), 0))
 const capitalInicialRetraso  = computed(() => retrasoArr.value.reduce((s,p) => s + Number(p.importe), 0))

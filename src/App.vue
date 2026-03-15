@@ -46,34 +46,33 @@
           <div v-for="pid in participeIds" :key="pid"
                class="nav-item"
                :class="{ active: participeActivoId === pid && !participeCcpId }"
-               @click="participeActivoId = pid; participeCcpId = null">
+               @click="participeActivoId = pid; participeCcpId = null; sidebarOpen = false">
             <span class="icon">▦</span> {{ nombresParticipes[pid] || pid }}
           </div>
         </div>
       </nav>
       <div class="sidebar-footer">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:8px">
           <div class="user-avatar">{{ initiales }}</div>
           <div class="user-info">
             <div class="name">{{ nombre }}</div>
             <div class="role">Partícipe</div>
           </div>
         </div>
-        <button class="btn btn-sm" style="width:100%;justify-content:center" @click="logout">
-          Cerrar sesión
-        </button>
       </div>
     </aside>
     <main class="main">
       <div class="topbar">
         <button class="hamburger-btn" @click="sidebarOpen = !sidebarOpen" aria-label="Menú">☰</button>
-        <div class="topbar-title">{{ participeCcpId ? 'Detalle Contrato' : (nombresParticipes[participeActivoId] || 'Mi Perfil') }}</div>
+        <div class="topbar-title">{{ participeCcpId ? 'Detalle Contrato' : 'Detalle Partícipe' }}</div>
+        <button class="btn btn-sm" @click="logout">Cerrar sesión</button>
       </div>
       <div class="content">
         <ContratosCCP
           v-if="participeCcpId"
           :view-id="participeCcpId"
           :read-only="true"
+          :es-portal-participe="true"
           @navigate="onParticipeNav"
         />
         <Participes
@@ -81,6 +80,7 @@
           :view-id="participeActivoId"
           :read-only="true"
           :solo-editar-contacto="true"
+          :es-portal-participe="true"
           @navigate="onParticipeNav"
         />
       </div>
