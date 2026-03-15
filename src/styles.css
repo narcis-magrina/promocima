@@ -144,7 +144,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); min-
 
 /* ── KPI CARDS ──────────────────────────────────────────────────────────────── */
 .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
-.kpi-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 18px 20px; position: relative; overflow: hidden; }
+.kpi-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 18px 20px; position: relative; }
 .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
 .kpi-card.kc-yellow::before   { background: var(--accent); }
 .kpi-card.kc-green::before    { background: var(--green); }
@@ -275,28 +275,67 @@ input[type="number"] { -moz-appearance: textfield; }
 .td-count { display: inline; font-size: 11px; color: var(--text3); margin-left: 4px; }
 
 /* ── HELP TIP ────────────────────────────────────────────────────────────────── */
-.help-tip { position: relative; display: inline-flex; align-items: center; margin-left: 5px; vertical-align: middle; }
+.help-tip { display: inline-flex; align-items: center; margin-left: 5px; vertical-align: middle; cursor: default; }
 .help-tip-icon {
   display: inline-flex; align-items: center; justify-content: center;
   width: 14px; height: 14px; border-radius: 50%;
   background: var(--bg3); border: 1px solid var(--border2);
   color: var(--text3); font-size: 9px; font-weight: 700;
-  cursor: default; line-height: 1; user-select: none;
+  line-height: 1; user-select: none;
   transition: background 0.15s, color 0.15s;
 }
 .help-tip:hover .help-tip-icon { background: var(--bg4); color: var(--text2); }
 .help-tip-bubble {
-  position: absolute; z-index: 200;
   background: var(--bg); border: 1px solid var(--border2);
   border-radius: 6px; padding: 8px 10px;
   font-size: 12px; color: var(--text2); font-weight: 400;
-  line-height: 1.5; white-space: normal;
-  width: 220px; pointer-events: none;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  line-height: 1.5; pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
-.help-tip-bubble.bottom { top: calc(100% + 6px); left: 50%; transform: translateX(-50%); }
-.help-tip-bubble.top    { bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); }
-.help-tip-bubble.right  { left: calc(100% + 6px); top: 50%; transform: translateY(-50%); }
+
+/* ── HELP PANEL ──────────────────────────────────────────────────────────────── */
+.help-panel-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--bg3); border: 1px solid var(--border2);
+  color: var(--text2); font-size: 13px; font-weight: 700;
+  cursor: pointer; transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+.help-panel-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.help-panel-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+  z-index: 500; display: flex; justify-content: flex-end;
+}
+.help-panel {
+  width: 360px; max-width: 95vw; height: 100%;
+  background: var(--bg2); border-left: 1px solid var(--border2);
+  display: flex; flex-direction: column;
+  animation: slideInRight 0.2s ease;
+}
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+.help-panel-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 20px 20px 16px; border-bottom: 1px solid var(--border);
+}
+.help-panel-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+.help-panel-sub   { font-size: 11px; color: var(--text3); }
+.help-panel-close {
+  background: none; border: none; color: var(--text3);
+  font-size: 16px; cursor: pointer; padding: 2px 4px;
+  border-radius: 4px; line-height: 1;
+}
+.help-panel-close:hover { background: var(--bg3); color: var(--text); }
+.help-panel-body { flex: 1; overflow-y: auto; padding: 12px 0; }
+.help-panel-item {
+  padding: 12px 20px; border-bottom: 1px solid var(--border);
+}
+.help-panel-item:last-child { border-bottom: none; }
+.help-panel-term { font-size: 13px; font-weight: 600; color: var(--accent); margin-bottom: 4px; }
+.help-panel-def  { font-size: 12px; color: var(--text2); line-height: 1.6; }
 
 /* ── HAMBURGER ──────────────────────────────────────────────────────────────── */
 .hamburger-btn {

@@ -1,80 +1,167 @@
 <template>
   <div>
     <!-- KPIs -->
-    <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:14px">
+    <!-- Fila 1: Capital + Rentabilidad -->
 
-      <!-- KPI 1: Capital En Curso -->
+      <!-- KPI 1: Capital -->
       <div class="kpi-card kc-green">
-        <div class="kpi-label">Capital En Curso <HelpTip :texto="help.capital_en_curso" /></div>
-        <div class="kpi-value">{{ fmtN(capitalEnCurso) }}</div>
-        <div style="margin-top:10px;display:grid;gap:5px">
+        <div class="kpi-label">Capital <HelpTip :texto="help.desplegado" /></div>
+        <div class="kpi-value" style="font-size:18px">{{ fmtN(capitalEnCurso) }}</div>
+        <div style="margin-top:8px;display:grid;gap:4px">
           <div style="display:flex;justify-content:space-between;font-size:11px">
-            <span style="color:var(--text3)">Capital Activo <HelpTip :texto="help.capital_activo" pos="right" /></span>
-            <span style="font-family:var(--mono);color:var(--green)">{{ fmtInt(capitalActivo) }}</span>
+            <span style="color:var(--text3)">En curso <HelpTip :texto="help.en_curso" pos="right" /></span>
+            <span style="font-family:var(--mono);color:var(--green)">{{ fmtN(capitalActivo) }}</span>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:11px">
-            <span style="color:var(--text3)">Capital participado activo <HelpTip :texto="help.capital_participado" pos="right" /></span>
-            <span style="font-family:var(--mono);color:var(--purple)">{{ fmtInt(capitalParticipado) }}</span>
+            <span style="color:var(--text3)">Activo <HelpTip :texto="help.activo" pos="right" /></span>
+            <span style="font-family:var(--mono);color:var(--green)">{{ fmtN(capitalActivoNoJudicial) }}</span>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:11px">
-            <span style="color:var(--text3)">Promocima activo</span>
-            <span style="font-family:var(--mono);color:var(--blue)">{{ fmtInt(capitalEnCurso - capitalParticipado) }}</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px;margin-top:2px;padding-top:5px;border-top:1px solid var(--border)">
-            <span style="color:var(--text3)">Rentabilidad media</span>
-            <span style="font-family:var(--mono);color:var(--accent)">{{ rentabilidadMedia }}%</span>
+            <span style="color:var(--text3)">Judicializado <HelpTip :texto="help.judicializado" pos="right" /></span>
+            <span style="font-family:var(--mono);color:var(--red)">{{ fmtN(capitalJudicializado) }}</span>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:11px">
-            <span style="color:var(--text3)">LTV medio cartera <HelpTip :texto="help.ltv" pos="right" /></span>
-            <span style="font-family:var(--mono)" :style="parseFloat(ltvMedio) <= 40 ? 'color:var(--green)' : 'color:var(--orange)'">{{ ltvMedio }}%</span>
+            <span style="color:var(--text3)">% judicializado</span>
+            <span style="font-family:var(--mono)" :style="pctJudicializado > 0 ? 'color:var(--red)' : 'color:var(--green)'">{{ pctJudicializado }}%</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-top:2px;padding-top:4px;border-top:1px solid var(--border)">
+            <span style="color:var(--text3)">Participado activo <HelpTip :texto="help.capital_participado" pos="right" /></span>
+            <span style="font-family:var(--mono);color:var(--purple)">{{ fmtN(capitalParticipado) }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px">
+            <span style="color:var(--text3)">Part. judicializado</span>
+            <span style="font-family:var(--mono);color:var(--red)">{{ fmtN(capitalParticJudicializado) }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px">
+            <span style="color:var(--text3)">% jud. partícipes</span>
+            <span style="font-family:var(--mono)" :style="pctJudicPartícipes > 0 ? 'color:var(--red)' : 'color:var(--green)'">{{ pctJudicPartícipes }}%</span>
           </div>
         </div>
       </div>
 
-      <!-- KPI 2: Ingresos Mensuales -->
+      <!-- KPI 2: Ingresos anuales -->
       <div class="kpi-card kc-blue">
-        <div class="kpi-label">Ingresos Mensuales</div>
-        <div class="kpi-value">{{ fmtN(interesesMes) }}</div>
-        <div style="margin-top:10px;display:grid;gap:5px">
+        <div class="kpi-label">Rentabilidad</div>
+        <div class="kpi-value" style="font-size:18px">{{ fmtN(ingrAnualesActivas) }}</div>
+        <div style="margin-top:8px;display:grid;gap:4px">
           <div style="display:flex;justify-content:space-between;font-size:11px">
-            <span style="color:var(--text3)">− Intereses partícipes</span>
-            <span style="font-family:var(--mono);color:var(--purple)">{{ fmtInt(pagosParticipesMes) }}</span>
+            <span style="color:var(--text3)">Ingr. anuales op. activas</span>
+            <span style="font-family:var(--mono)">{{ fmtN(ingrAnualesActivas) }}</span>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:11px">
-            <span style="color:var(--text3)">+ Ingresos gestión</span>
-            <span style="font-family:var(--mono);color:var(--green)">{{ fmtInt(ingresosGestionMes) }}</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px;margin-top:2px;padding-top:5px;border-top:1px solid var(--border)">
-            <span style="color:var(--text3)">= Neto Promocima</span>
-            <span style="font-family:var(--mono);color:var(--accent);font-weight:600">{{ fmtInt(netoPromocima) }}</span>
+            <span style="color:var(--text3)">Ingr. anuales part. activas</span>
+            <span style="font-family:var(--mono);color:var(--purple)">{{ fmtN(ingrAnualesParticipes) }}</span>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:11px">
-            <span style="color:var(--text3)">Rentabilidad Promocima</span>
-            <span style="font-family:var(--mono);color:var(--accent)">{{ rentabilidadPromocima }}%</span>
+            <span style="color:var(--text3)">Ingr. gestión anual</span>
+            <span style="font-family:var(--mono);color:var(--green)">{{ fmtN(ingrGestionAnual) }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px">
+            <span style="color:var(--text3)">Ingr. apertura LTM</span>
+            <span style="font-family:var(--mono);color:var(--accent)">{{ fmtN(ingrAperturaLTM) }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-top:2px;padding-top:4px;border-top:1px solid var(--border)">
+            <span style="color:var(--text3)">Rent. activas</span>
+            <span style="font-family:var(--mono);color:var(--green)">{{ rentActivas }}%</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px">
+            <span style="color:var(--text3)">Rent. partícipes</span>
+            <span style="font-family:var(--mono);color:var(--purple)">{{ rentParticipes }}%</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px">
+            <span style="color:var(--text3)">Rent. total Promocima</span>
+            <span style="font-family:var(--mono);color:var(--accent)">{{ rentTotalPromocima }}%</span>
           </div>
         </div>
       </div>
+    </div>
+    <!-- Fila 2: Operaciones + LTV + Duración -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px">
 
-      <!-- KPI 3: Incidencias -->
-      <div class="kpi-card" :class="incidencias > 0 ? 'kc-red' : 'kc-gray-dim'">
-        <div class="kpi-label">Incidencias</div>
-        <div class="kpi-value">{{ incidencias }}</div>
-        <div style="margin-top:10px;display:grid;gap:5px">
+      <!-- KPI 3: Operaciones -->
+      <div class="kpi-card kc-purple">
+        <div class="kpi-label">Operaciones</div>
+        <div class="kpi-value" style="font-size:18px">{{ nOperacionesTotal }}</div>
+        <div style="margin-top:8px;display:grid;gap:4px">
+          <div style="display:flex;justify-content:space-between;font-size:11px">
+            <span style="color:var(--text3)">Op. totales <HelpTip :texto="help.desplegado" pos="right" /></span>
+            <span style="font-family:var(--mono)">{{ nOperacionesTotal }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px">
+            <span style="color:var(--text3)">Canceladas <HelpTip :texto="help.cancelado" pos="right" /></span>
+            <span style="font-family:var(--mono);color:var(--text3)">{{ nCanceladas }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px">
+            <span style="color:var(--text3)">En curso <HelpTip :texto="help.en_curso" pos="right" /></span>
+            <span style="font-family:var(--mono)">{{ nEnCurso }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px">
+            <span style="color:var(--text3)">Judicializadas <HelpTip :texto="help.judicializado" pos="right" /></span>
+            <span style="font-family:var(--mono);color:var(--red)">{{ nJudicializados }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px">
+            <span style="color:var(--text3)">Activas <HelpTip :texto="help.activo" pos="right" /></span>
+            <span style="font-family:var(--mono);color:var(--green)">{{ nActivas }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px">
+            <span style="color:var(--text3)">Al día <HelpTip :texto="help.al_dia" pos="right" /></span>
+            <span style="font-family:var(--mono);color:var(--green)">{{ nAlDia }}</span>
+          </div>
           <div style="display:flex;justify-content:space-between;font-size:11px">
             <span style="color:var(--text3)">Con retraso <HelpTip :texto="help.con_retraso" pos="right" /></span>
-            <span style="font-family:var(--mono);color:var(--orange)">{{ fmtInt(importeRetraso) }} <span style="color:var(--text3)">({{ nConRetraso }})</span></span>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px">
-            <span style="color:var(--text3)">Judicializados <HelpTip :texto="help.judicializado" pos="right" /></span>
-            <span style="font-family:var(--mono);color:var(--red)">{{ fmtInt(importeJudicial) }} <span style="color:var(--text3)">({{ nJudicializados }})</span></span>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px;margin-top:2px;padding-top:5px;border-top:1px solid var(--border)">
-            <span style="color:var(--text3)">% incidencias (importe)</span>
-            <span style="font-family:var(--mono)" :style="pctIncidencias > 0 ? 'color:var(--red)' : 'color:var(--green)'">{{ pctIncidencias }}%</span>
+            <span style="font-family:var(--mono);color:var(--orange)">{{ nConRetraso }}</span>
           </div>
         </div>
       </div>
 
+      <!-- KPI 4: Garantías -->
+      <div class="kpi-card kc-orange">
+        <div class="kpi-label">LTV</div>
+        <div class="kpi-value" style="font-size:18px">{{ fmtN(garantiasEnCurso) }}</div>
+        <div style="margin-top:8px;display:grid;gap:4px">
+          <div style="display:flex;justify-content:space-between;font-size:11px">
+            <span style="color:var(--text3)">Total garantías en curso</span>
+            <span style="font-family:var(--mono)">{{ fmtN(garantiasEnCurso) }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px">
+            <span style="color:var(--text3)">LTV op. en curso <HelpTip :texto="help.ltv_en_curso" pos="right" /></span>
+            <span style="font-family:var(--mono)" :style="parseFloat(ltvEnCurso) > 60 ? 'color:var(--red)' : parseFloat(ltvEnCurso) > 40 ? 'color:var(--orange)' : 'color:var(--green)'">{{ ltvEnCurso }}%</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-top:2px;padding-top:4px;border-top:1px solid var(--border)">
+            <span style="color:var(--text3)">Total garantías partícipes</span>
+            <span style="font-family:var(--mono);color:var(--purple)">{{ fmtN(garantiasParticipes) }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px">
+            <span style="color:var(--text3)">LTV op. partícipes <HelpTip :texto="help.ltv_participes" pos="right" /></span>
+            <span style="font-family:var(--mono)" :style="parseFloat(ltvParticipes) > 60 ? 'color:var(--red)' : parseFloat(ltvParticipes) > 40 ? 'color:var(--orange)' : 'color:var(--green)'">{{ ltvParticipes }}%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI 5: Duraciones -->
+      <div class="kpi-card kc-gray-dim">
+        <div class="kpi-label">Duración <HelpTip texto="Las duraciones se expresan en meses." /></div>
+        <div class="kpi-value" style="font-size:18px">{{ durMediaEnCurso }}</div>
+        <div style="margin-top:8px;display:grid;gap:4px">
+          <div style="display:flex;justify-content:space-between;font-size:11px">
+            <span style="color:var(--text3)">Duración media en curso</span>
+            <span style="font-family:var(--mono)">{{ durMediaEnCurso }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px">
+            <span style="color:var(--text3)">Duración media canceladas</span>
+            <span style="font-family:var(--mono);color:var(--text3)">{{ durMediaCanceladas }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px">
+            <span style="color:var(--text3)">Duración media activas</span>
+            <span style="font-family:var(--mono);color:var(--green)">{{ durMediaActivas }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px">
+            <span style="color:var(--text3)">Duración media judicializadas</span>
+            <span style="font-family:var(--mono);color:var(--red)">{{ durMediaJudicializadas }}</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Resumen por estado -->
@@ -474,6 +561,184 @@ const pctIncidencias = computed(() => {
   if (!capitalActivo.value) return '0.0'
   return ((importeRetraso.value + importeJudicial.value) / capitalActivo.value * 100).toFixed(1)
 })
+
+// ── KPI 1: Capital ────────────────────────────────────────────────────────────
+const capitalJudicializado = computed(() =>
+  prestamosEnCurso.value
+    .filter(p => p.estado === 'judicializado')
+    .reduce((s, p) => s + calcCapitalActivoPrestamo(p), 0)
+)
+// Capital activo = capital vivo de operaciones NO judicializadas (al día + con retraso)
+const capitalActivoNoJudicial = computed(() => capitalActivo.value - capitalJudicializado.value)
+const pctJudicializado = computed(() =>
+  capitalEnCurso.value ? (capitalJudicializado.value / capitalEnCurso.value * 100).toFixed(1) : '0.0'
+)
+// Suma de importe_participacion de CCPs activos en préstamos judicializados
+const capitalParticJudicializado = computed(() =>
+  ccpRaw.value
+    .filter(c => {
+      const p = prestamosRaw.value.find(p => p.id === c.prestamo_id)
+      return p && p.estado === 'judicializado'
+    })
+    .reduce((s, c) => s + Number(c.importe_participacion || 0), 0)
+)
+const pctJudicPartícipes = computed(() =>
+  capitalParticipado.value ? (capitalParticJudicializado.value / capitalParticipado.value * 100).toFixed(1) : '0.0'
+)
+
+// ── KPI 2: Ingresos anuales ───────────────────────────────────────────────────
+// Para préstamos americanos: importe * tasa_anual
+// Para préstamos franceses: suma de intereses de cuotas del año natural en curso
+const anoActual = new Date().getFullYear()
+
+const ingrAnualesActivas = computed(() => {
+  const activos = prestamosEnCurso.value.filter(p => p.estado !== 'judicializado')
+  return activos.reduce((s, p) => {
+    const tipo = p.tipo_prestamo
+    const tasa = Number(p.interes_ordinario) / 100
+    if (tipo === 'Americano') {
+      return s + Number(p.importe) * tasa
+    }
+    // Francés / Francés con carencia: sumar intereses de cuotas del año actual
+    const cobrosP = todosCobros.value.filter(c => c.prestamo_id === p.id)
+    const cal = generateCalendarioTeorico(p, cobrosP)
+    const interesesAnio = cal
+      .filter(c => new Date(c.fecha + 'T00:00:00').getFullYear() === anoActual)
+      .reduce((acc, c) => acc + (c.interes || 0), 0)
+    return s + interesesAnio
+  }, 0)
+})
+
+// Intereses anuales proporcionales a la participación de cada CCP
+const ingrAnualesParticipes = computed(() => {
+  return ccpRaw.value.reduce((s, ccp) => {
+    const p = prestamosRaw.value.find(p => p.id === ccp.prestamo_id)
+    if (!p || p.estado === 'judicializado' || p.estado === 'cancelado') return s
+    const impTotal = Number(p.importe || 0)
+    const fraccion = impTotal > 0 ? Number(ccp.importe_participacion || 0) / impTotal : 0
+    const tipo = p.tipo_prestamo
+    const tasa = Number(p.interes_ordinario) / 100
+    let interesAnual = 0
+    if (tipo === 'Americano') {
+      interesAnual = impTotal * tasa
+    } else {
+      const cobrosP = todosCobros.value.filter(c => c.prestamo_id === p.id)
+      const cal = generateCalendarioTeorico(p, cobrosP)
+      interesAnual = cal
+        .filter(c => new Date(c.fecha + 'T00:00:00').getFullYear() === anoActual)
+        .reduce((acc, c) => acc + (c.interes || 0), 0)
+    }
+    return s + interesAnual * fraccion
+  }, 0)
+})
+
+const ingrGestionAnual = computed(() => ingresosGestionMes.value * 12)
+
+// Ingresos apertura LTM: préstamos firmados en los últimos 12 meses
+const ingrAperturaLTM = computed(() => {
+  const hoy = today()
+  const hace12m = new Date(hoy)
+  hace12m.setFullYear(hace12m.getFullYear() - 1)
+  const limite = hace12m.toISOString().split('T')[0]
+  return prestamosRaw.value
+    .filter(p => p.fecha_inicio && p.fecha_inicio >= limite && p.fecha_inicio <= hoy)
+    .reduce((s, p) => s + Number(p.importe) * Number(p.comision_apertura || 0) / 100, 0)
+})
+
+const rentActivas = computed(() => {
+  if (!capitalActivoNoJudicial.value) return '0.00'
+  return (ingrAnualesActivas.value / capitalActivoNoJudicial.value * 100).toFixed(2)
+})
+
+// Capital participado solo en préstamos activos (no judicializados)
+const capitalParticipActivos = computed(() =>
+  ccpRaw.value
+    .filter(c => {
+      const p = prestamosRaw.value.find(p => p.id === c.prestamo_id)
+      return p && p.estado !== 'cancelado' && p.estado !== 'judicializado'
+    })
+    .reduce((s, c) => s + Number(c.importe_participacion || 0), 0)
+)
+
+const rentParticipes = computed(() => {
+  if (!capitalParticipActivos.value) return '0.00'
+  return (ingrAnualesParticipes.value / capitalParticipActivos.value * 100).toFixed(2)
+})
+
+const rentTotalPromocima = computed(() => {
+  const capitalPropio = capitalActivoNoJudicial.value - capitalParticipActivos.value
+  if (!capitalPropio) return '0.00'
+  const ingrNetos = ingrAnualesActivas.value - ingrAnualesParticipes.value + ingrGestionAnual.value + ingrAperturaLTM.value
+  return (ingrNetos / capitalPropio * 100).toFixed(2)
+})
+
+// ── KPI 3: Operaciones ────────────────────────────────────────────────────────
+const nOperacionesTotal  = computed(() => prestamosRaw.value.length)
+const nCanceladas        = computed(() => prestamosRaw.value.filter(p => p.estado === 'cancelado').length)
+const nEnCurso           = computed(() => prestamosEnCurso.value.length)
+const nActivas           = computed(() => prestamosEnCurso.value.filter(p => p.estado !== 'judicializado').length)
+const nAlDia             = computed(() => prestamosEnCurso.value.filter(p => p.estado !== 'judicializado' && !tieneRetraso(p)).length)
+
+// ── KPI 4: Garantías ──────────────────────────────────────────────────────────
+// ── KPI 4: Garantías / LTV ────────────────────────────────────────────────────
+// Garantías = suma de garantia_tasacion de préstamos en curso (activos + judicializados)
+const garantiasEnCurso = computed(() =>
+  prestamosEnCurso.value
+    .filter(p => Number(p.garantia_tasacion || 0) > 0)
+    .reduce((s, p) => s + Number(p.garantia_tasacion), 0)
+)
+// LTV en curso = capital vivo real (activo + judicializado) / garantías en curso
+const ltvEnCurso = computed(() =>
+  garantiasEnCurso.value ? (capitalActivo.value / garantiasEnCurso.value * 100).toFixed(1) : '0.0'
+)
+// Garantías partícipes = garantías en curso × % participación sobre el total de cada préstamo
+const garantiasParticipes = computed(() =>
+  ccpRaw.value.reduce((s, ccp) => {
+    const p = prestamosRaw.value.find(p => p.id === ccp.prestamo_id)
+    if (!p || p.estado === 'cancelado') return s
+    if (!Number(p.garantia_tasacion || 0)) return s
+    const impTotal = Number(p.importe || 0)
+    const fraccion = impTotal > 0 ? Number(ccp.importe_participacion || 0) / impTotal : 0
+    return s + Number(p.garantia_tasacion) * fraccion
+  }, 0)
+)
+// Capital vivo proporcional participado (en curso = activo + judicializado)
+const capitalVivoParticipado = computed(() =>
+  ccpRaw.value.reduce((s, ccp) => {
+    const p = prestamosRaw.value.find(p => p.id === ccp.prestamo_id)
+    if (!p || p.estado === 'cancelado') return s
+    const impTotal = Number(p.importe || 0)
+    const fraccion = impTotal > 0 ? Number(ccp.importe_participacion || 0) / impTotal : 0
+    return s + calcCapitalActivoPrestamo(p) * fraccion
+  }, 0)
+)
+// LTV partícipes = capital vivo participado en curso / garantías partícipes
+const ltvParticipes = computed(() =>
+  garantiasParticipes.value ? (capitalVivoParticipado.value / garantiasParticipes.value * 100).toFixed(1) : '0.0'
+)
+
+// ── KPI 5: Duraciones ─────────────────────────────────────────────────────────
+// Duración real = días transcurridos / 30, redondeado
+// Para canceladas: fecha_cancelacion - fecha_inicio
+// Para el resto: hoy - fecha_inicio
+function duracionRealMeses(p, fechaFin) {
+  if (!p.fecha_inicio) return null
+  const inicio = new Date(p.fecha_inicio + 'T00:00:00')
+  const fin    = fechaFin ? new Date(fechaFin + 'T00:00:00') : new Date()
+  const dias   = (fin - inicio) / 86400000
+  return dias > 0 ? Math.round(dias / 30) : null
+}
+function durMedia(arr, canceladas = false) {
+  const vals = arr
+    .map(p => canceladas ? duracionRealMeses(p, p.fecha_cancelacion) : duracionRealMeses(p, null))
+    .filter(v => v !== null)
+  if (!vals.length) return '—'
+  return Math.round(vals.reduce((s, v) => s + v, 0) / vals.length)
+}
+const durMediaEnCurso       = computed(() => durMedia(prestamosEnCurso.value))
+const durMediaCanceladas     = computed(() => durMedia(prestamosRaw.value.filter(p => p.estado === 'cancelado'), true))
+const durMediaActivas        = computed(() => durMedia(prestamosEnCurso.value.filter(p => p.estado !== 'judicializado')))
+const durMediaJudicializadas = computed(() => durMedia(prestamosEnCurso.value.filter(p => p.estado === 'judicializado')))
 
 // ── Capital activo real de un préstamo (descuenta amortizaciones parciales y francés) ─
 function calcCapitalActivoPrestamo(p) {

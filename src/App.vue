@@ -168,7 +168,10 @@
       <div class="topbar">
         <button class="hamburger-btn" @click="sidebarOpen = !sidebarOpen" aria-label="Menú">☰</button>
         <div class="topbar-title">{{ pageTitle }}</div>
-        <button class="btn btn-sm" @click="logout">Cerrar sesión</button>
+        <div style="display:flex;align-items:center;gap:10px">
+          <HelpPanel />
+          <button class="btn btn-sm" @click="logout">Cerrar sesión</button>
+        </div>
       </div>
       <div class="content">
         <Dashboard          v-if="page === 'dashboard'"       @navigate="navigate" />
@@ -269,6 +272,7 @@ import ContratosCCP     from './components/ContratosCCP.vue'
 import PagosParticipes  from './components/PagosParticipes.vue'
 import Configuracion    from './components/Configuracion.vue'
 import Administracion   from './components/Administracion.vue'
+import HelpPanel        from './components/HelpPanel.vue'
 import { supabase }     from './supabase.js'
 
 // ── Init ───────────────────────────────────────

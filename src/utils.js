@@ -56,8 +56,6 @@ export const uuid = () => Math.random().toString(36).substr(2, 9).toUpperCase()
 
 // ── Fecha de referencia global ─────────────────────────────────────────────
 // Si se configura una fecha de referencia, se usa en lugar de la fecha real.
-// Así los estados "al día / con retraso" son comparables a un día determinado.
-import { ref } from 'vue'
 export const today = () => new Date().toISOString().split('T')[0]
 
 // ── Cálculos financieros ──────────────────────
@@ -799,4 +797,23 @@ export const calcSituacionPrestamo = (prestamo, cobros) => {
   const cal = generateCalendarioTeorico(prestamo, cobros)
   const calConEstado = distribuirCobros(cal, cobros)
   return calConEstado.some(c => c.fecha <= hoy && c.estado !== 'cobrada') ? 'con_retraso' : 'al_dia'
+}
+
+// ── Capital activo de un préstamo ──────────────────────────────────────────────
+// Descuenta amortizaciones parciales y, en préstamos franceses, el principal
+// amortizado mediante cuotas cobradas.
+export const calcCapitalActivoPrestamo = (prestamo, cobros = []) => {
+  const r = v => Math.round(v * 100) / 100
+  const totalAmort = cobros
+    .filter(c => c.tipo === 'amortizacion_parcial')
+    .reduce((s, c) => s + Number(c.importe_principal || 0), 0)
+  if (prestamo.tipo_prestamo === 'Americano') {
+    return Math.max(0, Number(prestamo.importe) - totalAmort)
+  }
+  const cal = generateCalendarioTeorico(prestamo, cobros)
+  const calConEstado = distribuirCobros(cal, cobros)
+  const amortCuotas = calConEstado
+    .filter(c => c.estado === 'cobrada')
+    .reduce((s, c) => s + (c.principal || 0), 0)
+  return Math.max(0, r(Number(prestamo.importe) - totalAmort - amortCuotas))
 }
