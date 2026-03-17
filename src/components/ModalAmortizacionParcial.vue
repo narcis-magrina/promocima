@@ -8,28 +8,14 @@
       <div class="modal-body">
 
         <div class="alert alert-warning" style="margin-bottom:16px">
-          <span v-if="form.modalidad === 'misma_cuota'">
-            El calendario se recalculará manteniendo la <strong>misma cuota mensual</strong>.
-            Al reducirse el capital, el préstamo se <strong>acorta</strong> (menos cuotas).
-          </span>
-          <span v-else>
-            El calendario se recalculará manteniendo la <strong>misma fecha de vencimiento</strong>.
-            Las cuotas restantes <strong>bajarán de importe</strong> al reducirse el capital.
-          </span>
+          Las cuotas restantes <strong>bajarán de importe</strong> al reducirse el capital, manteniendo la misma fecha de vencimiento.
         </div>
 
-        <!-- Fecha + Modalidad -->
+        <!-- Fecha -->
         <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
           <div class="form-group">
             <label class="form-label">Fecha de amortización <span class="req">*</span></label>
             <input class="form-control" type="date" v-model="form.fecha" @change="recalcular">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Modalidad de recálculo</label>
-            <select class="form-control" v-model="form.modalidad">
-              <option value="misma_cuota">Misma cuota → préstamo se acorta</option>
-              <option value="misma_fecha">Misma fecha fin → cuotas bajan de importe</option>
-            </select>
           </div>
         </div>
 
@@ -46,7 +32,8 @@
             </label>
             <input class="form-control" type="number" step="0.01" min="0" v-model="form.interesOrdinario">
             <div style="font-size:11px;color:var(--text3);margin-top:3px">
-              {{ diasDesdeUltimo }} días · {{ fmt(capitalPendiente) }} · {{ prestamo.interes_ordinario }}% / 12 / 30
+              Intereses de
+              <template v-if="desglosePeriodo.meses > 0">{{ desglosePeriodo.meses }} mes{{ desglosePeriodo.meses > 1 ? 'es' : '' }}<template v-if="desglosePeriodo.dias > 0"> y {{ desglosePeriodo.dias }} día{{ desglosePeriodo.dias > 1 ? 's' : '' }}</template></template><template v-else>{{ desglosePeriodo.dias }} día{{ desglosePeriodo.dias !== 1 ? 's' : '' }}</template>
             </div>
           </div>
 
@@ -171,7 +158,7 @@ const saving = ref(false)
 const form   = ref(formVacio())
 
 function formVacio() {
-  return { fecha: today(), modalidad: 'misma_cuota', principal: 0, interesOrdinario: 0, interesDemora: 0, gastos: 0, notas: '' }
+  return { fecha: today(), modalidad: 'misma_fecha', principal: 0, interesOrdinario: 0, interesDemora: 0, gastos: 0, notas: '' }
 }
 
 // ── Capital pendiente: importe original menos lo ya amortizado ─────────────
@@ -215,15 +202,44 @@ const cuotasRestantesActuales = computed(() =>
   props.calendarioConEstado.filter(c => c.estado !== 'cobrada').length
 )
 
-// ── Días desde el último vencimiento cobrado hasta la fecha de amortización ─
+// ── Fecha de referencia: última cuota cobrada o parcial (o inicio) ───────────
+const fechaUltimaCobrada = computed(() => {
+  const cobradas = props.calendarioConEstado.filter(c => c.estado === 'cobrada' || c.estado === 'parcial')
+  return cobradas.length
+    ? cobradas[cobradas.length - 1].fecha
+    : props.prestamo.fecha_inicio
+})
+
+// ── Pendiente de la cuota parcial previa (intereses + principal pendiente) ────
+const importePendienteCuotaPartial = computed(() => {
+  const fecha   = form.value.fecha || today()
+  const parcial = props.calendarioConEstado
+    .filter(c => c.estado === 'parcial' && c.fecha <= fecha)
+    .slice(-1)[0]
+  return parcial ? (parcial.pendiente || 0) : 0
+})
+
+// ── Desglose meses/días para el hint del formulario ──────────────────────────
+const desglosePeriodo = computed(() => {
+  const fecha  = form.value.fecha || today()
+  const dRef   = new Date(fechaUltimaCobrada.value + 'T00:00:00')
+  const dAmort = new Date(fecha + 'T00:00:00')
+
+  let meses = (dAmort.getFullYear() - dRef.getFullYear()) * 12
+            + (dAmort.getMonth()    - dRef.getMonth())
+  if (dAmort.getDate() < dRef.getDate()) meses = Math.max(0, meses - 1)
+
+  const dInicioResto = new Date(dRef)
+  dInicioResto.setMonth(dInicioResto.getMonth() + meses)
+  const dias = Math.min(30, Math.max(0, Math.round((dAmort - dInicioResto) / 86400000)))
+
+  return { meses, dias }
+})
+
+// Mantenemos diasDesdeUltimo para compatibilidad interna si se usa en algún otro sitio
 const diasDesdeUltimo = computed(() => {
-  const fecha     = form.value.fecha || today()
-  const fechaAmort = new Date(fecha + 'T00:00:00')
-  const cobradas  = props.calendarioConEstado.filter(c => c.estado === 'cobrada')
-  const fechaRef  = cobradas.length
-    ? new Date(cobradas[cobradas.length - 1].fecha + 'T00:00:00')
-    : new Date(props.prestamo.fecha_inicio + 'T00:00:00')
-  return Math.max(0, Math.round((fechaAmort - fechaRef) / 86400000))
+  const { meses, dias } = desglosePeriodo.value
+  return meses * 30 + dias
 })
 
 // ── Nuevo capital tras la amortización ────────────────────────────────────
@@ -284,26 +300,71 @@ const previewCalendario = computed(() => {
 
 // ── Recalcular intereses automáticamente al cambiar fecha ─────────────────
 function recalcular() {
-  const p       = props.prestamo
-  const fecha   = form.value.fecha || today()
-  const dias    = diasDesdeUltimo.value
+  const p         = props.prestamo
+  const fecha     = form.value.fecha || today()
   const tasaAnual = Number(p.interes_ordinario) / 100
+  const r         = v => Math.round(v * 100) / 100
 
-  // Intereses ordinarios: base 30 días fijos (coherente con cuota mensual = capital * tasa / 12)
-  // cuota_mensual * (dias / 30)  →  capital * tasaAnual / 12 * dias / 30
-  form.value.interesOrdinario = Math.round(capitalPendiente.value * tasaAnual / 12 * dias / 30 * 100) / 100
+  // ── Punto de partida: usar el desglose reactivo ya calculado ───────────────
+  const { meses: mesesEnteros, dias: diasResto } = desglosePeriodo.value
 
-  // Intereses de demora: cuotas vencidas y no cobradas
-  const tasaDemora = Number(p.interes_demora) / 100
-  const fechaRef   = new Date(fecha + 'T00:00:00')
-  form.value.interesDemora = Math.round(
-    props.calendarioConEstado
-      .filter(c => (c.estado === 'pendiente' || c.estado === 'parcial') && new Date(c.fecha + 'T00:00:00') < fechaRef)
-      .reduce((s, c) => {
-        const dias = Math.max(0, Math.round((fechaRef - new Date(c.fecha + 'T00:00:00')) / 86400000))
-        return s + Math.round(c.pendiente * tasaDemora / 365 * dias * 100) / 100
-      }, 0)
-    * 100) / 100
+  // ── Intereses de meses enteros ──────────────────────────────────────────
+  let interesesMeses = 0
+  const tipo = p.tipo_prestamo
+
+  if (tipo === 'Americano') {
+    // Americano: cada mes = saldo × tasa / 12 (saldo no cambia en meses intermedios)
+    interesesMeses = r(capitalPendiente.value * tasaAnual / 12 * mesesEnteros)
+
+  } else {
+    // Francés / Francés con carencia: simular cuota a cuota sobre el calendario
+    // para obtener el interés real de cada mes entero
+    const calConEstado = props.calendarioConEstado
+    // Buscar la primera cuota pendiente o parcial a partir de fechaRef
+    let saldoSim = capitalPendiente.value
+    const tasaMes = tasaAnual / 12
+    // Obtener el PMT actual del calendario (primera cuota no cobrada)
+    const primeraNoCobraada = calConEstado.find(c => c.estado !== 'cobrada')
+    const pmtActual = primeraNoCobraada ? primeraNoCobraada.total : 0
+
+    for (let m = 0; m < mesesEnteros; m++) {
+      if (saldoSim <= 0.005) break
+      const intMes = r(saldoSim * tasaMes)
+      const prinMes = pmtActual > 0 ? r(Math.min(pmtActual - intMes, saldoSim)) : 0
+      interesesMeses = r(interesesMeses + intMes)
+      saldoSim = r(saldoSim - prinMes)
+    }
+  }
+
+  // ── Intereses de días restantes ─────────────────────────────────────────
+  // Interés del siguiente mes completo, prorrateado por diasResto / 30
+  let interesesDias = 0
+  if (diasResto > 0) {
+    let saldoParaDias = capitalPendiente.value
+    if (tipo !== 'Americano' && mesesEnteros > 0) {
+      // Descontar el principal amortizado en los meses enteros simulados
+      const tasaMes = tasaAnual / 12
+      const primeraNoCobraada = props.calendarioConEstado.find(c => c.estado !== 'cobrada')
+      const pmtActual = primeraNoCobraada ? primeraNoCobraada.total : 0
+      let s = capitalPendiente.value
+      for (let m = 0; m < mesesEnteros; m++) {
+        if (s <= 0.005) break
+        const intMes  = r(s * tasaMes)
+        const prinMes = pmtActual > 0 ? r(Math.min(pmtActual - intMes, s)) : 0
+        s = r(s - prinMes)
+      }
+      saldoParaDias = s
+    }
+    const interesMesSiguiente = r(saldoParaDias * tasaAnual / 12)
+    interesesDias = r(interesMesSiguiente * diasResto / 30)
+  }
+
+  // ── Total intereses ordinarios ──────────────────────────────────────────
+  // Si hay cuota parcial previa, añadir el pendiente de esa cuota
+  const pendientePartial = importePendienteCuotaPartial.value
+  form.value.interesOrdinario = r(interesesMeses + interesesDias + pendientePartial)
+
+  // Intereses de demora: se dejan a 0 por defecto (el usuario los introduce manualmente)
 }
 
 watch(() => props.modelValue, open => {

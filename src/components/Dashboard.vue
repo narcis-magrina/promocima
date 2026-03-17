@@ -352,7 +352,7 @@
               <span style="color:var(--text3)">{{ fmtN(sinParticipe.retraso_imp) }}</span>
               <span class="td-count">({{ sinParticipe.retraso_n }})</span>
             </td>
-            <td class="td-mono td-right">
+            <td class="td-mono td-right col-hide-mobile">
               <span style="color:var(--text3)">{{ fmtN(sinParticipe.cancelado_imp) }}</span>
               <span class="td-count">({{ sinParticipe.cancelado_n }})</span>
             </td>
@@ -360,7 +360,7 @@
               <span style="color:var(--text3)">{{ fmtN(sinParticipe.judicial_imp) }}</span>
               <span class="td-count">({{ sinParticipe.judicial_n }})</span>
             </td>
-            <td class="td-mono td-right" style="font-weight:600;color:var(--text3)">
+            <td class="td-mono td-right col-hide-mobile" style="font-weight:600;color:var(--text3)">
               {{ fmtN(sinParticipe.en_curso_imp) }}
               <span style="font-size:11px"> ({{ sinParticipe.en_curso_n }})</span>
             </td>
@@ -494,15 +494,19 @@ const ltvMedio = computed(() => {
   return (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1)
 })
 
-// Capital participado: suma real de importe_participacion de contratos CCP activos en préstamos activos
+// Capital participado: suma del capital vivo proporcional de CCPs en préstamos activos (no jud, no cancelados)
 const prestamosConCCP = computed(() => {
   const ids = new Set(ccpRaw.value.map(c => c.prestamo_id))
   return prestamosEnCurso.value.filter(p => ids.has(p.id))
 })
 const capitalParticipado = computed(() =>
-  ccpRaw.value
-    .filter(c => prestamosEnCurso.value.some(p => p.id === c.prestamo_id))
-    .reduce((s, c) => s + Number(c.importe_participacion || 0), 0)
+  ccpRaw.value.reduce((s, c) => {
+    const p = prestamosRaw.value.find(p => p.id === c.prestamo_id)
+    if (!p || p.estado === 'cancelado' || p.estado === 'judicializado') return s
+    const impTotal = Number(p.importe || 0)
+    const fraccion = impTotal > 0 ? Number(c.importe_participacion || 0) / impTotal : 0
+    return s + calcCapitalActivoPrestamo(p) * fraccion
+  }, 0)
 )
 const nParticipados = computed(() => prestamosConCCP.value.length)
 
@@ -573,23 +577,25 @@ const capitalActivoNoJudicial = computed(() => capitalActivo.value - capitalJudi
 const pctJudicializado = computed(() =>
   capitalEnCurso.value ? (capitalJudicializado.value / capitalEnCurso.value * 100).toFixed(1) : '0.0'
 )
-// Suma de importe_participacion de CCPs activos en préstamos judicializados
+// Capital participado judicializado: capital vivo proporcional de CCPs en préstamos judicializados
 const capitalParticJudicializado = computed(() =>
-  ccpRaw.value
-    .filter(c => {
-      const p = prestamosRaw.value.find(p => p.id === c.prestamo_id)
-      return p && p.estado === 'judicializado'
-    })
-    .reduce((s, c) => s + Number(c.importe_participacion || 0), 0)
+  ccpRaw.value.reduce((s, c) => {
+    const p = prestamosRaw.value.find(p => p.id === c.prestamo_id)
+    if (!p || p.estado !== 'judicializado') return s
+    const impTotal = Number(p.importe || 0)
+    const fraccion = impTotal > 0 ? Number(c.importe_participacion || 0) / impTotal : 0
+    return s + calcCapitalActivoPrestamo(p) * fraccion
+  }, 0)
 )
-const pctJudicPartícipes = computed(() =>
-  capitalParticipado.value ? (capitalParticJudicializado.value / capitalParticipado.value * 100).toFixed(1) : '0.0'
-)
+const pctJudicPartícipes = computed(() => {
+  const total = capitalParticipado.value + capitalParticJudicializado.value
+  return total ? (capitalParticJudicializado.value / total * 100).toFixed(1) : '0.0'
+})
 
 // ── KPI 2: Ingresos anuales ───────────────────────────────────────────────────
 // Para préstamos americanos: importe * tasa_anual
 // Para préstamos franceses: suma de intereses de cuotas del año natural en curso
-const anoActual = new Date().getFullYear()
+const anoActual = computed(() => Number(today().slice(0, 4)))
 
 const ingrAnualesActivas = computed(() => {
   const activos = prestamosEnCurso.value.filter(p => p.estado !== 'judicializado')
@@ -603,7 +609,7 @@ const ingrAnualesActivas = computed(() => {
     const cobrosP = todosCobros.value.filter(c => c.prestamo_id === p.id)
     const cal = generateCalendarioTeorico(p, cobrosP)
     const interesesAnio = cal
-      .filter(c => new Date(c.fecha + 'T00:00:00').getFullYear() === anoActual)
+      .filter(c => new Date(c.fecha + 'T00:00:00').getFullYear() === anoActual.value)
       .reduce((acc, c) => acc + (c.interes || 0), 0)
     return s + interesesAnio
   }, 0)
@@ -625,7 +631,7 @@ const ingrAnualesParticipes = computed(() => {
       const cobrosP = todosCobros.value.filter(c => c.prestamo_id === p.id)
       const cal = generateCalendarioTeorico(p, cobrosP)
       interesAnual = cal
-        .filter(c => new Date(c.fecha + 'T00:00:00').getFullYear() === anoActual)
+        .filter(c => new Date(c.fecha + 'T00:00:00').getFullYear() === anoActual.value)
         .reduce((acc, c) => acc + (c.interes || 0), 0)
     }
     return s + interesAnual * fraccion
@@ -724,9 +730,9 @@ const ltvParticipes = computed(() =>
 function duracionRealMeses(p, fechaFin) {
   if (!p.fecha_inicio) return null
   const inicio = new Date(p.fecha_inicio + 'T00:00:00')
-  const fin    = fechaFin ? new Date(fechaFin + 'T00:00:00') : new Date()
+  const fin    = fechaFin ? new Date(fechaFin + 'T00:00:00') : new Date(today() + 'T00:00:00')
   const dias   = (fin - inicio) / 86400000
-  return dias > 0 ? Math.round(dias / 30) : null
+  return dias > 0 ? Math.floor(dias / 30) : null
 }
 function durMedia(arr, canceladas = false) {
   const vals = arr

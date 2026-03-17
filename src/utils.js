@@ -55,8 +55,12 @@ export const fmtDate = (d) => {
 export const uuid = () => Math.random().toString(36).substr(2, 9).toUpperCase()
 
 // ── Fecha de referencia global ─────────────────────────────────────────────
-// Si se configura una fecha de referencia, se usa en lugar de la fecha real.
-export const today = () => new Date().toISOString().split('T')[0]
+// En producción devuelve la fecha real del sistema.
+// En tests, llamar a setToday('2026-03-20') para fijar una fecha determinista.
+let _todayFn = () => new Date().toISOString().split('T')[0]
+export const today = () => _todayFn()
+export const setToday = (fn) => { _todayFn = typeof fn === 'function' ? fn : () => fn }
+export const resetToday = () => { _todayFn = () => new Date().toISOString().split('T')[0] }
 
 // ── Cálculos financieros ──────────────────────
 
@@ -98,17 +102,17 @@ export const generateCalendarioTeorico = (prestamo, cobros = []) => {
   const fmtFecha = d =>
     `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 
-  const fechaDeCuota = (n) => {
-    // Calcular año y mes destino a partir de inicio, sin usar setDate para evitar
-    // el overflow de JS cuando el día de inicio es 29-31 (ej: 31ene +1mes → 3mar)
-    const mesTotal = inicio.getMonth() + n * mesesPaso
-    const anio = inicio.getFullYear() + Math.floor(mesTotal / 12)
+  // fechaDeCuota ahora acepta el ancla (fecha y día de cobro activos).
+  // Antes de cualquier AP: ancla = fecha_inicio, dia = dia_cobro original.
+  // Tras una AP: ancla = fecha de la AP, dia = día de la AP.
+  // n = número de meses a sumar desde el ancla.
+  const fechaDeCuota = (n, anclaDate, diaCobro) => {
+    const mesTotal = anclaDate.getMonth() + n * mesesPaso
+    const anio = anclaDate.getFullYear() + Math.floor(mesTotal / 12)
     const mes  = mesTotal % 12  // 0-based
-    // Último día del mes destino
     const diasEnMes = new Date(anio, mes + 1, 0).getDate()
-    const dia = Math.min(prestamo.dia_cobro, diasEnMes)
-    const d = new Date(anio, mes, dia)
-    return fmtFecha(d)
+    const dia = Math.min(diaCobro, diasEnMes)
+    return fmtFecha(new Date(anio, mes, dia))
   }
 
   // ── Amortizaciones parciales ordenadas por fecha ───────────────────────
@@ -151,53 +155,74 @@ export const generateCalendarioTeorico = (prestamo, cobros = []) => {
   let factorPrimeraCuotaPostAP = null  // factor proporcional para la 1ª cuota tras AP
   let fechaUltimaAP = null             // fecha de la última AP aplicada
 
+  // Ancla dinámica: punto desde el que se calculan las fechas de cuota
+  // Cambia con cada AP (fecha y día de cobro de la AP)
+  let anclaDate = inicio
+  let diaCobro  = Number(prestamo.dia_cobro)
+  let cuotaEnTramo = 0  // contador de cuotas dentro del tramo actual (reset tras cada AP)
+
   // Iteramos exactamente numCuotasTotal veces (la definición del préstamo).
   // Para misma_cuota tras amortización parcial, el saldo se agota antes y el break termina el loop.
   for (let i = 1; i <= numCuotasTotal; i++) {
     if (saldo <= 0.005) break
 
-    const fechaStr = fechaDeCuota(i)
+    cuotaEnTramo++
+    const fechaStr = fechaDeCuota(cuotaEnTramo, anclaDate, diaCobro)
     factorPrimeraCuotaPostAP = null  // resetear en cada iteración
+    let saltarCuota = false
 
-    // ── Aplicar amortizaciones parciales cuya fecha cae antes de esta cuota ──
-    while (apIdx < amortParciales.length && amortParciales[apIdx].fecha < fechaStr) {
+    // ── Aplicar amortizaciones parciales cuya fecha cae antes o el mismo día ──
+    while (apIdx < amortParciales.length && amortParciales[apIdx].fecha <= fechaStr) {
       const ap = amortParciales[apIdx]
+      const esMismoDia = ap.fecha === fechaStr
       saldo = Math.max(0, r(saldo - ap.principal))
       fechaUltimaAP = ap.fecha
       apIdx++
       if (saldo <= 0.005) break
 
-      if (tipo === 'Francés' && tasaPeriodo > 0) {
-        // Cuotas que quedan por generar a partir de esta iteración (i incluida)
-        const cuotasRestantes = numCuotasTotal - (i - 1)
+      // Actualizar ancla: a partir de esta AP las cuotas se calculan desde su fecha y día
+      const dAP = new Date(ap.fecha + 'T00:00:00')
+      anclaDate    = dAP
+      diaCobro     = dAP.getDate()
+      cuotaEnTramo = 0  // reiniciar contador del tramo
 
+      if (tipo === 'Francés' && tasaPeriodo > 0) {
+        const cuotasRestantes = numCuotasTotal - (i - 1)
         if (ap.modalidad === 'misma_fecha') {
-          // Misma fecha fin → recalcular cuota para repartir nuevo saldo en cuotasRestantes
           cuotaFija = calcPMT(saldo, tasaPeriodo, Math.max(1, cuotasRestantes))
-        } else {
-          // Misma cuota → cuotaFija no cambia; el saldo reducido se agotará antes.
         }
       }
 
+      // Si la AP cae el mismo día que esta cuota: omitir la cuota (intereses ya en la AP)
+      if (esMismoDia) {
+        saltarCuota = true
+        break
+      }
+
       // ── Factor proporcional para la primera cuota post-AP ──────────────────
-      // La AP cae a mitad de período: solo se deben intereses por los días
-      // que van desde la fecha de AP hasta el siguiente vencimiento.
-      // Período = desde el vencimiento anterior hasta este vencimiento.
+      // Solo si la AP cae a mitad de período (no mismo día)
       if (fechaUltimaAP) {
-        const fechaVencAnt = i > 1 ? fechaDeCuota(i - 1) : inicio.toISOString().slice(0, 10)
+        const fechaVencAnt = cuotas.length > 0
+          ? cuotas[cuotas.length - 1].fecha
+          : fmtFecha(inicio)
+        const fechaSig = fechaDeCuota(1, anclaDate, diaCobro)
         const dVencAnt  = new Date(fechaVencAnt + 'T00:00:00')
-        const dVenc     = new Date(fechaStr + 'T00:00:00')
-        const dAP       = new Date(fechaUltimaAP + 'T00:00:00')
-        const diasPeriodo   = (dVenc - dVencAnt) / 86400000
-        const diasDesdeAP   = (dVenc - dAP) / 86400000
+        const dVenc     = new Date(fechaSig + 'T00:00:00')
+        const dAP2      = new Date(fechaUltimaAP + 'T00:00:00')
+        const diasPeriodo = (dVenc - dVencAnt) / 86400000
+        const diasDesdeAP = (dVenc - dAP2) / 86400000
         if (diasPeriodo > 0 && diasDesdeAP > 0 && diasDesdeAP < diasPeriodo) {
           factorPrimeraCuotaPostAP = diasDesdeAP / diasPeriodo
         }
       }
     }
     if (saldo <= 0.005) break
-
     cuotaNum++
+    if (saltarCuota) continue
+
+    // Recalcular la fecha con el ancla y diaCobro potencialmente actualizados tras la AP
+    const fechaFinal = fechaDeCuota(cuotaEnTramo, anclaDate, diaCobro)
+
     let interes = 0, principal = 0
     const factorAP = factorPrimeraCuotaPostAP  // puede ser null (cuota normal) o fracción
 
@@ -235,7 +260,7 @@ export const generateCalendarioTeorico = (prestamo, cobros = []) => {
 
     cuotas.push({
       num:       cuotaNum,
-      fecha:     fechaStr,
+      fecha:     fechaFinal,
       interes:   r(interes),
       principal: r(principal),
       total:     r(interes + principal),
@@ -775,9 +800,16 @@ export const distribuirCobros = (cal, cobros) => {
 
   let tramoIdx = 0, restante = tramos[0] || 0, apIdx = 0
   return cal.map(c => {
+    // Avanzar tramo para APs anteriores a esta cuota
     while (apIdx < apFechas.length && apFechas[apIdx] < c.fecha) {
       apIdx++; tramoIdx++
       restante = tramos[tramoIdx] || 0
+    }
+    // Si la AP cae el mismo día que esta cuota, los intereses de esa cuota
+    // ya están incluidos en la AP → la cuota se considera cobrada
+    const apMismoDia = apIdx < apFechas.length && apFechas[apIdx] === c.fecha
+    if (apMismoDia) {
+      return { ...c, cobrado: c.total, pendiente: 0, estado: 'cobrada' }
     }
     const cobrado   = r(Math.min(restante, c.total))
     restante        = r(restante - cobrado)

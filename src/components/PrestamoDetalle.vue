@@ -691,14 +691,18 @@ const calendarioConEstado = computed(() => {
   const fechaPrimeraAP = amortParciales.length > 0 ? amortParciales[0].fecha : null
 
   for (const c of cal) {
-    // Intercalar filas de amortización parcial cuya fecha es anterior a esta cuota
-    while (apIdx < amortParciales.length && amortParciales[apIdx].fecha < c.fecha) {
+    // Intercalar filas de amortización parcial cuya fecha es <= esta cuota
+    while (apIdx < amortParciales.length && amortParciales[apIdx].fecha <= c.fecha) {
+      const esMismoDia = amortParciales[apIdx].fecha === c.fecha
       filas.push(amortParciales[apIdx])
       apIdx++
-      // Pasar al siguiente tramo de cobros
       tramoIdx++
       restante = tramos[tramoIdx]?.total || 0
+      // Si la AP cae el mismo día que esta cuota, los intereses ya están en la AP → saltarla
+      if (esMismoDia) { break }
     }
+    // Si la última AP intercalada era del mismo día, saltar esta cuota
+    if (apIdx > 0 && amortParciales[apIdx - 1]?.fecha === c.fecha) continue
 
     // Distribuir cobros del tramo actual secuencialmente
     let cobrado, pendiente, estado
@@ -720,7 +724,6 @@ const calendarioConEstado = computed(() => {
     // el pendiente es 0 y el estado cobrada. Las completamente pendientes se ocultan.
     if (fechaPrimeraAP && c.fecha < fechaPrimeraAP) {
       if (estado === 'pendiente') continue
-      // cobrada o parcial: el importe real es lo cobrado
       filas.push({ ...c, total: cobrado, cobrado, pendiente: 0, estado: 'cobrada' })
       continue
     }
