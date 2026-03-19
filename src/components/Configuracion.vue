@@ -52,7 +52,7 @@
       </div>
 
       <div class="table-card">
-        <div class="table-header"><h3>Partícipes</h3></div>
+        <div class="table-header"><h3>Portal Partícipes</h3></div>
         <div class="modal-body">
           <div class="form-grid">
             <div class="form-group">
@@ -71,6 +71,18 @@
               <label class="form-label">% Apertura partícipes por defecto</label>
               <input class="form-control" type="number" step="0.01" v-model="form.porcentaje_apertura_defecto">
             </div>
+            <div class="form-group span-2">
+              <label class="form-label">Fecha de cierre para el portal de los partícipes
+                <span style="color:var(--text3);font-size:11px;margin-left:6px">Los datos posteriores a esta fecha no serán visibles en el portal</span>
+              </label>
+              <div style="display:flex;gap:8px;align-items:center">
+                <input class="form-control" type="date" v-model="form.fecha_cierre_portal" style="max-width:200px">
+                <button v-if="form.fecha_cierre_portal" class="btn btn-sm btn-danger" @click="form.fecha_cierre_portal = null" title="Quitar fecha de cierre">✕ Quitar</button>
+              </div>
+              <div v-if="form.fecha_cierre_portal" style="margin-top:6px;font-size:12px;color:var(--accent)">
+                ⚠ El portal mostrará datos hasta el {{ fmtDate(form.fecha_cierre_portal) }} inclusive
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -83,6 +95,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { supabase } from '../supabase.js'
+import { fmtDate } from '../utils.js'
 
 const loading = ref(true)
 const guardado = ref(false)
@@ -96,7 +109,8 @@ const form = ref({
   porcentaje_irpf: 19,
   dia_cobro_participes: 10,
   porcentaje_gestion_defecto: 2,
-  porcentaje_apertura_defecto: 0
+  porcentaje_apertura_defecto: 0,
+  fecha_cierre_portal: null,
 })
 
 onMounted(async () => {

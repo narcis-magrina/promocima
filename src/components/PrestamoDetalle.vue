@@ -9,6 +9,18 @@
       ⊗ Préstamo cancelado el {{ fmtDate(prestamo.fecha_cancelacion) }}.
     </div>
 
+    <!-- Enlace al préstamo origen (si este es un sucesor de AP) -->
+    <div v-if="origenPrestamo" class="alert" style="background:rgba(139,92,246,0.07);border-color:rgba(139,92,246,0.3);color:var(--purple);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
+      <span>↖ Originado por amortización parcial del préstamo <strong>{{ origenPrestamo.alias }}</strong> ({{ origenPrestamo.id }})</span>
+      <button class="btn btn-sm" style="border-color:var(--purple);color:var(--purple)" @click="$emit('navigate','prestamos', origenPrestamo.id)">Ver original</button>
+    </div>
+
+    <!-- Enlace al préstamo sucesor (si este tuvo una AP) -->
+    <div v-if="sucesorPrestamo" class="alert" style="background:rgba(139,92,246,0.07);border-color:rgba(139,92,246,0.3);color:var(--purple);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
+      <span>↘ Refinanciado como <strong>{{ sucesorPrestamo.alias }}</strong> ({{ sucesorPrestamo.id }}) tras amortización parcial</span>
+      <button class="btn btn-sm" style="border-color:var(--purple);color:var(--purple)" @click="$emit('navigate','prestamos', sucesorPrestamo.id)">Ver sucesor</button>
+    </div>
+
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px">
       <div>
         <div style="font-size:18px;font-weight:700">{{ prestamo.alias }}</div>
@@ -361,6 +373,8 @@
               <th>Fecha</th>
               <th style="text-align:right">Importe</th>
               <th>Tipo</th>
+              <th>Fecha real cobro</th>
+              <th style="text-align:right">Importe real</th>
               <th>Notas</th>
               <th></th>
             </tr>
@@ -394,6 +408,8 @@
                   {{ c.tipo === 'cancelacion' ? 'Cancelación' : c.tipo === 'judicializacion' ? 'Judicialización' : c.tipo === 'amortizacion_parcial' ? 'Amort. Parcial' : 'Pago cuota' }}
                 </span>
               </td>
+              <td style="font-size:12px" :style="c.fecha_real_cobro && c.fecha_real_cobro !== c.fecha_real ? 'color:var(--text1);font-weight:600' : 'color:var(--text3)'">{{ c.fecha_real_cobro ? fmtDate(c.fecha_real_cobro) : '—' }}</td>
+              <td class="td-mono td-right" style="font-size:12px" :style="c.importe_real_cobro != null && Math.abs(Number(c.importe_real_cobro) - Number(c.importe)) > 0.005 ? 'color:var(--text1);font-weight:600' : 'color:var(--text3)'">{{ c.importe_real_cobro != null ? fmtDec(c.importe_real_cobro) : '—' }}</td>
               <td style="font-size:12px;color:var(--text3)">{{ c.notas || '—' }}</td>
               <td>
                 <button
@@ -462,6 +478,14 @@
           <div class="form-grid cols-1">
             <div class="form-group"><label class="form-label">Fecha Real <span class="req">*</span></label><input class="form-control" type="date" v-model="formCobro.fecha"></div>
             <div class="form-group"><label class="form-label">Importe (€) <span class="req">*</span></label><input class="form-control" type="number" step="0.01" v-model="formCobro.importe"></div>
+            <div class="form-group">
+              <label class="form-label">Fecha real cobro <span style="color:var(--text3);font-size:11px">(informativo)</span></label>
+              <input class="form-control" type="date" v-model="formCobro.fecha_real_cobro">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Importe real cobro <span style="color:var(--text3);font-size:11px">(informativo)</span></label>
+              <input class="form-control" type="number" step="0.01" v-model="formCobro.importe_real_cobro">
+            </div>
             <div class="form-group"><label class="form-label">Notas</label><textarea class="form-control" v-model="formCobro.notas"></textarea></div>
           </div>
         </div>
@@ -509,9 +533,11 @@ import ModalJudicializar from './ModalJudicializar.vue'
 import ModalAmortizacionParcial from './ModalAmortizacionParcial.vue'
 
 const props = defineProps({
-  prestamo:    { type: Object, required: true },
-  cobros:      { type: Array,  required: true },
-  prestamoId:  { type: String, required: true },
+  prestamo:        { type: Object, required: true },
+  cobros:          { type: Array,  required: true },
+  prestamoId:      { type: String, required: true },
+  origenPrestamo:  { type: Object, default: null },  // préstamo del que proviene (si es sucesor)
+  sucesorPrestamo: { type: Object, default: null },  // préstamo sucesor (si tuvo AP)
 })
 const emit = defineEmits(['navigate', 'editar', 'recargar'])
 
@@ -524,7 +550,7 @@ const modalCancelar     = ref(false)
 const modalAmortParcial = ref(false)
 const modalJud     = ref(null)   // null | 'judicializar' | 'revertir'
 const cuotaSeleccionada = ref(null)
-const formCobro    = ref({ fecha: '', importe: 0, notas: '' })
+const formCobro    = ref({ fecha: '', importe: 0, fecha_real_cobro: '', importe_real_cobro: '', notas: '' })
 
 // Contratos CCP activos de este préstamo (para KPI parte participada)
 const ccpActivos   = ref([])
@@ -548,7 +574,7 @@ const estadoBadge = computed(() => {
   if (est === 'cancelado' || est === 'judicializado') return getEstadoBadge(est)
   // Calcular situación al día / con retraso usando distribución secuencial
   const hoy = today()
-  const vencidas = calendarioConEstado.value.filter(c => !c.esAmortParcial && c.fecha <= hoy)
+  const vencidas = calendarioConEstado.value.filter(c => c.fecha <= hoy)
   for (const cuota of vencidas) {
     if (cuota.estado !== 'cobrada') return getEstadoBadge('con_retraso')
   }
@@ -610,7 +636,7 @@ const capitalPendiente = computed(() => {
     const totalPagadoEnCuotas = props.cobros
       .filter(c => c.tipo === 'pago_cuota')
       .reduce((s, c) => s + Number(c.importe), 0)
-    const cal = generateCalendarioTeorico(p, props.cobros)
+    const cal = generateCalendarioTeorico(p)
     let restante = totalPagadoEnCuotas
     for (const cuota of cal) {
       if (restante <= 0) break
@@ -625,123 +651,31 @@ const capitalPendiente = computed(() => {
 })
 
 const tieneAmortParcial = computed(() =>
-  props.cobros.some(c => c.tipo === 'amortizacion_parcial' && Number(c.importe_principal || 0) > 0)
+  false  // AP ahora genera un préstamo nuevo
 )
 
 const calendarioConEstado = computed(() => {
   const r = v => Math.round(v * 100) / 100
-
-  // Amortizaciones parciales ordenadas por fecha — se intercalarán como filas especiales
-  const amortParciales = props.cobros
-    .filter(c => c.tipo === 'amortizacion_parcial' && Number(c.importe_principal || 0) > 0)
-    .map(c => ({
-      esAmortParcial:   true,
-      fecha:            c.fecha_real || c.fecha_teorica,
-      principal:        r(Number(c.importe_principal || 0)),
-      interes:          r(Number(c.importe_interes_ordinario || 0) + Number(c.importe_interes_demora || 0)),
-      interesOrdinario: r(Number(c.importe_interes_ordinario || 0)),
-      interesDemora:    r(Number(c.importe_interes_demora    || 0)),
-      total:            r(Number(c.importe || 0)),
-      cobrado:          r(Number(c.importe || 0)),
-      pendiente:        0,
-      estado:           'amortizacion_parcial',
-      notas:            c.notas || '',
-    }))
-    .sort((a, b) => a.fecha.localeCompare(b.fecha))
-
-  // Calendario teórico (ya tiene en cuenta las amortizaciones para recalcular cuotas)
-  const cal = generateCalendarioTeorico(props.prestamo, props.cobros)
-
-  // Cobros ordinarios ordenados por fecha para distribución secuencial por tramos.
-  // Cada amortización parcial divide el calendario en tramos independientes:
-  // los cobros anteriores a la AP cubren las cuotas anteriores a la AP,
-  // y los cobros posteriores a la AP cubren las cuotas posteriores.
-  const cobrosOrdinarios = props.cobros
-    .filter(x => x.tipo === 'pago_cuota' || x.tipo === 'cancelacion')
-    .map(x => ({ fecha: x.fecha_real || x.fecha_teorica, importe: r(Number(x.importe)) }))
-    .sort((a, b) => a.fecha.localeCompare(b.fecha))
-
-  // Construir tramos: [ { hasta: fecha_AP | null, total: suma cobros en ese tramo } ]
-  // Un tramo cubre cobros cuya fecha < fecha de la siguiente AP (o hasta el final si no hay más)
-  const tramos = []
-  let cobrosIdx = 0
-  // Tramos: uno por cada AP + uno final
-  const fechasAP = amortParciales.map(ap => ap.fecha)
-  const limites  = [...fechasAP, null]  // null = sin límite (último tramo)
-
-  for (const limite of limites) {
-    let total = 0
-    // Sumar cobros cuya fecha < limite (o todos si limite es null)
-    const cobrosTramo = []
-    while (cobrosIdx < cobrosOrdinarios.length) {
-      const cb = cobrosOrdinarios[cobrosIdx]
-      if (limite !== null && cb.fecha >= limite) break
-      total = r(total + cb.importe)
-      cobrosTramo.push(cb)
-      cobrosIdx++
-    }
-    tramos.push({ limite, total })
-  }
-
-  // Distribuir: cada tramo cubre las cuotas de su rango
-  let tramoIdx  = 0
-  let restante  = tramos[0]?.total || 0
-  let apIdx     = 0
-  const filas   = []
-  const fechaPrimeraAP = amortParciales.length > 0 ? amortParciales[0].fecha : null
-
-  for (const c of cal) {
-    // Intercalar filas de amortización parcial cuya fecha es <= esta cuota
-    while (apIdx < amortParciales.length && amortParciales[apIdx].fecha <= c.fecha) {
-      const esMismoDia = amortParciales[apIdx].fecha === c.fecha
-      filas.push(amortParciales[apIdx])
-      apIdx++
-      tramoIdx++
-      restante = tramos[tramoIdx]?.total || 0
-      // Si la AP cae el mismo día que esta cuota, los intereses ya están en la AP → saltarla
-      if (esMismoDia) { break }
-    }
-    // Si la última AP intercalada era del mismo día, saltar esta cuota
-    if (apIdx > 0 && amortParciales[apIdx - 1]?.fecha === c.fecha) continue
-
-    // Distribuir cobros del tramo actual secuencialmente
-    let cobrado, pendiente, estado
-    if (restante <= 0) {
-      cobrado   = 0
-      pendiente = c.total
-      estado    = 'pendiente'
-    } else {
-      cobrado   = r(Math.min(restante, c.total))
-      restante  = r(restante - cobrado)
-      pendiente = r(c.total - cobrado)
-      estado    = pendiente < c.total * 0.01 ? 'cobrada'
-                : cobrado   > 0              ? 'parcial'
-                :                              'pendiente'
-    }
-
-    // Antes de la primera AP: todas las cuotas se dan por saldadas.
-    // El total de la cuota pasa a ser lo que realmente se cobró (cobrado),
-    // el pendiente es 0 y el estado cobrada. Las completamente pendientes se ocultan.
-    if (fechaPrimeraAP && c.fecha < fechaPrimeraAP) {
-      if (estado === 'pendiente') continue
-      filas.push({ ...c, total: cobrado, cobrado, pendiente: 0, estado: 'cobrada' })
-      continue
-    }
-
-    filas.push({ ...c, cobrado, pendiente, estado })
-  }
-
-  // Amortizaciones parciales que queden después de la última cuota
-  while (apIdx < amortParciales.length) {
-    filas.push(amortParciales[apIdx])
-    apIdx++
-  }
-
-  return filas
+  // Calendario limpio: sin APs embebidas (generan préstamo nuevo)
+  const cal = generateCalendarioTeorico(props.prestamo)
+  let restante = r(
+    props.cobros
+      .filter(c => c.tipo === 'pago_cuota' || c.tipo === 'cancelacion')
+      .reduce((s, c) => s + Number(c.importe), 0)
+  )
+  return cal.map(c => {
+    const cobrado   = r(Math.min(restante, c.total))
+    restante        = r(restante - cobrado)
+    const pendiente = r(c.total - cobrado)
+    const estado    = pendiente < c.total * 0.01 ? 'cobrada'
+                    : cobrado   > 0              ? 'parcial'
+                    :                              'pendiente'
+    return { ...c, cobrado, pendiente, estado }
+  })
 })
 
 const cuotaDetalle = computed(() => {
-  const cuotas = calendarioConEstado.value.filter(c => !c.esAmortParcial)
+  const cuotas = calendarioConEstado.value
   if (!cuotas.length) return { total: 0, interes: 0, principal: 0 }
   const pendiente = cuotas.find(c => c.estado !== 'cobrada')
   const cuota = pendiente || cuotas[0]
@@ -750,14 +684,14 @@ const cuotaDetalle = computed(() => {
 
 const cuotasFiltradas = computed(() => {
   const todas = calendarioConEstado.value
-  if (filtroCuotas.value === 'cobrada')   return todas.filter(c => c.estado === 'cobrada' || c.esAmortParcial)
-  if (filtroCuotas.value === 'pendiente') return todas.filter(c => c.estado !== 'cobrada' || c.esAmortParcial)
+  if (filtroCuotas.value === 'cobrada')   return todas.filter(c => c.estado === 'cobrada')
+  if (filtroCuotas.value === 'pendiente') return todas.filter(c => c.estado !== 'cobrada')
   return todas
 })
 
 const cobrosVencidosPendientes = computed(() => {
   const hoy = today()
-  return calendarioConEstado.value.filter(c => !c.esAmortParcial && c.estado !== 'cobrada' && c.fecha <= hoy)
+  return calendarioConEstado.value.filter(c => c.estado !== 'cobrada' && c.fecha <= hoy)
 })
 
 const importeRetrasado = computed(() =>
@@ -827,7 +761,7 @@ const cuotasCobradasAntesJudicializacion = computed(() => {
   if (!props.prestamo?.fecha_judicializacion) return []
   const fJud = props.prestamo.fecha_judicializacion
   return calendarioConEstado.value.filter(c =>
-    (c.estado === 'cobrada' || c.esAmortParcial) && c.fecha <= fJud
+    c.estado === 'cobrada' && c.fecha <= fJud
   )
 })
 
@@ -866,9 +800,9 @@ async function cobrarCuotaDirecto(c) {
 }
 
 function abrirRegistrarCobro() {
-  const primera = calendarioConEstado.value.find(c => !c.esAmortParcial && c.estado !== 'cobrada')
+  const primera = calendarioConEstado.value.find(c => c.estado !== 'cobrada')
   cuotaSeleccionada.value = primera || { num: 1, fecha: today(), pendiente: 0 }
-  formCobro.value = { fecha: primera?.fecha || today(), importe: primera?.pendiente?.toFixed(2) || '', notas: '' }
+  formCobro.value = { fecha: primera?.fecha || today(), importe: primera?.pendiente?.toFixed(2) || '', fecha_real_cobro: primera?.fecha || today(), importe_real_cobro: primera?.pendiente?.toFixed(2) || '', notas: '' }
   modalCuota.value = true
 }
 
@@ -882,7 +816,7 @@ async function guardarCobro() {
   // Obtener cuotas pendientes (o parcialmente cobradas) desde la seleccionada en adelante
   // Excluir filas especiales de amortización parcial
   const pendientes = calendarioConEstado.value.filter(
-    c => !c.esAmortParcial && c.estado !== 'cobrada' && c.num >= cuotaSeleccionada.value.num
+    c => c.estado !== 'cobrada' && c.num >= cuotaSeleccionada.value.num
   )
 
   if (restante <= 0) return alert('El importe debe ser mayor que cero')
@@ -912,6 +846,8 @@ async function guardarCobro() {
     importe: Math.round(restante * 100) / 100,
     tipo: 'pago_cuota',
     notas,
+    fecha_real_cobro:    formCobro.value.fecha_real_cobro    || null,
+    importe_real_cobro:  formCobro.value.importe_real_cobro  ? Math.round(Number(formCobro.value.importe_real_cobro) * 100) / 100 : null,
   }
 
   const { error } = await supabase.from('cobros').insert(insert)

@@ -98,28 +98,6 @@
         </div>
       </div>
 
-      <!-- Fila 3: Situación mes -->
-      <div style="margin-bottom:20px">
-        <div class="kpi-card kc-orange">
-          <div class="kpi-label">Situación mes</div>
-          <div class="kpi-value" style="font-size:20px">{{ fmtN(kpartBrutoMes) }}</div>
-          <div style="margin-top:8px;display:grid;gap:4px">
-            <div class="kpi-row">
-              <span>Beneficio/mes</span>
-              <span class="kpi-row-val">{{ fmtN(kpartBrutoMes) }}</span>
-            </div>
-            <div class="kpi-row">
-              <span>Neto/mes</span>
-              <span class="kpi-row-val">{{ fmtN(kpartNetoMes) }}</span>
-            </div>
-            <div class="kpi-row kpi-row-sep">
-              <span>Devengado pendiente</span>
-              <span class="kpi-row-val">{{ kpartDevengadoTotal > 0 ? fmtN(kpartDevengadoTotal) : '—' }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
     </template>
 
     <!-- Contratos -->
@@ -136,14 +114,8 @@
     </div>
 
     <template v-else>
-      <!-- Filtro de estado — solo si hay cancelados -->
-      <div v-if="contratos.some(c => estadoContrato(c) === 'cancelado')" style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
-        <button class="btn btn-sm" :class="filtroEstado==='activos' ? 'btn-primary' : ''" @click="filtroEstado='activos'">Activos</button>
-        <button class="btn btn-sm" :class="filtroEstado==='todos' ? 'btn-primary' : ''" @click="filtroEstado='todos'">Todos</button>
-        <span style="font-size:12px;color:var(--text3)">{{ contratosFiltrados.length }} contrato{{ contratosFiltrados.length !== 1 ? 's' : '' }}</span>
-      </div>
       <div class="table-card" style="margin-bottom:20px">
-        <div class="table-header"><h3>Contratos ({{ contratosFiltrados.length }})</h3></div>
+        <div class="table-header"><h3>Contratos ({{ contratos.length }})</h3></div>
         <table>
           <thead>
             <tr>
@@ -151,24 +123,27 @@
               <th v-if="modoTodo">Partícipe</th>
               <th style="text-align:right">Importe Participado</th>
               <th style="text-align:center">% Part.</th>
-              <th v-if="modoTodo" style="text-align:right">Beneficio/mes</th>
               <th style="text-align:right">Neto/mes</th>
-              <th style="text-align:right;color:var(--orange)">Devengado</th>
               <th>Estado préstamo</th>
               <th>Estado contrato</th>
+              <th style="text-align:center">Acción</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="c in contratosFiltrados" :key="c.id" style="cursor:pointer" @click="emit('navigate', 'contratos-ccp', c.id)">
+            <tr v-for="c in contratos" :key="c.id" style="cursor:pointer" @click="emit('navigate', 'contratos-ccp', c.id)">
               <td style="font-weight:500">{{ c.prestamos?.alias || c.prestamo_id }}</td>
               <td v-if="modoTodo" style="font-size:12px;color:var(--text2)">{{ c.participes?.nombre || '—' }}</td>
               <td class="td-mono td-right">{{ fmt(c.importe_participacion) }}</td>
               <td class="td-mono td-center">{{ c.porcentaje_participacion }}%</td>
-              <td v-if="modoTodo" class="td-mono td-right" style="color:var(--accent)">{{ fmt(calcBeneficioMes(c)) }}</td>
               <td class="td-mono td-right" style="color:var(--green)">{{ fmt(calcInteresNeto(c)) }}</td>
-              <td class="td-mono td-right" style="color:var(--orange)">{{ calcDevengado(c) > 0 ? fmt(calcDevengado(c)) : '—' }}</td>
               <td><span v-html="getEstadoBadge(c.prestamos?.estado === 'cancelado' ? 'cancelado' : c.prestamos?.estado === 'judicializado' ? 'judicializado' : c.prestamos?.situacion || 'al_dia')" /></td>
               <td><span class="badge" :class="c.activo ? 'badge-outline-green' : 'badge-outline-gray'">{{ c.activo ? 'Activo' : 'Inactivo' }}</span></td>
+              <td class="td-center">
+                <button class="btn btn-sm btn-registrar" style="font-size:11px;padding:3px 9px"
+                  @click="emit('navigate', 'contratos-ccp', c.id)">
+                  Ver detalle
+                </button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -181,15 +156,12 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { supabase } from '../supabase.js'
-import { fmt, fmtInt, fmtN, fmtDate, getEstadoBadge, calcSituacionPrestamo, calcCapitalActivoPrestamo, generateCalendarioTeorico, calcDevengadoContrato, today } from '../utils.js'
+import { fmt, fmtInt, fmtN, fmtDate, getEstadoBadge, calcSituacionPrestamo, calcCapitalActivoPrestamo, generateCalendarioTeorico } from '../utils.js'
 import { useAuth } from '../composables/useAuth.js'
-import HelpTip from './HelpTip.vue'
-import { help } from '../helpTexts.js'
 
 const props = defineProps({
   participeId:  { type: String,  default: null },  // un partícipe específico
   participeIds: { type: Array,   default: null },  // lista explícita (modo Todo)
-  fechaCierre:  { type: String,  default: null },  // fecha de cierre portal (YYYY-MM-DD)
 })
 const emit  = defineEmits(['navigate'])
 
@@ -202,14 +174,12 @@ const pidsActivos = computed(() => {
 })
 
 const contratos  = ref([])
-const filtroEstado = ref('activos')  // 'activos' | 'todos'
 const pagos      = ref([])
 const loading    = ref(true)
 
 onMounted(cargar)
 watch(() => props.participeId, cargar)
 watch(() => props.participeIds, cargar)
-watch(() => props.fechaCierre, cargar)
 watch(authParticipeIds, cargar)
 
 async function cargar() {
@@ -219,7 +189,7 @@ async function cargar() {
   try {
     const { data: cc } = await supabase
       .from('contratos_ccp')
-      .select('*, participes(nombre), prestamos(id, alias, estado, interes_ordinario, importe, fecha_inicio, dia_cobro, duracion_meses, tipo_prestamo, periodicidad, garantia_tasacion, meses_carencia)')
+      .select('*, participes(nombre), prestamos(id, alias, estado, interes_ordinario, importe, fecha_inicio, dia_cobro, duracion_meses, tipo_prestamo, periodicidad, garantia_tasacion)')
       .in('participe_id', pids)
       .order('fecha_firma')
 
@@ -228,35 +198,24 @@ async function cargar() {
     if (prestamoIds.length) {
       const { data: cbp } = await supabase
         .from('cobros')
-        .select('prestamo_id, importe, tipo, fecha_real, fecha_teorica, cuota_num')
+        .select('prestamo_id, importe, tipo, fecha_real, fecha_teorica')
         .in('prestamo_id', prestamoIds)
-        .limit(50000)
       cobrosPortal = cbp || []
     }
 
-    // Aplicar fecha de cierre: filtrar contratos, cobros y pagos posteriores a la fecha
-    const cierre = props.fechaCierre || null
-    const ccFiltrados = (cc || []).filter(c => !cierre || (c.fecha_firma || '') <= cierre)
-
-    contratos.value = ccFiltrados
-      .filter(c => !cierre || !c.prestamos || (c.prestamos.fecha_inicio || '') <= cierre)
-      .map(c => {
-        const pr = c.prestamos
-        if (!pr) return c
-        const cobrosP = cobrosPortal
-          .filter(cb => cb.prestamo_id === pr.id)
-          .filter(cb => !cierre || (cb.fecha_real || cb.fecha_teorica || '') <= cierre)
-        return { ...c, cobrosP, prestamos: { ...pr, situacion: calcSituacionPrestamo(pr, cobrosP, cierre) } }
-      })
+    contratos.value = (cc || []).map(c => {
+      const pr = c.prestamos
+      if (!pr) return c
+      const cobrosP = cobrosPortal.filter(cb => cb.prestamo_id === pr.id)
+      return { ...c, cobrosP, prestamos: { ...pr, situacion: calcSituacionPrestamo(pr, cobrosP) } }
+    })
 
     const ccpIds = contratos.value.map(c => c.id)
     if (ccpIds.length) {
-      let pgQuery = supabase
+      const { data: pg } = await supabase
         .from('pagos_reales_participe').select('*')
         .in('contrato_ccp_id', ccpIds)
         .order('fecha_pago_real', { ascending: false })
-      if (props.fechaCierre) pgQuery = pgQuery.lte('fecha_pago_real', props.fechaCierre)
-      const { data: pg } = await pgQuery
       pagos.value = pg || []
     } else {
       pagos.value = []
@@ -268,12 +227,6 @@ async function cargar() {
 
 // Modo Todo: hay varios partícipes en la lista
 const modoTodo = computed(() => pidsActivos.value.length > 1)
-
-// Filtro de estado
-const contratosFiltrados = computed(() => {
-  if (filtroEstado.value === 'todos') return contratos.value
-  return contratos.value.filter(c => estadoContrato(c) !== 'cancelado')
-})
 
 // ── Helpers de estado ─────────────────────────────────────────────────────────
 const estadoContrato = c => {
@@ -343,39 +296,11 @@ const kpartLTV = computed(() => {
   return Math.round(kpartEnCurso.value / kpartGarantias.value * 10000) / 100
 })
 
-// ── Situación mes ─────────────────────────────────────────────────────────────
-const kpartBrutoMes = computed(() =>
-  Math.round(contratosActNOJud.value.reduce((s, c) => {
-    if (!c.prestamos) return s
-    const tasaNet = (Number(c.prestamos.interes_ordinario) - Number(c.porcentaje_gestion)) / 100
-    return s + Number(c.importe_participacion) * tasaNet / 12
-  }, 0) * 100) / 100
-)
-const kpartNetoMes = computed(() =>
-  Math.round(kpartBrutoMes.value * (1 - 0.19) * 100) / 100
-)
-const kpartDevengadoTotal = computed(() =>
-  Math.round(contratosActivos.value.reduce((s, c) => s + calcDevengado(c), 0) * 100) / 100
-)
-
 // ── Tabla contratos ───────────────────────────────────────────────────────────
-function calcBeneficioMes(c) {
-  // Intereses - gestión (bruto antes de IRPF)
-  if (!c.prestamos) return 0
-  const tasaNet = (Number(c.prestamos.interes_ordinario) - Number(c.porcentaje_gestion)) / 100
-  return Math.round(Number(c.importe_participacion) * tasaNet / 12 * 100) / 100
-}
-
 function calcInteresNeto(c) {
   if (!c.prestamos) return 0
   const tasaNet = (Number(c.prestamos.interes_ordinario) - Number(c.porcentaje_gestion)) / 100
   const bruto   = Number(c.importe_participacion) * tasaNet / 12
   return Math.round(bruto * (1 - 0.19) * 100) / 100
-}
-
-function calcDevengado(c) {
-  if (!c.prestamos || !c.activo || c.prestamos.estado === 'cancelado') return 0
-  const pagosC = pagos.value.filter(p => p.contrato_ccp_id === c.id)
-  return calcDevengadoContrato(c, c.prestamos, c.cobrosP || [], pagosC, props.fechaCierre || today())
 }
 </script>

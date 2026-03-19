@@ -135,17 +135,10 @@ watch(() => props.modelValue, open => {
 
 // ── Cálculos automáticos ──────────────────────
 function calcPrincipalPendiente() {
-  const p   = props.prestamo
-  const cal = generateCalendarioTeorico(p, props.cobros)
+  const p = props.prestamo
+  if (p.tipo_prestamo === 'Americano') return Number(p.importe)
+  const cal = generateCalendarioTeorico(p)
   const calConEstado = distribuirCobros(cal, props.cobros)
-  if (p.tipo_prestamo === 'Americano') {
-    // Para americano: principal pendiente = saldo vivo (importe - amortizaciones parciales)
-    const totalAmort = props.cobros
-      .filter(c => c.tipo === 'amortizacion_parcial')
-      .reduce((s, c) => s + Number(c.importe_principal || 0), 0)
-    return Math.max(0, Math.round((Number(p.importe) - totalAmort) * 100) / 100)
-  }
-  // Francés: sumar principal de cuotas cobradas
   const amortizado = calConEstado
     .filter(c => c.estado === 'cobrada')
     .reduce((s, c) => s + (c.principal || 0), 0)
@@ -153,7 +146,7 @@ function calcPrincipalPendiente() {
 }
 
 function calcInteresOrdinarioPendiente(fecha) {
-  const cal = generateCalendarioTeorico(props.prestamo, props.cobros)
+  const cal = generateCalendarioTeorico(props.prestamo)
   const calConEstado = distribuirCobros(cal, props.cobros)
   return calConEstado.reduce((s, c) => {
     if (c.fecha > fecha) return s

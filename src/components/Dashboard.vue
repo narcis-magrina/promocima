@@ -6,36 +6,36 @@
 
       <!-- KPI 1: Capital -->
       <div class="kpi-card kc-green">
-        <div class="kpi-label">Capital <HelpTip :texto="help.desplegado" /></div>
+        <div class="kpi-label">Capital Invertido <HelpTip :texto="help.invertido" /></div>
         <div class="kpi-value" style="font-size:18px">{{ fmtN(capitalEnCurso) }}</div>
         <div style="margin-top:8px;display:grid;gap:4px">
-          <div style="display:flex;justify-content:space-between;font-size:11px">
+          <div class="kpi-row">
             <span style="color:var(--text3)">En curso <HelpTip :texto="help.en_curso" pos="right" /></span>
-            <span style="font-family:var(--mono);color:var(--green)">{{ fmtN(capitalActivo) }}</span>
+            <span class="kpi-row-val">{{ fmtN(capitalActivo) }}</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px">
+          <div class="kpi-row">
             <span style="color:var(--text3)">Activo <HelpTip :texto="help.activo" pos="right" /></span>
-            <span style="font-family:var(--mono);color:var(--green)">{{ fmtN(capitalActivoNoJudicial) }}</span>
+            <span class="kpi-row-val">{{ fmtN(capitalActivoNoJudicial) }}</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px">
+          <div class="kpi-row">
             <span style="color:var(--text3)">Judicializado <HelpTip :texto="help.judicializado" pos="right" /></span>
-            <span style="font-family:var(--mono);color:var(--red)">{{ fmtN(capitalJudicializado) }}</span>
+            <span class="kpi-row-val">{{ fmtN(capitalJudicializado) }}</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px">
+          <div class="kpi-row">
             <span style="color:var(--text3)">% judicializado</span>
-            <span style="font-family:var(--mono)" :style="pctJudicializado > 0 ? 'color:var(--red)' : 'color:var(--green)'">{{ pctJudicializado }}%</span>
+            <span class="kpi-row-val" >{{ pctJudicializado }}%</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px;margin-top:2px;padding-top:4px;border-top:1px solid var(--border)">
+          <div class="kpi-row kpi-row-sep">
             <span style="color:var(--text3)">Participado activo <HelpTip :texto="help.capital_participado" pos="right" /></span>
-            <span style="font-family:var(--mono);color:var(--purple)">{{ fmtN(capitalParticipado) }}</span>
+            <span class="kpi-row-val">{{ fmtN(capitalParticipado) }}</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px">
+          <div class="kpi-row">
             <span style="color:var(--text3)">Part. judicializado</span>
-            <span style="font-family:var(--mono);color:var(--red)">{{ fmtN(capitalParticJudicializado) }}</span>
+            <span class="kpi-row-val">{{ fmtN(capitalParticJudicializado) }}</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px">
+          <div class="kpi-row">
             <span style="color:var(--text3)">% jud. partícipes</span>
-            <span style="font-family:var(--mono)" :style="pctJudicPartícipes > 0 ? 'color:var(--red)' : 'color:var(--green)'">{{ pctJudicPartícipes }}%</span>
+            <span class="kpi-row-val" >{{ pctJudicPartícipes }}%</span>
           </div>
         </div>
       </div>
@@ -45,33 +45,33 @@
         <div class="kpi-label">Rentabilidad</div>
         <div class="kpi-value" style="font-size:18px">{{ fmtN(ingrAnualesActivas) }}</div>
         <div style="margin-top:8px;display:grid;gap:4px">
-          <div style="display:flex;justify-content:space-between;font-size:11px">
+          <div class="kpi-row">
             <span style="color:var(--text3)">Ingr. anuales op. activas</span>
-            <span style="font-family:var(--mono)">{{ fmtN(ingrAnualesActivas) }}</span>
+            <span class="kpi-row-val">{{ fmtN(ingrAnualesActivas) }}</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px">
+          <div class="kpi-row">
             <span style="color:var(--text3)">Ingr. anuales part. activas</span>
-            <span style="font-family:var(--mono);color:var(--purple)">{{ fmtN(ingrAnualesParticipes) }}</span>
+            <span class="kpi-row-val">{{ fmtN(ingrAnualesParticipes) }}</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px">
+          <div class="kpi-row">
             <span style="color:var(--text3)">Ingr. gestión anual</span>
-            <span style="font-family:var(--mono);color:var(--green)">{{ fmtN(ingrGestionAnual) }}</span>
+            <span class="kpi-row-val">{{ fmtN(ingrGestionAnual) }}</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px">
+          <div class="kpi-row">
             <span style="color:var(--text3)">Ingr. apertura LTM</span>
-            <span style="font-family:var(--mono);color:var(--accent)">{{ fmtN(ingrAperturaLTM) }}</span>
+            <span class="kpi-row-val">{{ fmtN(ingrAperturaLTM) }}</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px;margin-top:2px;padding-top:4px;border-top:1px solid var(--border)">
+          <div class="kpi-row kpi-row-sep">
             <span style="color:var(--text3)">Rent. activas</span>
-            <span style="font-family:var(--mono);color:var(--green)">{{ rentActivas }}%</span>
+            <span class="kpi-row-val">{{ rentActivas }}%</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px">
+          <div class="kpi-row">
             <span style="color:var(--text3)">Rent. partícipes</span>
-            <span style="font-family:var(--mono);color:var(--purple)">{{ rentParticipes }}%</span>
+            <span class="kpi-row-val">{{ rentParticipes }}%</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px">
+          <div class="kpi-row">
             <span style="color:var(--text3)">Rent. total Promocima</span>
-            <span style="font-family:var(--mono);color:var(--accent)">{{ rentTotalPromocima }}%</span>
+            <span class="kpi-row-val">{{ rentTotalPromocima }}%</span>
           </div>
         </div>
       </div>
@@ -84,33 +84,33 @@
         <div class="kpi-label">Operaciones</div>
         <div class="kpi-value" style="font-size:18px">{{ nOperacionesTotal }}</div>
         <div style="margin-top:8px;display:grid;gap:4px">
-          <div style="display:flex;justify-content:space-between;font-size:11px">
-            <span style="color:var(--text3)">Op. totales <HelpTip :texto="help.desplegado" pos="right" /></span>
-            <span style="font-family:var(--mono)">{{ nOperacionesTotal }}</span>
+          <div class="kpi-row">
+            <span style="color:var(--text3)">Op. totales <HelpTip :texto="help.invertido" pos="right" /></span>
+            <span class="kpi-row-val">{{ nOperacionesTotal }}</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px">
+          <div class="kpi-row">
             <span style="color:var(--text3)">Canceladas <HelpTip :texto="help.cancelado" pos="right" /></span>
-            <span style="font-family:var(--mono);color:var(--text3)">{{ nCanceladas }}</span>
+            <span class="kpi-row-val">{{ nCanceladas }}</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px">
+          <div class="kpi-row">
             <span style="color:var(--text3)">En curso <HelpTip :texto="help.en_curso" pos="right" /></span>
-            <span style="font-family:var(--mono)">{{ nEnCurso }}</span>
+            <span class="kpi-row-val">{{ nEnCurso }}</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px">
+          <div class="kpi-row">
             <span style="color:var(--text3)">Judicializadas <HelpTip :texto="help.judicializado" pos="right" /></span>
-            <span style="font-family:var(--mono);color:var(--red)">{{ nJudicializados }}</span>
+            <span class="kpi-row-val">{{ nJudicializados }}</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px">
+          <div class="kpi-row">
             <span style="color:var(--text3)">Activas <HelpTip :texto="help.activo" pos="right" /></span>
-            <span style="font-family:var(--mono);color:var(--green)">{{ nActivas }}</span>
+            <span class="kpi-row-val">{{ nActivas }}</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px">
+          <div class="kpi-row">
             <span style="color:var(--text3)">Al día <HelpTip :texto="help.al_dia" pos="right" /></span>
-            <span style="font-family:var(--mono);color:var(--green)">{{ nAlDia }}</span>
+            <span class="kpi-row-val">{{ nAlDia }}</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px">
+          <div class="kpi-row">
             <span style="color:var(--text3)">Con retraso <HelpTip :texto="help.con_retraso" pos="right" /></span>
-            <span style="font-family:var(--mono);color:var(--orange)">{{ nConRetraso }}</span>
+            <span class="kpi-row-val">{{ nConRetraso }}</span>
           </div>
         </div>
       </div>
@@ -120,21 +120,21 @@
         <div class="kpi-label">LTV</div>
         <div class="kpi-value" style="font-size:18px">{{ fmtN(garantiasEnCurso) }}</div>
         <div style="margin-top:8px;display:grid;gap:4px">
-          <div style="display:flex;justify-content:space-between;font-size:11px">
+          <div class="kpi-row">
             <span style="color:var(--text3)">Total garantías en curso</span>
-            <span style="font-family:var(--mono)">{{ fmtN(garantiasEnCurso) }}</span>
+            <span class="kpi-row-val">{{ fmtN(garantiasEnCurso) }}</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px">
+          <div class="kpi-row">
             <span style="color:var(--text3)">LTV op. en curso <HelpTip :texto="help.ltv_en_curso" pos="right" /></span>
-            <span style="font-family:var(--mono)" :style="parseFloat(ltvEnCurso) > 60 ? 'color:var(--red)' : parseFloat(ltvEnCurso) > 40 ? 'color:var(--orange)' : 'color:var(--green)'">{{ ltvEnCurso }}%</span>
+            <span class="kpi-row-val" >{{ ltvEnCurso }}%</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px;margin-top:2px;padding-top:4px;border-top:1px solid var(--border)">
+          <div class="kpi-row kpi-row-sep">
             <span style="color:var(--text3)">Total garantías partícipes</span>
-            <span style="font-family:var(--mono);color:var(--purple)">{{ fmtN(garantiasParticipes) }}</span>
+            <span class="kpi-row-val">{{ fmtN(garantiasParticipes) }}</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px">
+          <div class="kpi-row">
             <span style="color:var(--text3)">LTV op. partícipes <HelpTip :texto="help.ltv_participes" pos="right" /></span>
-            <span style="font-family:var(--mono)" :style="parseFloat(ltvParticipes) > 60 ? 'color:var(--red)' : parseFloat(ltvParticipes) > 40 ? 'color:var(--orange)' : 'color:var(--green)'">{{ ltvParticipes }}%</span>
+            <span class="kpi-row-val" >{{ ltvParticipes }}%</span>
           </div>
         </div>
       </div>
@@ -144,21 +144,21 @@
         <div class="kpi-label">Duración <HelpTip texto="Las duraciones se expresan en meses." /></div>
         <div class="kpi-value" style="font-size:18px">{{ durMediaEnCurso }}</div>
         <div style="margin-top:8px;display:grid;gap:4px">
-          <div style="display:flex;justify-content:space-between;font-size:11px">
+          <div class="kpi-row">
             <span style="color:var(--text3)">Duración media en curso</span>
-            <span style="font-family:var(--mono)">{{ durMediaEnCurso }}</span>
+            <span class="kpi-row-val">{{ durMediaEnCurso }}</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px">
+          <div class="kpi-row">
             <span style="color:var(--text3)">Duración media canceladas</span>
-            <span style="font-family:var(--mono);color:var(--text3)">{{ durMediaCanceladas }}</span>
+            <span class="kpi-row-val">{{ durMediaCanceladas }}</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px">
+          <div class="kpi-row">
             <span style="color:var(--text3)">Duración media activas</span>
-            <span style="font-family:var(--mono);color:var(--green)">{{ durMediaActivas }}</span>
+            <span class="kpi-row-val">{{ durMediaActivas }}</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px">
+          <div class="kpi-row">
             <span style="color:var(--text3)">Duración media judicializadas</span>
-            <span style="font-family:var(--mono);color:var(--red)">{{ durMediaJudicializadas }}</span>
+            <span class="kpi-row-val">{{ durMediaJudicializadas }}</span>
           </div>
         </div>
       </div>
@@ -447,24 +447,11 @@ onMounted(async () => {
 // ── Estado calculado ─────────────────────────────────────────────────────────
 function tieneRetraso(p) {
   if (p.estado === 'judicializado' || p.estado === 'cancelado') return false
-  const hoy     = today()
-  const cobrosP = todosCobros.value.filter(c => c.prestamo_id === p.id)
-  const cal     = generateCalendarioTeorico(p, cobrosP)
+  const hoy      = today()
+  const cobrosP  = todosCobros.value.filter(c => c.prestamo_id === p.id)
+  const cal      = generateCalendarioTeorico(p)
   const calConEstado = distribuirCobros(cal, cobrosP)
-
-  // Fecha de la primera amortización parcial (si la hay)
-  const fechaPrimeraAP = cobrosP
-    .filter(c => c.tipo === 'amortizacion_parcial')
-    .map(c => c.fecha_real || c.fecha_teorica)
-    .filter(Boolean)
-    .sort()[0] || null
-
-  return calConEstado.some(c => {
-    if (c.fecha > hoy) return false
-    // Cuotas anteriores a una AP se consideran saldadas
-    if (fechaPrimeraAP && c.fecha < fechaPrimeraAP) return false
-    return c.estado !== 'cobrada'
-  })
+  return calConEstado.some(c => c.fecha <= hoy && c.estado !== 'cobrada')
 }
 
 function calcEstadoPrestamo(p) {
@@ -607,7 +594,7 @@ const ingrAnualesActivas = computed(() => {
     }
     // Francés / Francés con carencia: sumar intereses de cuotas del año actual
     const cobrosP = todosCobros.value.filter(c => c.prestamo_id === p.id)
-    const cal = generateCalendarioTeorico(p, cobrosP)
+    const cal = generateCalendarioTeorico(p)
     const interesesAnio = cal
       .filter(c => new Date(c.fecha + 'T00:00:00').getFullYear() === anoActual.value)
       .reduce((acc, c) => acc + (c.interes || 0), 0)
@@ -629,7 +616,7 @@ const ingrAnualesParticipes = computed(() => {
       interesAnual = impTotal * tasa
     } else {
       const cobrosP = todosCobros.value.filter(c => c.prestamo_id === p.id)
-      const cal = generateCalendarioTeorico(p, cobrosP)
+      const cal = generateCalendarioTeorico(p)
       interesAnual = cal
         .filter(c => new Date(c.fecha + 'T00:00:00').getFullYear() === anoActual.value)
         .reduce((acc, c) => acc + (c.interes || 0), 0)
@@ -746,23 +733,16 @@ const durMediaCanceladas     = computed(() => durMedia(prestamosRaw.value.filter
 const durMediaActivas        = computed(() => durMedia(prestamosEnCurso.value.filter(p => p.estado !== 'judicializado')))
 const durMediaJudicializadas = computed(() => durMedia(prestamosEnCurso.value.filter(p => p.estado === 'judicializado')))
 
-// ── Capital activo real de un préstamo (descuenta amortizaciones parciales y francés) ─
+// ── Capital activo real de un préstamo ────────────────────────────────────────
 function calcCapitalActivoPrestamo(p) {
+  if (p.tipo_prestamo === 'Americano') return Number(p.importe)
   const cobrosP = todosCobros.value.filter(c => c.prestamo_id === p.id)
-  // Amortizaciones parciales de principal
-  const totalAmort = cobrosP
-    .filter(c => c.tipo === 'amortizacion_parcial')
-    .reduce((s, c) => s + Number(c.importe_principal || 0), 0)
-  if (p.tipo_prestamo === 'Americano') {
-    return Math.max(0, Number(p.importe) - totalAmort)
-  }
-  // Francés: descontar también el principal amortizado via cuotas
-  const cal = generateCalendarioTeorico(p, cobrosP)
+  const cal = generateCalendarioTeorico(p)
   const calConEstado = distribuirCobros(cal, cobrosP)
   const amortCuotas = calConEstado
     .filter(c => c.estado === 'cobrada')
     .reduce((s, c) => s + (c.principal || 0), 0)
-  return Math.max(0, Math.round((Number(p.importe) - totalAmort - amortCuotas) * 100) / 100)
+  return Math.max(0, Math.round((Number(p.importe) - amortCuotas) * 100) / 100)
 }
 
 // ── Resumen por estado ────────────────────────────────────────────────────────

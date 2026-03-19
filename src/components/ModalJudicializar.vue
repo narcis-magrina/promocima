@@ -107,17 +107,10 @@ watch(() => props.modelValue, v => {
 })
 
 function calcPrincipalPendiente() {
-  const p   = props.prestamo
-  const cal = generateCalendarioTeorico(p, props.cobros)
+  const p = props.prestamo
+  if (p.tipo_prestamo === 'Americano') return Number(p.importe)
+  const cal = generateCalendarioTeorico(p)
   const calConEstado = distribuirCobros(cal, props.cobros)
-  if (p.tipo_prestamo === 'Americano') {
-    // Para americano: principal pendiente = saldo vivo (importe - amortizaciones parciales)
-    const totalAmort = props.cobros
-      .filter(c => c.tipo === 'amortizacion_parcial')
-      .reduce((s, c) => s + Number(c.importe_principal || 0), 0)
-    return Math.max(0, Math.round((Number(p.importe) - totalAmort) * 100) / 100)
-  }
-  // Francés: sumar principal de cuotas cobradas
   const amortizado = calConEstado
     .filter(c => c.estado === 'cobrada')
     .reduce((s, c) => s + (c.principal || 0), 0)
@@ -128,7 +121,7 @@ function calcInteresOrdinarioPendiente(fecha) {
   // Solo se reclaman intereses de cuotas vencidas hasta la fecha de judicialización
   // que NO han sido cobradas mediante cobro real registrado.
   // Las cuotas cobradas parcialmente se prorratean por la fracción pendiente.
-  const cal = generateCalendarioTeorico(props.prestamo, props.cobros)
+  const cal = generateCalendarioTeorico(props.prestamo)
   const calConEstado = distribuirCobros(cal, props.cobros)
   // Importe real cobrado de cobros de tipo pago_cuota
   const cobradoReal = props.cobros
@@ -157,9 +150,8 @@ async function ejecutarJud() {
   if (!f.fecha) return alert('La fecha es obligatoria')
 
   // Validar que la fecha de judicialización no sea anterior al último cobro real
-  // Incluye tanto pago_cuota como amortizacion_parcial
   const cobrosReales = props.cobros
-    .filter(c => c.fecha_real && (c.tipo === 'pago_cuota' || c.tipo === 'amortizacion_parcial'))
+    .filter(c => c.fecha_real && c.tipo === 'pago_cuota')
     .map(c => c.fecha_real)
     .sort()
   if (cobrosReales.length) {

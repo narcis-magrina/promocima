@@ -1,13 +1,18 @@
 <template>
   <div>
     <div v-if="!esPortalParticipe" class="back-btn" @click="$emit('navigate','contratos-ccp')">← Volver a Contratos CCP</div>
+    <div v-else class="back-btn" @click="$emit('navigate','contratos-ccp')">← Volver a la lista</div>
 
     <!-- Cabecera -->
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px">
       <div>
-        <div style="font-size:18px;font-weight:700">{{ contrato.id }}</div>
+        <div style="font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px">
+          {{ contrato.prestamos?.alias || contrato.id }}
+          <span v-if="prestamoEsAP" title="Contrato sobre préstamo originado por amortización parcial"
+            style="font-size:11px;background:rgba(139,92,246,0.12);color:var(--purple);border:1px solid rgba(139,92,246,0.3);padding:2px 7px;border-radius:4px">AP</span>
+        </div>
         <div style="font-size:12px;color:var(--text3);margin-top:4px">
-          {{ contrato.participes?.nombre }} · {{ contrato.prestamos?.alias }}
+          {{ contrato.participes?.nombre }} · {{ contrato.id }}
         </div>
         <div style="font-size:12px;color:var(--text3);margin-top:2px">Firma: {{ fmtDate(contrato.fecha_firma) }}</div>
       </div>
@@ -141,10 +146,6 @@
           <span style="font-weight:600;color:var(--text2)">Neto</span> = Beneficio − Gestión ({{ contrato.porcentaje_gestion }}%) − IRPF ({{ pctIRPF }}%)
         </div>
         <div style="display:flex;gap:8px;align-items:center;margin-left:auto">
-          <span class="badge badge-green" style="font-size:10px">Pagado</span>
-          <span class="badge badge-outline-yellow" style="font-size:10px">Devengado</span>
-          <span class="badge" style="font-size:10px;background:#fff;color:var(--red);border:1px solid var(--red);font-weight:700">⚠ Anticipo</span>
-          <span class="badge badge-gray" style="font-size:10px">Pendiente</span>
           <select class="form-control" v-model="filtroCal" style="width:160px;padding:4px 8px;font-size:12px" :style="filtroCal !== 'todas' ? 'border-color:var(--accent);border-width:2px;color:var(--accent)' : ''">
             <option value="todas">Todas</option>
             <option value="pendientes">Devengados / Pendientes</option>
@@ -328,7 +329,7 @@
               <th style="text-align:right">Bruto</th>
               <th style="text-align:right">IRPF</th>
               <th style="text-align:right;color:var(--green)">Neto</th>
-              <th>Obs.</th>
+              <th v-if="!readOnly">Obs.</th>
               <th v-if="!readOnly"></th>
             </tr>
           </thead>
@@ -340,14 +341,14 @@
               <td class="td-mono td-right">{{ fmtDec(p.importe_bruto) }}</td>
               <td class="td-mono td-right" style="color:var(--red)">{{ fmtDec(p.importe_retencion) }}</td>
               <td class="td-mono td-right" style="color:var(--green);font-weight:600">{{ fmtDec(p.importe_neto) }}</td>
-              <td style="font-size:11px;color:var(--text3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+              <td v-if="!readOnly" style="font-size:11px;color:var(--text3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
                   :title="p.observaciones">{{ p.observaciones || '—' }}</td>
               <td v-if="!readOnly">
                 <button class="btn btn-sm btn-danger-solid" style="padding:2px 7px;font-size:13px"
                   title="Eliminar pago" @click="eliminarPagoYRecargar(p)">✕</button>
               </td>
             </tr>
-            <tr v-if="!pagosReales.length"><td :colspan="readOnly ? 7 : 8" class="table-empty">Sin pagos registrados</td></tr>
+            <tr v-if="!pagosReales.length"><td :colspan="readOnly ? 6 : 8" class="table-empty">Sin pagos registrados</td></tr>
           </tbody>
         </table>
       </div>
@@ -424,9 +425,13 @@ const props = defineProps({
   prestamoDetalle:   { type: Object, default: null },
   cobrosPrestamo:    { type: Array,  default: () => [] },
   readOnly:          { type: Boolean, default: false },
-  esPortalParticipe: { type: Boolean, default: false }, // oculta navegación interna (back-btn)
+  esPortalParticipe: { type: Boolean, default: false },
+  fechaCierre:       { type: String,  default: null },  // fecha de cierre portal (YYYY-MM-DD)
 })
 const emit = defineEmits(['navigate', 'recargar', 'editar'])
+
+// Badge AP: el préstamo subyacente fue creado por amortización parcial
+const prestamoEsAP = computed(() => !!props.prestamoDetalle?.origen_prestamo_id)
 
 const tab         = ref('detalle')
 const filtroCal   = ref('pendientes')
@@ -468,7 +473,15 @@ const prestamoParaCalculo = computed(() => {
 const lineasCalendario = computed(() => {
   if (!props.contrato || !prestamoParaCalculo.value?.fecha_inicio) return []
   if (!prestamoParaCalculo.value.dia_cobro || !prestamoParaCalculo.value.duracion_meses) return []
-  const result = calcularLineasCCP(props.contrato, prestamoParaCalculo.value, props.cobrosPrestamo, pagosReales.value, pctIRPF.value)
+  // Filtrar cobros y pagos por fecha de cierre si aplica
+  const cierre = props.fechaCierre || null
+  const cobrosFiltrados = cierre
+    ? props.cobrosPrestamo.filter(cb => (cb.fecha_real || cb.fecha_teorica || '') <= cierre)
+    : props.cobrosPrestamo
+  const pagosFiltrados = cierre
+    ? pagosReales.value.filter(p => (p.fecha_pago_real || '') <= cierre)
+    : pagosReales.value
+  const result = calcularLineasCCP(props.contrato, prestamoParaCalculo.value, cobrosFiltrados, pagosFiltrados, pctIRPF.value)
   console.log('[CCP] lineasCalendario:', result.length, 'líneas', { contrato: props.contrato?.id, prestamo: prestamoParaCalculo.value?.id, fecha_inicio: prestamoParaCalculo.value?.fecha_inicio, duracion: prestamoParaCalculo.value?.duracion_meses })
   return result
 })

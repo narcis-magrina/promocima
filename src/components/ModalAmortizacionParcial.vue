@@ -7,8 +7,9 @@
       </div>
       <div class="modal-body">
 
-        <div class="alert alert-warning" style="margin-bottom:16px">
-          Las cuotas restantes <strong>bajarán de importe</strong> al reducirse el capital, manteniendo la misma fecha de vencimiento.
+        <div class="alert alert-info" style="margin-bottom:16px">
+          Se cancelará este préstamo y se creará uno nuevo con el capital restante,
+          la misma fecha de vencimiento y las cuotas reducidas.
         </div>
 
         <!-- Fecha -->
@@ -40,7 +41,7 @@
           <div class="form-group">
             <label class="form-label">
               Intereses de demora (€)
-              <span style="font-size:10px;color:var(--text3);font-weight:400;margin-left:6px">calculado · editable</span>
+              <span style="font-size:10px;color:var(--text3);font-weight:400;margin-left:6px">editable</span>
             </label>
             <input class="form-control" type="number" step="0.01" min="0" v-model="form.interesDemora">
           </div>
@@ -76,11 +77,11 @@
           </div>
         </div>
 
-        <!-- Preview recálculo -->
-        <div v-if="(+form.principal||0) > 0 && previewCalendario.length"
+        <!-- Preview préstamo sucesor -->
+        <div v-if="nuevoCapital > 0"
           style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:14px">
           <div style="font-size:12px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">
-            Vista previa tras la amortización
+            Nuevo préstamo generado
           </div>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
             <div style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px">
@@ -91,34 +92,14 @@
               <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Capital nuevo</div>
               <div style="font-family:var(--mono);font-size:15px;font-weight:600;color:var(--green)">{{ fmt(nuevoCapital) }}</div>
             </div>
-            <!-- misma_cuota: cuota igual, plazo más corto -->
-            <template v-if="form.modalidad === 'misma_cuota'">
-              <div style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px">
-                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Cuota (sin cambio)</div>
-                <div style="font-family:var(--mono);font-size:15px;font-weight:600">{{ fmt(cuotaActual) }}</div>
-              </div>
-              <div style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px">
-                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Cuotas restantes</div>
-                <div style="font-family:var(--mono);font-size:15px;font-weight:600;color:var(--green)">
-                  {{ previewCalendario.length }}
-                  <span style="font-size:11px;color:var(--text3);font-family:var(--sans)"> (antes {{ cuotasRestantesActuales }})</span>
-                </div>
-              </div>
-            </template>
-            <!-- misma_fecha: mismo número de cuotas, cuota más baja -->
-            <template v-else>
-              <div style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px">
-                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Cuotas (sin cambio)</div>
-                <div style="font-family:var(--mono);font-size:15px;font-weight:600">{{ cuotasRestantesActuales }}</div>
-              </div>
-              <div style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px">
-                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Nueva cuota mensual</div>
-                <div style="font-family:var(--mono);font-size:15px;font-weight:600;color:var(--green)">
-                  {{ fmt(nuevaCuota) }}
-                  <span style="font-size:11px;color:var(--text3);font-family:var(--sans)"> (antes {{ fmt(cuotaActual) }})</span>
-                </div>
-              </div>
-            </template>
+            <div style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px">
+              <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Cuotas restantes</div>
+              <div style="font-family:var(--mono);font-size:15px;font-weight:600">{{ cuotasRestantes }}</div>
+            </div>
+            <div style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px">
+              <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Nueva cuota</div>
+              <div style="font-family:var(--mono);font-size:15px;font-weight:600;color:var(--green)">{{ fmt(nuevaCuota) }}</div>
+            </div>
           </div>
         </div>
 
@@ -143,7 +124,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { supabase } from '../supabase.js'
-import { fmt, generateCalendarioTeorico, uuid, today } from '../utils.js'
+import { fmt, generateCalendarioTeorico, distribuirCobros, uuid, today } from '../utils.js'
 
 const props = defineProps({
   modelValue:          { type: Boolean, required: true },
@@ -158,220 +139,123 @@ const saving = ref(false)
 const form   = ref(formVacio())
 
 function formVacio() {
-  return { fecha: today(), modalidad: 'misma_fecha', principal: 0, interesOrdinario: 0, interesDemora: 0, gastos: 0, notas: '' }
+  return { fecha: today(), principal: 0, interesOrdinario: 0, interesDemora: 0, gastos: 0, notas: '' }
 }
 
-// ── Capital pendiente: importe original menos lo ya amortizado ─────────────
+// ── Capital pendiente ────────────────────────────────────────────────────────
+// Americano: importe directo (sin APs embebidas).
+// Francés: importe menos principal amortizado via cuotas cobradas.
 const capitalPendiente = computed(() => {
-  const p       = props.prestamo
-  const importe = Number(p.importe)
-
-  // Amortizaciones parciales previas ya registradas
-  const amortParcialPrevio = props.cobros
-    .filter(c => c.tipo === 'amortizacion_parcial')
-    .reduce((s, c) => s + Number(c.importe_principal || 0), 0)
-
-  // Principal amortizado vía cuotas ordinarias (distribución secuencial)
-  let amortCuotas = 0
-  if (p.tipo_prestamo !== 'Americano') {
-    const totalPagadoEnCuotas = props.cobros
-      .filter(c => c.tipo === 'pago_cuota')
-      .reduce((s, c) => s + Number(c.importe), 0)
-    const cal = generateCalendarioTeorico(p, props.cobros)
-    let restante = totalPagadoEnCuotas
-    for (const cuota of cal) {
-      if (restante <= 0) break
-      const cobrado = Math.min(restante, cuota.total)
-      restante -= cobrado
-      const ratio = cuota.total > 0 ? Math.min(1, cobrado / cuota.total) : 0
-      amortCuotas += cuota.principal * ratio
-    }
-    amortCuotas = Math.round(amortCuotas * 100) / 100
-  }
-
-  return Math.max(0, Math.round((importe - amortParcialPrevio - amortCuotas) * 100) / 100)
+  const p = props.prestamo
+  if (p.tipo_prestamo === 'Americano') return Number(p.importe)
+  const cal = generateCalendarioTeorico(p)
+  const calConEstado = distribuirCobros(cal, props.cobros)
+  const amortCuotas = calConEstado
+    .filter(c => c.estado === 'cobrada')
+    .reduce((s, c) => s + (c.principal || 0), 0)
+  return Math.max(0, Math.round((Number(p.importe) - amortCuotas) * 100) / 100)
 })
 
-// ── Cuota actual (primera cuota no cobrada del calendario) ─────────────────
-const cuotaActual = computed(() => {
-  const pendiente = props.calendarioConEstado.find(c => c.estado !== 'cobrada')
-  return pendiente?.total || 0
-})
-
-const cuotasRestantesActuales = computed(() =>
-  props.calendarioConEstado.filter(c => c.estado !== 'cobrada').length
-)
-
-// ── Fecha de referencia: última cuota cobrada o parcial (o inicio) ───────────
-const fechaUltimaCobrada = computed(() => {
-  const cobradas = props.calendarioConEstado.filter(c => c.estado === 'cobrada' || c.estado === 'parcial')
-  return cobradas.length
-    ? cobradas[cobradas.length - 1].fecha
-    : props.prestamo.fecha_inicio
-})
-
-// ── Pendiente de la cuota parcial previa (intereses + principal pendiente) ────
-const importePendienteCuotaPartial = computed(() => {
-  const fecha   = form.value.fecha || today()
-  const parcial = props.calendarioConEstado
-    .filter(c => c.estado === 'parcial' && c.fecha <= fecha)
-    .slice(-1)[0]
-  return parcial ? (parcial.pendiente || 0) : 0
-})
-
-// ── Desglose meses/días para el hint del formulario ──────────────────────────
-const desglosePeriodo = computed(() => {
-  const fecha  = form.value.fecha || today()
-  const dRef   = new Date(fechaUltimaCobrada.value + 'T00:00:00')
-  const dAmort = new Date(fecha + 'T00:00:00')
-
-  let meses = (dAmort.getFullYear() - dRef.getFullYear()) * 12
-            + (dAmort.getMonth()    - dRef.getMonth())
-  if (dAmort.getDate() < dRef.getDate()) meses = Math.max(0, meses - 1)
-
-  const dInicioResto = new Date(dRef)
-  dInicioResto.setMonth(dInicioResto.getMonth() + meses)
-  const dias = Math.min(30, Math.max(0, Math.round((dAmort - dInicioResto) / 86400000)))
-
-  return { meses, dias }
-})
-
-// Mantenemos diasDesdeUltimo para compatibilidad interna si se usa en algún otro sitio
-const diasDesdeUltimo = computed(() => {
-  const { meses, dias } = desglosePeriodo.value
-  return meses * 30 + dias
-})
-
-// ── Nuevo capital tras la amortización ────────────────────────────────────
+// ── Nuevo capital del préstamo sucesor ────────────────────────────────────────
 const nuevoCapital = computed(() =>
   Math.max(0, Math.round((capitalPendiente.value - Number(form.value.principal || 0)) * 100) / 100)
 )
 
-// ── Nueva cuota para modalidad misma_fecha ───────────────────────────────
-const nuevaCuota = computed(() => {
-  if (nuevoCapital.value <= 0 || cuotasRestantesActuales.value <= 0) return 0
-  const tipo = props.prestamo.tipo_prestamo
-  const tasaAnual = Number(props.prestamo.interes_ordinario) / 100
-  const periodicidad = (props.prestamo.periodicidad || 'mensual').toLowerCase()
-  const tasaPeriodo = periodicidad === 'anual' ? tasaAnual
-                    : periodicidad === 'trimestral' ? tasaAnual * 3 / 12
-                    : tasaAnual / 12
-  const n = cuotasRestantesActuales.value
+// ── Cuotas restantes (para preview nueva cuota) ───────────────────────────────
+const cuotasRestantes = computed(() =>
+  props.calendarioConEstado.filter(c => c.estado !== 'cobrada').length
+)
 
-  if (tipo === 'Americano') {
-    // Cuota americana = solo intereses sobre nuevo capital
-    return Math.round(nuevoCapital.value * tasaPeriodo * 100) / 100
-  }
-  // Francés: PMT
-  if (tasaPeriodo > 0 && n > 0) {
-    return Math.round(nuevoCapital.value * tasaPeriodo / (1 - Math.pow(1 + tasaPeriodo, -n)) * 100) / 100
-  }
+// ── Nueva cuota mensual del préstamo sucesor ──────────────────────────────────
+const nuevaCuota = computed(() => {
+  if (nuevoCapital.value <= 0 || cuotasRestantes.value <= 0) return 0
+  const tipo     = props.prestamo.tipo_prestamo
+  const tasa     = Number(props.prestamo.interes_ordinario) / 100
+  const tasaMes  = (props.prestamo.periodicidad || 'mensual') === 'anual' ? tasa
+                 : (props.prestamo.periodicidad || 'mensual') === 'trimestral' ? tasa * 3 / 12
+                 : tasa / 12
+  const n = cuotasRestantes.value
+  if (tipo === 'Americano') return Math.round(nuevoCapital.value * tasaMes * 100) / 100
+  if (tasaMes > 0 && n > 0)
+    return Math.round(nuevoCapital.value * tasaMes / (1 - Math.pow(1 + tasaMes, -n)) * 100) / 100
   return n > 0 ? Math.round(nuevoCapital.value / n * 100) / 100 : 0
 })
 
-// ── Preview: longitud del nuevo calendario ────────────────────────────────
-const previewCalendario = computed(() => {
-  const principal = Number(form.value.principal || 0)
-  if (principal <= 0 || nuevoCapital.value <= 0 || !form.value.fecha) return []
-  const p    = props.prestamo
-  const tipo = p.tipo_prestamo
-  const periodicidad = (p.periodicidad || 'mensual').toLowerCase()
-  const tasaPeriodo = periodicidad === 'anual' ? Number(p.interes_ordinario) / 100
-                    : periodicidad === 'trimestral' ? Number(p.interes_ordinario) / 100 * 3 / 12
-                    : Number(p.interes_ordinario) / 100 / 12
-
-  if (form.value.modalidad === 'misma_fecha' || tipo === 'Americano') {
-    // Misma fecha fin: mismo número de cuotas restantes
-    return Array.from({ length: cuotasRestantesActuales.value }, (_, i) => i + 1)
-  }
-
-  // misma_cuota (Francés): n = -ln(1 - r×P/C) / ln(1+r)
-  const cuota = cuotaActual.value
-  if (cuota <= 0) return []
-  if (tasaPeriodo > 0) {
-    const ratio = tasaPeriodo * nuevoCapital.value / cuota
-    if (ratio >= 1) return []
-    const nCuotas = Math.ceil(-Math.log(1 - ratio) / Math.log(1 + tasaPeriodo))
-    return Array.from({ length: nCuotas }, (_, i) => i + 1)
-  }
-  const nCuotas = Math.ceil(nuevoCapital.value / cuota)
-  return Array.from({ length: nCuotas }, (_, i) => i + 1)
+// ── Fecha de referencia para cálculo de intereses ────────────────────────────
+const fechaUltimaCobrada = computed(() => {
+  const cobradas = props.calendarioConEstado.filter(c => c.estado === 'cobrada' || c.estado === 'parcial')
+  return cobradas.length ? cobradas[cobradas.length - 1].fecha : props.prestamo.fecha_inicio
 })
 
-// ── Recalcular intereses automáticamente al cambiar fecha ─────────────────
+// ── Pendiente de cuota parcial previa ────────────────────────────────────────
+const importePendienteCuotaPartial = computed(() => {
+  const fecha   = form.value.fecha || today()
+  const parcial = props.calendarioConEstado
+    .filter(c => c.estado === 'parcial' && c.fecha <= fecha).slice(-1)[0]
+  return parcial ? (parcial.pendiente || 0) : 0
+})
+
+// ── Desglose meses/días para el hint ─────────────────────────────────────────
+const desglosePeriodo = computed(() => {
+  const fecha  = form.value.fecha || today()
+  const dRef   = new Date(fechaUltimaCobrada.value + 'T00:00:00')
+  const dAmort = new Date(fecha + 'T00:00:00')
+  let meses = (dAmort.getFullYear() - dRef.getFullYear()) * 12
+            + (dAmort.getMonth()    - dRef.getMonth())
+  if (dAmort.getDate() < dRef.getDate()) meses = Math.max(0, meses - 1)
+  const dIni = new Date(dRef); dIni.setMonth(dIni.getMonth() + meses)
+  const dias = Math.min(30, Math.max(0, Math.round((dAmort - dIni) / 86400000)))
+  return { meses, dias }
+})
+
+// ── Recalcular intereses al cambiar fecha ─────────────────────────────────────
 function recalcular() {
-  const p         = props.prestamo
-  const fecha     = form.value.fecha || today()
+  const p       = props.prestamo
   const tasaAnual = Number(p.interes_ordinario) / 100
-  const r         = v => Math.round(v * 100) / 100
+  const r       = v => Math.round(v * 100) / 100
+  const { meses, dias } = desglosePeriodo.value
 
-  // ── Punto de partida: usar el desglose reactivo ya calculado ───────────────
-  const { meses: mesesEnteros, dias: diasResto } = desglosePeriodo.value
-
-  // ── Intereses de meses enteros ──────────────────────────────────────────
+  // Meses enteros
   let interesesMeses = 0
-  const tipo = p.tipo_prestamo
-
-  if (tipo === 'Americano') {
-    // Americano: cada mes = saldo × tasa / 12 (saldo no cambia en meses intermedios)
-    interesesMeses = r(capitalPendiente.value * tasaAnual / 12 * mesesEnteros)
-
+  if (p.tipo_prestamo === 'Americano') {
+    interesesMeses = r(capitalPendiente.value * tasaAnual / 12 * meses)
   } else {
-    // Francés / Francés con carencia: simular cuota a cuota sobre el calendario
-    // para obtener el interés real de cada mes entero
-    const calConEstado = props.calendarioConEstado
-    // Buscar la primera cuota pendiente o parcial a partir de fechaRef
-    let saldoSim = capitalPendiente.value
+    let s = capitalPendiente.value
     const tasaMes = tasaAnual / 12
-    // Obtener el PMT actual del calendario (primera cuota no cobrada)
-    const primeraNoCobraada = calConEstado.find(c => c.estado !== 'cobrada')
-    const pmtActual = primeraNoCobraada ? primeraNoCobraada.total : 0
-
-    for (let m = 0; m < mesesEnteros; m++) {
-      if (saldoSim <= 0.005) break
-      const intMes = r(saldoSim * tasaMes)
-      const prinMes = pmtActual > 0 ? r(Math.min(pmtActual - intMes, saldoSim)) : 0
+    const pmt = props.calendarioConEstado.find(c => c.estado !== 'cobrada')?.total || 0
+    for (let m = 0; m < meses; m++) {
+      if (s <= 0.005) break
+      const intMes = r(s * tasaMes)
       interesesMeses = r(interesesMeses + intMes)
-      saldoSim = r(saldoSim - prinMes)
+      s = r(s - (pmt > 0 ? r(Math.min(pmt - intMes, s)) : 0))
     }
   }
 
-  // ── Intereses de días restantes ─────────────────────────────────────────
-  // Interés del siguiente mes completo, prorrateado por diasResto / 30
+  // Días restantes
   let interesesDias = 0
-  if (diasResto > 0) {
-    let saldoParaDias = capitalPendiente.value
-    if (tipo !== 'Americano' && mesesEnteros > 0) {
-      // Descontar el principal amortizado en los meses enteros simulados
+  if (dias > 0) {
+    let saldo = capitalPendiente.value
+    if (p.tipo_prestamo !== 'Americano' && meses > 0) {
       const tasaMes = tasaAnual / 12
-      const primeraNoCobraada = props.calendarioConEstado.find(c => c.estado !== 'cobrada')
-      const pmtActual = primeraNoCobraada ? primeraNoCobraada.total : 0
+      const pmt = props.calendarioConEstado.find(c => c.estado !== 'cobrada')?.total || 0
       let s = capitalPendiente.value
-      for (let m = 0; m < mesesEnteros; m++) {
+      for (let m = 0; m < meses; m++) {
         if (s <= 0.005) break
-        const intMes  = r(s * tasaMes)
-        const prinMes = pmtActual > 0 ? r(Math.min(pmtActual - intMes, s)) : 0
-        s = r(s - prinMes)
+        const intMes = r(s * tasaMes)
+        s = r(s - (pmt > 0 ? r(Math.min(pmt - intMes, s)) : 0))
       }
-      saldoParaDias = s
+      saldo = s
     }
-    const interesMesSiguiente = r(saldoParaDias * tasaAnual / 12)
-    interesesDias = r(interesMesSiguiente * diasResto / 30)
+    interesesDias = r(r(saldo * tasaAnual / 12) * dias / 30)
   }
 
-  // ── Total intereses ordinarios ──────────────────────────────────────────
-  // Si hay cuota parcial previa, añadir el pendiente de esa cuota
-  const pendientePartial = importePendienteCuotaPartial.value
-  form.value.interesOrdinario = r(interesesMeses + interesesDias + pendientePartial)
-
-  // Intereses de demora: se dejan a 0 por defecto (el usuario los introduce manualmente)
+  form.value.interesOrdinario = r(interesesMeses + interesesDias + importePendienteCuotaPartial.value)
+  // Intereses de demora: siempre 0 por defecto, el usuario los introduce manualmente
 }
 
-watch(() => props.modelValue, open => {
-  if (open) { form.value = formVacio(); recalcular() }
-})
+watch(() => props.modelValue, open => { if (open) { form.value = formVacio(); recalcular() } })
 
-// ── Total cobro ────────────────────────────────────────────────────────────
+// ── Total cobro ───────────────────────────────────────────────────────────────
 const total = computed(() => Math.round((
   Number(form.value.interesOrdinario || 0) +
   Number(form.value.interesDemora    || 0) +
@@ -385,7 +269,7 @@ const esValido = computed(() =>
   Number(form.value.principal) <= capitalPendiente.value + 0.01
 )
 
-// ── Ejecutar ───────────────────────────────────────────────────────────────
+// ── Ejecutar: 4 pasos atómicos ────────────────────────────────────────────────
 async function ejecutar() {
   if (!esValido.value || saving.value) return
   const principal = Number(form.value.principal)
@@ -393,23 +277,91 @@ async function ejecutar() {
 
   saving.value = true
   try {
-    const r  = v => Math.round(Number(v || 0) * 100) / 100
-    const { error } = await supabase.from('cobros').insert({
+    const rnd = v => Math.round(Number(v || 0) * 100) / 100
+    const p   = props.prestamo
+    const fecha = form.value.fecha
+
+    // ── Paso 1: Cobro de cancelación en el préstamo original ──────────────────
+    const { error: e1 } = await supabase.from('cobros').insert({
       id:                        'CB' + uuid(),
       prestamo_id:               props.prestamoId,
-      cuota_num:                 'AP' + form.value.fecha.replace(/-/g, ''),
-      fecha_teorica:             form.value.fecha,
-      fecha_real:                form.value.fecha,
-      importe:                   r(total.value),
-      importe_principal:         r(form.value.principal),
-      importe_interes_ordinario: r(form.value.interesOrdinario),
-      importe_interes_demora:    r(form.value.interesDemora),
-      importe_gastos:            r(form.value.gastos),
-      tipo:                      'amortizacion_parcial',
-      modalidad_recalculo:        form.value.modalidad,
-      notas:                     form.value.notas || `Amortización parcial: ${fmt(r(form.value.principal))} de principal`,
+      cuota_num:                 'AP' + fecha.replace(/-/g, ''),
+      fecha_teorica:             fecha,
+      fecha_real:                fecha,
+      importe:                   rnd(total.value),
+      importe_principal:         rnd(principal),
+      importe_interes_ordinario: rnd(form.value.interesOrdinario),
+      importe_interes_demora:    rnd(form.value.interesDemora),
+      importe_gastos:            rnd(form.value.gastos),
+      tipo:                      'cancelacion',
+      notas:                     form.value.notas || `Amortización parcial: ${fmt(rnd(principal))} de principal`,
     })
-    if (error) { alert('Error al guardar: ' + error.message); return }
+    if (e1) { alert('Error al registrar el cobro: ' + e1.message); return }
+
+    // ── Paso 2: Cancelar el préstamo original ─────────────────────────────────
+    const { error: e2 } = await supabase
+      .from('prestamos')
+      .update({ estado: 'cancelado', fecha_cancelacion: fecha })
+      .eq('id', props.prestamoId)
+    if (e2) { alert('Error al cancelar el préstamo: ' + e2.message); return }
+
+    // ── Paso 3: Crear el préstamo sucesor ─────────────────────────────────────
+    const diaAP  = new Date(fecha + 'T00:00:00').getDate()
+    const { data: prestamosExistentes } = await supabase.from('prestamos').select('id')
+    const numsP  = (prestamosExistentes || []).map(x => parseInt(x.id.replace(/\D/g, '')) || 0)
+    const nuevoId = 'P' + String((numsP.length ? Math.max(...numsP) : 0) + 1).padStart(3, '0')
+    const { error: e3 } = await supabase.from('prestamos').insert({
+      id:                  nuevoId,
+      origen_prestamo_id:  props.prestamoId,
+      alias:               p.alias + ' (AP)',
+      centro_coste:        p.centro_coste,
+      cliente_id:          p.cliente_id,
+      intermediario_id:    p.intermediario_id || null,
+      garantia_tipo:       p.garantia_tipo,
+      garantia_direccion:  p.garantia_direccion,
+      garantia_tasacion:   p.garantia_tasacion,
+      importe:             rnd(nuevoCapital.value),
+      fecha_inicio:        fecha,
+      dia_cobro:           diaAP,
+      duracion_meses:      cuotasRestantes.value,
+      interes_ordinario:   p.interes_ordinario,
+      interes_demora:      p.interes_demora,
+      tipo_prestamo:       p.tipo_prestamo,
+      periodicidad:        p.periodicidad || 'mensual',
+      meses_carencia:      p.meses_carencia || null,
+      comision_apertura:   0,
+      cirbe:               p.cirbe || false,
+      estado:              'activo',
+      judicializado:       false,
+    })
+    if (e3) { alert('Error al crear el préstamo sucesor: ' + e3.message); return }
+
+    // ── Paso 4: Replicar CCPs activos con saldo proporcional ──────────────────
+    const { data: ccps } = await supabase
+      .from('contratos_ccp')
+      .select('*')
+      .eq('prestamo_id', props.prestamoId)
+      .eq('activo', true)
+
+    if (ccps && ccps.length > 0) {
+      const fraccion = Number(p.importe) > 0 ? rnd(nuevoCapital.value) / Number(p.importe) : 0
+      const { data: ccpsExistentes } = await supabase.from('contratos_ccp').select('id')
+      const numsC = (ccpsExistentes || []).map(x => parseInt(x.id.replace(/\D/g, '')) || 0)
+      let nextCCP = (numsC.length ? Math.max(...numsC) : 0) + 1
+      const nuevosCCPs = ccps.map(ccp => ({
+        id:                       'CCP' + String(nextCCP++).padStart(3, '0'),
+        prestamo_id:              nuevoId,
+        participe_id:             ccp.participe_id,
+        porcentaje_participacion: ccp.porcentaje_participacion,
+        importe_participacion:    rnd(Number(ccp.importe_participacion) * fraccion),
+        porcentaje_gestion:       ccp.porcentaje_gestion,
+        fecha_firma:              fecha,
+        activo:                   true,
+      }))
+      const { error: e4 } = await supabase.from('contratos_ccp').insert(nuevosCCPs)
+      if (e4) { alert('Error al crear los contratos CCP: ' + e4.message); return }
+    }
+
     emit('update:modelValue', false)
     emit('ejecutado')
   } finally {

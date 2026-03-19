@@ -202,19 +202,17 @@ async function guardar() {
   saving.value = true
   msgEditar.value = null
   try {
-    const { data: { session } } = await supabase.auth.getSession()
-    const res = await fetch(`/api/usuarios/${form.value.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-      body: JSON.stringify({
-        nombre: form.value.nombre,
-        rol: form.value.rol,
-        activo: form.value.activo,
-        participe_ids: form.value.participe_ids
-      })
-    })
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.error)
+    const ids = form.value.rol === 'participe'
+      ? (form.value.participe_ids || []).map(String).filter(Boolean)
+      : []
+    const { error } = await supabase.from('perfiles').update({
+      nombre:        form.value.nombre,
+      rol:           form.value.rol,
+      activo:        form.value.activo,
+      participe_ids: ids,
+      participe_id:  ids.length > 0 ? ids[0] : null,
+    }).eq('id', form.value.id)
+    if (error) throw error
     modalAbierto.value = false
     await cargar()
   } catch (e) {

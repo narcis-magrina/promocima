@@ -154,8 +154,12 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); min-
 .kpi-card.kc-purple::before   { background: var(--purple); }
 .kpi-card.kc-gray-dim::before { background: var(--text3); }
 .kpi-label { font-size: 11px; color: var(--text3); letter-spacing: 0.05em; text-transform: uppercase; font-weight: 500; margin-bottom: 8px; }
-.kpi-value { font-family: var(--mono); font-size: 24px; font-weight: 600; color: var(--text); letter-spacing: -0.02em; }
+.kpi-value { font-family: var(--mono); font-size: 24px; font-weight: 600; color: #ffffff; letter-spacing: -0.02em; transition: font-size 0.2s ease; }
 .kpi-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+.kpi-row { display: flex; justify-content: space-between; font-size: 11px; transition: font-size 0.2s ease; }
+.kpi-row-sep { margin-top: 2px; padding-top: 4px; border-top: 1px solid var(--border); }
+.kpi-row span:first-child { color: var(--text3); }
+.kpi-row-val { font-family: var(--mono); color: #ffffff; }
 
 /* ── TABLES ─────────────────────────────────────────────────────────────────── */
 .table-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 20px; }
@@ -389,7 +393,7 @@ input[type="number"] { -moz-appearance: textfield; }
   /* Contenido con menos padding */
   .content { padding: 12px; }
 
-  /* KPI grid: 2 columnas en móvil */
+  /* KPI grid: 2 columnas en tablet/móvil horizontal */
   .kpi-grid,
   div[style*="grid-template-columns"][style*="repeat(4"],
   div[style*="grid-template-columns"][style*="repeat(5"],
@@ -399,9 +403,10 @@ input[type="number"] { -moz-appearance: textfield; }
     margin-bottom: 16px !important;
   }
   .kpi-card { padding: 12px !important; }
-  .kpi-value, div.kpi-value { font-size: 16px !important; }
-  .kpi-label { font-size: 10px !important; }
-  .kpi-sub { font-size: 10px !important; }
+  .kpi-value, div.kpi-value { font-size: 30px !important; }
+  .kpi-label { font-size: 15px !important; }
+  .kpi-sub { font-size: 15px !important; }
+  .kpi-row { font-size: 15px !important; }
 
   /* Tablas: scroll horizontal */
   .table-card { overflow-x: auto; }
@@ -415,7 +420,6 @@ input[type="number"] { -moz-appearance: textfield; }
 
   /* td-count en móvil: nueva línea */
   .td-count { display: block; margin-left: 0; margin-top: 2px; font-size: 10px; }
-
 
   /* Cuando la barra está oculta, el contenedor flex pasa a block alineado a la derecha */
   .progress-bar-hide-mobile + span {
@@ -441,16 +445,9 @@ input[type="number"] { -moz-appearance: textfield; }
 }
 
 @media (max-width: 480px) {
-  /* Móvil pequeño: KPIs en 1 columna */
+  /* Móvil vertical: KPIs en 1 columna, mismos tamaños que a 2 columnas */
   .kpi-grid,
   div[style*="grid-template-columns"][style*="repeat("] {
     grid-template-columns: 1fr !important;
   }
-
-  /* Fuentes más pequeñas */
-  body { font-size: 12px; }
-  .kpi-value, div.kpi-value { font-size: 14px !important; }
-  .kpi-label { font-size: 9px !important; }
-  div[style*="font-size:18px"] { font-size: 14px !important; }
-  div[style*="font-size:20px"] { font-size: 16px !important; }
 }

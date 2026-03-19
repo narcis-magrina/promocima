@@ -72,7 +72,12 @@
             <tr v-for="c in contratosFiltrados" :key="c.id" style="cursor:pointer"
                 @click="$emit('seleccionar', c.id)">
               <td style="font-size:12px;font-weight:500">{{ c.participes?.nombre || '—' }}</td>
-              <td style="font-size:12px">{{ c.prestamos?.alias || '—' }}</td>
+              <td style="font-size:12px">
+                {{ c.prestamos?.alias || '—' }}
+                <span v-if="prestamos.find(p => p.id === c.prestamo_id)?.origen_prestamo_id"
+                  title="Contrato sobre préstamo originado por amortización parcial"
+                  style="font-size:10px;background:rgba(139,92,246,0.12);color:var(--purple);border:1px solid rgba(139,92,246,0.3);padding:1px 5px;border-radius:4px;margin-left:4px">AP</span>
+              </td>
               <td style="font-size:12px" class="col-hide-mobile">{{ fmtDate(c.fecha_firma) }}</td>
               <td class="td-mono td-right">{{ fmtDec(c.importe_participacion) }}</td>
               <td class="td-mono td-center col-hide-mobile">{{ c.porcentaje_participacion }}%</td>

@@ -14,11 +14,15 @@ export default async function handler(req, res) {
 
     if (req.method === 'PUT') {
       const { nombre, rol, activo, participe_ids } = req.body
+      const ids = rol === 'participe'
+        ? (Array.isArray(participe_ids) ? participe_ids : []).map(String).filter(Boolean)
+        : []
       const { error } = await supabase.from('perfiles').update({
         nombre,
         rol,
         activo,
-        participe_ids: rol === 'participe' ? (participe_ids || []) : []
+        participe_ids: ids,
+        participe_id: ids.length > 0 ? ids[0] : null,
       }).eq('id', id)
       if (error) throw error
       return res.status(200).json({ ok: true })

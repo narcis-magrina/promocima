@@ -6,7 +6,7 @@
 // ── Glosario completo (usado en el panel de ayuda) ────────────────────────────
 export const glosario = [
   {
-    termino:    'Capital desplegado',
+    termino:    'Capital invertido',
     definicion: 'Nominal de las operaciones en curso (no canceladas). Es el importe bruto concedido sin descontar amortizaciones.',
   },
   {
@@ -37,12 +37,24 @@ export const glosario = [
     termino:    'LTV (Loan To Value)',
     definicion: 'Ratio entre el capital vivo en curso y el valor de tasación de las garantías, expresado en porcentaje. Se calcula sobre los préstamos en curso (activos + judicializados). Un LTV del 40% significa que el capital pendiente representa el 40% del valor de tasación de la garantía. A mayor LTV, mayor riesgo.',
   },
+  {
+    termino:    'Beneficio/mes',
+    definicion: 'Rendimiento bruto mensual antes de impuestos. Se calcula como el capital participado multiplicado por la tasa neta (tasa del préstamo menos el porcentaje de gestión), dividido entre 12.',
+  },
+  {
+    termino:    'Neto/mes',
+    definicion: 'Rendimiento neto mensual después de aplicar la retención de IRPF (19%) sobre el beneficio bruto. Es el importe que el partícipe recibe efectivamente cada mes.',
+  },
+  {
+    termino:    'Devengado',
+    definicion: 'Importe acumulado pendiente de pago al partícipe. Una cuota se considera devengada cuando el préstamo ha cobrado su cuota y ha comenzado el mes siguiente al cobro (momento en que el partícipe ya puede saber que recibirá ese importe).',
+  },
 ]
 
 // ── Textos cortos para tooltips ? ─────────────────────────────────────────────
 export const help = {
   // Estados
-  desplegado:    'Nominal de las operaciones en curso (no canceladas).',
+  invertido:    'Nominal de las operaciones en curso (no canceladas).',
   en_curso:      'Capital vivo real: activas + judicializadas, descontando principal amortizado.',
   activo:        'Operaciones en curso no judicializadas (al día + con retraso).',
   al_dia:        'Operaciones activas sin cuotas vencidas pendientes.',
@@ -63,6 +75,7 @@ export const help = {
   participacion_en_curso: 'Suma de importes CCP activos en operaciones no canceladas.',
   prestamos_en_curso:     'Operaciones en curso donde este partícipe tiene algún contrato CCP activo.',
   rentabilidad_mes:       'Rendimiento neto mensual: devengado bruto menos gestión, antes de impuestos.',
+  devengado:              'Importe pendiente de cobro. Se genera cuando el préstamo cobra su cuota y comienza el mes siguiente. Por ejemplo, cobro el 26/2 → devengado desde el 1/3. Se acumula hasta que Promocima realiza el pago al partícipe (habitualmente el día 10 del mes). Si el pago no se realiza en esa fecha, el importe sigue devengado hasta que se abone.',
 
   // Ingresos
   ingr_anuales_activas:    'Intereses anuales de operaciones activas. Americanos: nominal × tasa. Franceses: intereses de cuotas del año en curso.',

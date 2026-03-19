@@ -43,6 +43,13 @@
       <nav class="sidebar-nav">
         <div class="nav-section">
           <div class="nav-label">Mi Portal</div>
+          <!-- Opción "Todo" — solo si hay más de un partícipe -->
+          <div v-if="participeIds.length > 1"
+               class="nav-item"
+               :class="{ active: participeActivoId === null && !participeCcpId }"
+               @click="participeActivoId = null; participeCcpId = null; sidebarOpen = false">
+            <span class="icon">▦</span> Todo
+          </div>
           <div v-for="pid in participeIds" :key="pid"
                class="nav-item"
                :class="{ active: participeActivoId === pid && !participeCcpId }"
@@ -55,6 +62,9 @@
         <div style="display:flex;align-items:center;gap:8px">
           <div class="user-avatar">{{ initiales }}</div>
           <div class="user-info">
+            <div v-if="fechaCierrePortal" style="font-size:10px;color:var(--accent);margin-bottom:2px;font-family:var(--mono)">
+              Datos hasta {{ fmtDate(fechaCierrePortal) }}
+            </div>
             <div class="name">{{ nombre }}</div>
             <div class="role">Partícipe</div>
           </div>
@@ -65,7 +75,10 @@
       <div class="topbar">
         <button class="hamburger-btn" @click="sidebarOpen = !sidebarOpen" aria-label="Menú">☰</button>
         <div class="topbar-title">{{ participeCcpId ? 'Detalle Contrato' : 'Detalle Partícipe' }}</div>
-        <button class="btn btn-sm" @click="logout">Cerrar sesión</button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <HelpPanel />
+          <button class="btn btn-sm" @click="logout">Cerrar sesión</button>
+        </div>
       </div>
       <div class="content">
         <ContratosCCP
@@ -73,14 +86,24 @@
           :view-id="participeCcpId"
           :read-only="true"
           :es-portal-participe="true"
+          :fecha-cierre="fechaCierrePortal"
           @navigate="onParticipeNav"
         />
+        <!-- Modo Todo: KPIs agregados de todos los partícipes -->
+        <ParticiPePortal
+          v-else-if="participeActivoId === null && participeIds.length > 1"
+          :participe-ids="participeIds"
+          :fecha-cierre="fechaCierrePortal"
+          @navigate="onParticipeNav"
+        />
+        <!-- Modo individual: detalle de un partícipe -->
         <Participes
           v-else
           :view-id="participeActivoId"
           :read-only="true"
           :solo-editar-contacto="true"
           :es-portal-participe="true"
+          :fecha-cierre="fechaCierrePortal"
           @navigate="onParticipeNav"
         />
       </div>
@@ -209,10 +232,23 @@ function toggleCollapse() {
 const participeCcpId    = ref(null)
 const participeActivoId = ref(null)
 const nombresParticipes = ref({})
+const fechaCierrePortal = ref(null)
+
+// Cargar fecha de cierre del portal desde config
+watch(isParticipe, async (val) => {
+  if (!val) return
+  const { data } = await supabase.from('config').select('fecha_cierre_portal').eq('id', 1).single()
+  fechaCierrePortal.value = data?.fecha_cierre_portal || null
+}, { immediate: true })
 
 watch(participeIds, async (ids) => {
   if (!ids.length) return
-  if (!participeActivoId.value || !ids.includes(participeActivoId.value)) {
+  // Si hay varios partícipes y no hay uno seleccionado, arrancar en modo Todo (null)
+  // Si hay uno solo, seleccionarlo directamente
+  if (participeActivoId.value !== null && !ids.includes(participeActivoId.value)) {
+    participeActivoId.value = ids.length === 1 ? ids[0] : null
+  }
+  if (ids.length === 1 && participeActivoId.value === null) {
     participeActivoId.value = ids[0]
   }
   const { data } = await supabase.from('participes').select('id, nombre').in('id', ids)
@@ -274,6 +310,7 @@ import Configuracion    from './components/Configuracion.vue'
 import Administracion   from './components/Administracion.vue'
 import HelpPanel        from './components/HelpPanel.vue'
 import { supabase }     from './supabase.js'
+import { fmtDate }      from './utils.js'
 
 // ── Init ───────────────────────────────────────
 onMounted(() => {

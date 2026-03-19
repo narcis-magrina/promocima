@@ -7,6 +7,8 @@
       :prestamo="prestamo"
       :cobros="cobros"
       :prestamo-id="viewId"
+      :origen-prestamo="origenPrestamo"
+      :sucesor-prestamo="sucesorPrestamo"
       @navigate="$emit('navigate', $event)"
       @editar="editarPrestamo"
       @recargar="cargarTodo"
@@ -89,7 +91,10 @@
             <tbody>
               <tr v-for="p in prestamosFiltrados" :key="p.id" style="cursor:pointer" @click="$emit('navigate','prestamos',p.id)">
                 <td class="td-mono td-center col-hide-mobile" style="color:var(--text3)">{{ p.centro_coste || '—' }}</td>
-                <td style="font-weight:500">{{ p.alias }}</td>
+                <td style="font-weight:500">
+                  {{ p.alias }}
+                  <span v-if="p.origen_prestamo_id" title="Originado por amortización parcial" style="font-size:10px;background:rgba(139,92,246,0.12);color:var(--purple);border:1px solid rgba(139,92,246,0.3);padding:1px 5px;border-radius:4px;margin-left:4px">AP</span>
+                </td>
                 <td style="font-size:12px" class="col-hide-mobile">{{ p.intermediarios?.nombre || '—' }}</td>
                 <td v-html="getTipoBadge(p.tipo_prestamo)" class="col-hide-mobile" />
                 <td class="td-mono td-right">{{ fmtN(p.importe) }}</td>
@@ -291,6 +296,18 @@ function onFechaInicioChange() {
 // ── Computed ──────────────────────────────────
 const prestamo = computed(() => prestamos.value.find(p => p.id === props.viewId) || null)
 
+// Préstamo del que proviene el actual (si tiene origen_prestamo_id)
+const origenPrestamo = computed(() => {
+  if (!prestamo.value?.origen_prestamo_id) return null
+  return prestamosRaw.value.find(p => p.id === prestamo.value.origen_prestamo_id) || null
+})
+
+// Préstamo sucesor creado por AP desde el actual
+const sucesorPrestamo = computed(() => {
+  if (!props.viewId) return null
+  return prestamosRaw.value.find(p => p.origen_prestamo_id === props.viewId) || null
+})
+
 function esActivo(p) {
   return p.estado === 'activo'
 }
@@ -303,45 +320,19 @@ function estadoVisible(p) {
 
 function calcSituacion(p, cobrosPreCalculados) {
   if (!esActivo(p)) return null
-  const hoy = today()
+  const hoy    = today()
   const cobrosP = cobrosPreCalculados !== undefined
     ? cobrosPreCalculados
     : todosCobros.value.filter(c => c.prestamo_id === p.id)
-  const cal = generateCalendarioTeorico(p, cobrosP)
-
-  // Misma lógica de tramos que PrestamoDetalle para consistencia
-  const cobrosOrdinarios = cobrosP
+  const cal = generateCalendarioTeorico(p)
+  const r = v => Math.round(v * 100) / 100
+  let restante = r(cobrosP
     .filter(x => x.tipo === 'pago_cuota' || x.tipo === 'cancelacion')
-    .map(x => ({ fecha: x.fecha_real || x.fecha_teorica, importe: Math.round(Number(x.importe) * 100) / 100 }))
-    .sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''))
-
-  const apFechas = cobrosP
-    .filter(x => x.tipo === 'amortizacion_parcial' && Number(x.importe_principal || 0) > 0)
-    .map(x => x.fecha_real || x.fecha_teorica)
-    .filter(Boolean).sort()
-
-  const limites = [...apFechas, null]
-  const tramos = []
-  let ci = 0
-  for (const limite of limites) {
-    let total = 0
-    while (ci < cobrosOrdinarios.length) {
-      if (limite !== null && cobrosOrdinarios[ci].fecha >= limite) break
-      total = Math.round((total + cobrosOrdinarios[ci].importe) * 100) / 100
-      ci++
-    }
-    tramos.push(total)
-  }
-
-  let tramoIdx = 0, restante = tramos[0] || 0, apIdx = 0
+    .reduce((s, x) => s + Number(x.importe), 0))
   for (const cuota of cal) {
-    while (apIdx < apFechas.length && apFechas[apIdx] < cuota.fecha) {
-      apIdx++; tramoIdx++
-      restante = tramos[tramoIdx] || 0
-    }
     if (cuota.fecha > hoy) break
-    const cobrado = Math.round(Math.min(restante, cuota.total) * 100) / 100
-    restante = Math.round((restante - cobrado) * 100) / 100
+    const cobrado = r(Math.min(restante, cuota.total))
+    restante = r(restante - cobrado)
     if (cobrado < cuota.total * 0.99) return 'con_retraso'
   }
   return 'al_dia'
@@ -354,19 +345,14 @@ const prestamosConSituacion = computed(() => prestamos.value)
 
 const activos        = computed(() => prestamosConSituacion.value.filter(p => esActivo(p)))
 function calcCapitalActivoPrestamo(p) {
+  if (p.tipo_prestamo === 'Americano') return Number(p.importe)
   const cobrosP = todosCobros.value.filter(c => c.prestamo_id === p.id)
-  const totalAmort = cobrosP
-    .filter(c => c.tipo === 'amortizacion_parcial')
-    .reduce((s, c) => s + Number(c.importe_principal || 0), 0)
-  if (p.tipo_prestamo === 'Americano') {
-    return Math.max(0, Number(p.importe) - totalAmort)
-  }
-  const cal = generateCalendarioTeorico(p, cobrosP)
+  const cal = generateCalendarioTeorico(p)
   const calConEstado = distribuirCobros(cal, cobrosP)
   const amortCuotas = calConEstado
     .filter(c => c.estado === 'cobrada')
     .reduce((s, c) => s + (c.principal || 0), 0)
-  return Math.max(0, Math.round((Number(p.importe) - totalAmort - amortCuotas) * 100) / 100)
+  return Math.max(0, Math.round((Number(p.importe) - amortCuotas) * 100) / 100)
 }
 
 const capitalEnCurso = computed(() =>

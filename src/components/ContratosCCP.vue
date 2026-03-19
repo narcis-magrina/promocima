@@ -9,6 +9,7 @@
       :cobros-prestamo="cobrosPrestamo"
       :read-only="readOnly"
       :es-portal-participe="esPortalParticipe"
+      :fecha-cierre="fechaCierre"
       @navigate="(page, id) => $emit('navigate', page, id)"
       @editar="editarContrato"
     />
@@ -108,7 +109,8 @@ import ContratoCCPLista   from './ContratoCCPLista.vue'
 const props = defineProps({
   viewId:            String,
   readOnly:          { type: Boolean, default: false },
-  esPortalParticipe: { type: Boolean, default: false }, // se pasa al detalle para ocultar back-btn
+  esPortalParticipe: { type: Boolean, default: false },
+  fechaCierre:       { type: String,  default: null },
 })
 const emit  = defineEmits(['navigate'])
 
@@ -184,7 +186,7 @@ async function cargarDatos() {
   const [{ data: c }, { data: p }, { data: pr }, { data: tp }, { data: cbGlobal }] = await Promise.all([
     supabase.from('contratos_ccp').select('*, participes(nombre), prestamos(id, alias, interes_ordinario)'),
     supabase.from('participes').select('id, nombre').order('nombre'),
-    supabase.from('prestamos').select('id, alias, importe, interes_ordinario, interes_demora, fecha_inicio, dia_cobro, duracion_meses, tipo_prestamo, periodicidad, estado, fecha_judicializacion, importe_demanda, demanda_principal, demanda_interes_ordinario, demanda_gastos, meses_carencia'),
+    supabase.from('prestamos').select('id, alias, importe, interes_ordinario, interes_demora, fecha_inicio, dia_cobro, duracion_meses, tipo_prestamo, periodicidad, estado, fecha_judicializacion, importe_demanda, demanda_principal, demanda_interes_ordinario, demanda_gastos, meses_carencia, origen_prestamo_id'),
     supabase.from('pagos_reales_participe').select('contrato_ccp_id'),
     supabase.from('cobros').select('prestamo_id, cuota_num, importe, tipo, fecha_real, fecha_teorica, importe_principal, modalidad_recalculo').range(0, 9999),
   ])
@@ -273,7 +275,7 @@ async function guardar() {
     const { data: existentes } = await supabase.from('contratos_ccp').select('id')
     const nums = (existentes || []).map(x => parseInt(x.id.replace(/\D/g, '')) || 0)
     const next = (nums.length ? Math.max(...nums) : 0) + 1
-    const nuevoId = 'CCP' + String(next).padStart(3, '0')
+    const nuevoId = 'CCP' + String(next).padStart(6, '0')
     const contratoNuevo = {
       id: nuevoId, ...form.value, porcentaje_participacion,
       activo: prestamo.estado !== 'cancelado',

@@ -78,15 +78,15 @@ export const getLTV = (prestamo, garantia) => {
 }
 
 // ── Calendario teórico ────────────────────────
-
-// cobros opcionales: si se pasan, las amortizaciones parciales recalculan el calendario
-export const generateCalendarioTeorico = (prestamo, cobros = []) => {
+// Un préstamo = un calendario limpio. Las APs generan un préstamo nuevo,
+// por lo que no hay tramos ni lógica de amortización parcial aquí.
+export const generateCalendarioTeorico = (prestamo) => {
   if (prestamo.estado === 'cancelado') return []
 
-  const r      = v => Math.round(v * 100) / 100
-  const inicio = new Date(prestamo.fecha_inicio + 'T00:00:00')
-  const P      = Number(prestamo.importe)
-  const tipo   = prestamo.tipo_prestamo
+  const r         = v => Math.round(v * 100) / 100
+  const inicio    = new Date(prestamo.fecha_inicio + 'T00:00:00')
+  const P         = Number(prestamo.importe)
+  const tipo      = prestamo.tipo_prestamo
   const tasaAnual = Number(prestamo.interes_ordinario) / 100
 
   const periodicidad = (prestamo.periodicidad || 'mensual').toLowerCase()
@@ -102,30 +102,14 @@ export const generateCalendarioTeorico = (prestamo, cobros = []) => {
   const fmtFecha = d =>
     `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 
-  // fechaDeCuota ahora acepta el ancla (fecha y día de cobro activos).
-  // Antes de cualquier AP: ancla = fecha_inicio, dia = dia_cobro original.
-  // Tras una AP: ancla = fecha de la AP, dia = día de la AP.
-  // n = número de meses a sumar desde el ancla.
-  const fechaDeCuota = (n, anclaDate, diaCobro) => {
-    const mesTotal = anclaDate.getMonth() + n * mesesPaso
-    const anio = anclaDate.getFullYear() + Math.floor(mesTotal / 12)
-    const mes  = mesTotal % 12  // 0-based
+  const fechaDeCuota = (n) => {
+    const mesTotal  = inicio.getMonth() + n * mesesPaso
+    const anio      = inicio.getFullYear() + Math.floor(mesTotal / 12)
+    const mes       = mesTotal % 12
     const diasEnMes = new Date(anio, mes + 1, 0).getDate()
-    const dia = Math.min(diaCobro, diasEnMes)
-    return fmtFecha(new Date(anio, mes, dia))
+    return fmtFecha(new Date(anio, mes, Math.min(prestamo.dia_cobro, diasEnMes)))
   }
 
-  // ── Amortizaciones parciales ordenadas por fecha ───────────────────────
-  const amortParciales = cobros
-    .filter(c => c.tipo === 'amortizacion_parcial' && Number(c.importe_principal || 0) > 0)
-    .map(c => ({
-      fecha:     c.fecha_real || c.fecha_teorica,
-      principal: Number(c.importe_principal),
-      modalidad: c.modalidad_recalculo || 'misma_cuota',
-    }))
-    .sort((a, b) => a.fecha.localeCompare(b.fecha))
-
-  // ── Calcular cuota PMT inicial ─────────────────────────────────────────
   const calcPMT = (saldo, tasa, n) => {
     if (tasa <= 0 || n <= 0) return n > 0 ? r(saldo / n) : 0
     return r(saldo * tasa / (1 - Math.pow(1 + tasa, -n)))
@@ -134,7 +118,6 @@ export const generateCalendarioTeorico = (prestamo, cobros = []) => {
   let cuotaFija = tipo === 'Francés' ? calcPMT(P, tasaPeriodo, numCuotasTotal) : 0
   let cuotasCarencia = 0, cuotaFijaPostCarencia = 0
   if (tipo === 'Francés con carencia') {
-    // Usar meses_carencia guardado en el préstamo; si no existe, mitad del plazo como fallback
     const mesesCarenciaConf = Number(prestamo.meses_carencia || 0)
     cuotasCarencia = mesesCarenciaConf > 0
       ? Math.round(mesesCarenciaConf / mesesPaso)
@@ -142,125 +125,37 @@ export const generateCalendarioTeorico = (prestamo, cobros = []) => {
     cuotaFijaPostCarencia = calcPMT(P, tasaPeriodo, Math.max(1, numCuotasTotal - cuotasCarencia))
   }
 
-  // ── Generación del calendario por tramos ──────────────────────────────
-  // Cada amortización parcial divide el calendario en tramos.
-  // Tramo: { desde (nº cuota, 1-based), saldo, cuotaFija, nCuotas }
-  // Con misma_cuota: misma cuotaFija, calculamos cuántas cuotas quedan con el nuevo saldo.
-  // Con misma_fecha: recalculamos cuotaFija para agotar el nuevo saldo en las cuotas restantes.
-
   const cuotas = []
-  let saldo        = P
-  let apIdx        = 0
-  let cuotaNum     = 0  // numeración global de cuota para el usuario
-  let factorPrimeraCuotaPostAP = null  // factor proporcional para la 1ª cuota tras AP
-  let fechaUltimaAP = null             // fecha de la última AP aplicada
+  let saldo = P
 
-  // Ancla dinámica: punto desde el que se calculan las fechas de cuota
-  // Cambia con cada AP (fecha y día de cobro de la AP)
-  let anclaDate = inicio
-  let diaCobro  = Number(prestamo.dia_cobro)
-  let cuotaEnTramo = 0  // contador de cuotas dentro del tramo actual (reset tras cada AP)
-
-  // Iteramos exactamente numCuotasTotal veces (la definición del préstamo).
-  // Para misma_cuota tras amortización parcial, el saldo se agota antes y el break termina el loop.
   for (let i = 1; i <= numCuotasTotal; i++) {
     if (saldo <= 0.005) break
 
-    cuotaEnTramo++
-    const fechaStr = fechaDeCuota(cuotaEnTramo, anclaDate, diaCobro)
-    factorPrimeraCuotaPostAP = null  // resetear en cada iteración
-    let saltarCuota = false
-
-    // ── Aplicar amortizaciones parciales cuya fecha cae antes o el mismo día ──
-    while (apIdx < amortParciales.length && amortParciales[apIdx].fecha <= fechaStr) {
-      const ap = amortParciales[apIdx]
-      const esMismoDia = ap.fecha === fechaStr
-      saldo = Math.max(0, r(saldo - ap.principal))
-      fechaUltimaAP = ap.fecha
-      apIdx++
-      if (saldo <= 0.005) break
-
-      // Actualizar ancla: a partir de esta AP las cuotas se calculan desde su fecha y día
-      const dAP = new Date(ap.fecha + 'T00:00:00')
-      anclaDate    = dAP
-      diaCobro     = dAP.getDate()
-      cuotaEnTramo = 0  // reiniciar contador del tramo
-
-      if (tipo === 'Francés' && tasaPeriodo > 0) {
-        const cuotasRestantes = numCuotasTotal - (i - 1)
-        if (ap.modalidad === 'misma_fecha') {
-          cuotaFija = calcPMT(saldo, tasaPeriodo, Math.max(1, cuotasRestantes))
-        }
-      }
-
-      // Si la AP cae el mismo día que esta cuota: omitir la cuota (intereses ya en la AP)
-      if (esMismoDia) {
-        saltarCuota = true
-        break
-      }
-
-      // ── Factor proporcional para la primera cuota post-AP ──────────────────
-      // Solo si la AP cae a mitad de período (no mismo día)
-      if (fechaUltimaAP) {
-        const fechaVencAnt = cuotas.length > 0
-          ? cuotas[cuotas.length - 1].fecha
-          : fmtFecha(inicio)
-        const fechaSig = fechaDeCuota(1, anclaDate, diaCobro)
-        const dVencAnt  = new Date(fechaVencAnt + 'T00:00:00')
-        const dVenc     = new Date(fechaSig + 'T00:00:00')
-        const dAP2      = new Date(fechaUltimaAP + 'T00:00:00')
-        const diasPeriodo = (dVenc - dVencAnt) / 86400000
-        const diasDesdeAP = (dVenc - dAP2) / 86400000
-        if (diasPeriodo > 0 && diasDesdeAP > 0 && diasDesdeAP < diasPeriodo) {
-          factorPrimeraCuotaPostAP = diasDesdeAP / diasPeriodo
-        }
-      }
-    }
-    if (saldo <= 0.005) break
-    cuotaNum++
-    if (saltarCuota) continue
-
-    // Recalcular la fecha con el ancla y diaCobro potencialmente actualizados tras la AP
-    const fechaFinal = fechaDeCuota(cuotaEnTramo, anclaDate, diaCobro)
-
     let interes = 0, principal = 0
-    const factorAP = factorPrimeraCuotaPostAP  // puede ser null (cuota normal) o fracción
 
     if (tipo === 'Americano') {
-      const interesBase = r(saldo * tasaPeriodo)
-      interes = factorAP !== null ? r(interesBase * factorAP) : interesBase
-      // Último pago devuelve todo el saldo
-      const esUltima = i === numCuotasTotal || saldo <= interesBase + 0.005
-      principal = esUltima ? saldo : 0
+      interes   = r(saldo * tasaPeriodo)
+      principal = (i === numCuotasTotal || saldo <= interes + 0.005) ? saldo : 0
 
     } else if (tipo === 'Francés') {
-      interes = r(saldo * tasaPeriodo)
-      // Si el saldo ya no llega a una cuota completa es la última
-      if (saldo <= cuotaFija + 0.005) {
-        principal = saldo
-      } else {
-        principal = Math.max(0, r(cuotaFija - interes))
-      }
-      saldo = r(saldo - principal)
+      interes   = r(saldo * tasaPeriodo)
+      principal = saldo <= cuotaFija + 0.005 ? saldo : Math.max(0, r(cuotaFija - interes))
+      saldo     = r(saldo - principal)
 
     } else if (tipo === 'Francés con carencia') {
       if (i <= cuotasCarencia) {
         interes   = r(P * tasaPeriodo)
         principal = 0
       } else {
-        interes = r(saldo * tasaPeriodo)
-        if (saldo <= cuotaFijaPostCarencia + 0.005) {
-          principal = saldo
-        } else {
-          principal = Math.max(0, r(cuotaFijaPostCarencia - interes))
-        }
-        saldo = r(saldo - principal)
+        interes   = r(saldo * tasaPeriodo)
+        principal = saldo <= cuotaFijaPostCarencia + 0.005 ? saldo : Math.max(0, r(cuotaFijaPostCarencia - interes))
+        saldo     = r(saldo - principal)
       }
     }
 
     cuotas.push({
-      num:       cuotaNum,
-      fecha:     fechaFinal,
+      num:       i,
+      fecha:     fechaDeCuota(i),
       interes:   r(interes),
       principal: r(principal),
       total:     r(interes + principal),
@@ -305,115 +200,64 @@ export const getTipoBadge = (tipo) => {
 
 // ── Calendario CCP ────────────────────────────
 
-export const generateCalendarioCCP = (contrato, prestamo, porcentajeIRPF = 19, cobros = []) => {
-  // contrato: { fecha_firma, importe_participacion, porcentaje_gestion, porcentaje_participacion }
-  // prestamo: { fecha_inicio, dia_cobro, duracion_meses, interes_ordinario, tipo_prestamo, importe }
-  // cobros:   lista de cobros del préstamo (para detectar amortizaciones parciales)
+export const generateCalendarioCCP = (contrato, prestamo, porcentajeIRPF = 19) => {
+  // Sin cobros como parámetro: las APs generan un préstamo nuevo,
+  // por lo que el calendario del partícipe es siempre lineal desde fecha_firma.
 
   const cuotas = []
-  const fechaFirma      = new Date(contrato.fecha_firma + 'T00:00:00')
-  const diaFirma        = fechaFirma.getDate()
-  const diaCobro        = Number(prestamo.dia_cobro)
+  const fechaFirma       = new Date(contrato.fecha_firma + 'T00:00:00')
+  const diaFirma         = fechaFirma.getDate()
+  const diaCobro         = Number(prestamo.dia_cobro)
   const principalInicial = Number(contrato.importe_participacion)
-  const pctPart         = Number(contrato.porcentaje_participacion) / 100
-  const pctGestion      = Number(contrato.porcentaje_gestion) / 100
-  const pctIRPF         = porcentajeIRPF / 100
+  const pctGestion       = Number(contrato.porcentaje_gestion) / 100
+  const pctIRPF          = porcentajeIRPF / 100
 
   const fmtFecha = (d) =>
     `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 
-  // Amortizaciones parciales ordenadas — reducen el principal del partícipe
-  const amortParciales = cobros
-    .filter(c => c.tipo === 'amortizacion_parcial' && Number(c.importe_principal || 0) > 0)
-    .map(c => ({
-      fecha:     c.fecha_real || c.fecha_teorica,
-      principal: Number(c.importe_principal) * pctPart,  // parte proporcional al partícipe
-    }))
-    .sort((a, b) => a.fecha.localeCompare(b.fecha))
-
-  let principalActual = principalInicial
-  let apIdx           = 0
-  let fechaUltimaAP   = null  // para calcular factor proporcional primera cuota post-AP
-
-  // Cuota calculada sobre el principal activo, con factor proporcional opcional
-  const calcCuota = (factor, ppal) => {
-    const beneficio = Math.round(ppal * (Number(prestamo.interes_ordinario) / 100) / 12 * factor * 100) / 100
-    const gestion   = Math.round(ppal * pctGestion / 12 * factor * 100) / 100
+  const calcCuota = (factor) => {
+    const beneficio = Math.round(principalInicial * (Number(prestamo.interes_ordinario) / 100) / 12 * factor * 100) / 100
+    const gestion   = Math.round(principalInicial * pctGestion / 12 * factor * 100) / 100
     const bruto     = Math.round((beneficio - gestion) * 100) / 100
     const irpf      = Math.round(bruto * pctIRPF * 100) / 100
     const neto      = Math.round((bruto - irpf) * 100) / 100
     return { beneficio, gestion, bruto, irpf, neto, factor }
   }
 
-  // Recorrer todas las cuotas del préstamo
   const inicio = new Date(prestamo.fecha_inicio + 'T00:00:00')
   let cuotasDelPartícipe = 0
-  let prevFechaStr = fmtFecha(inicio)  // fecha del vencimiento anterior (para calcular días del período)
 
   for (let i = 1; i <= prestamo.duracion_meses; i++) {
-    const mesTotal = inicio.getMonth() + i
-    const anioP = inicio.getFullYear() + Math.floor(mesTotal / 12)
-    const mesP  = mesTotal % 12
+    const mesTotal   = inicio.getMonth() + i
+    const anioP      = inicio.getFullYear() + Math.floor(mesTotal / 12)
+    const mesP       = mesTotal % 12
     const diasEnMesP = new Date(anioP, mesP + 1, 0).getDate()
     const fechaPrestamo = new Date(anioP, mesP, Math.min(diaCobro, diasEnMesP))
-    const fechaStr = fmtFecha(fechaPrestamo)
+    const fechaStr   = fmtFecha(fechaPrestamo)
 
-    // Factor proporcional si hay AP en este período
-    let factorPostAP = null
-
-    // Aplicar APs cuya fecha es anterior a esta cuota → reducir principal activo
-    while (apIdx < amortParciales.length && amortParciales[apIdx].fecha < fechaStr) {
-      principalActual = Math.max(0, Math.round((principalActual - amortParciales[apIdx].principal) * 100) / 100)
-      fechaUltimaAP   = amortParciales[apIdx].fecha
-      apIdx++
-
-      // Calcular factor proporcional: días desde AP hasta este vencimiento / días del período
-      if (fechaUltimaAP) {
-        const dVencAnt  = new Date(prevFechaStr + 'T00:00:00')
-        const dVenc     = new Date(fechaStr + 'T00:00:00')
-        const dAP       = new Date(fechaUltimaAP + 'T00:00:00')
-        const diasPeriodo = (dVenc - dVencAnt) / 86400000
-        const diasDesdeAP = (dVenc - dAP) / 86400000
-        if (diasPeriodo > 0 && diasDesdeAP > 0 && diasDesdeAP < diasPeriodo) {
-          factorPostAP = diasDesdeAP / diasPeriodo
-        }
-      }
-    }
-
-    if (principalActual <= 0.005) break
-
-    // Ignorar cuotas anteriores a la fecha de firma
-    if (fechaPrestamo < fechaFirma) {
-      prevFechaStr = fechaStr
-      continue
-    }
+    if (fechaPrestamo < fechaFirma) continue
 
     cuotasDelPartícipe++
 
-    // Fecha de cobro del partícipe: día 10 del mes siguiente
-    const fechaCobro = new Date(fechaPrestamo)
-    fechaCobro.setMonth(fechaCobro.getMonth() + 1)
-    fechaCobro.setDate(10)
+    const mesNextC  = fechaPrestamo.getMonth() + 1  // mes siguiente (0-based)
+    const anioNextC = mesNextC === 12 ? fechaPrestamo.getFullYear() + 1 : fechaPrestamo.getFullYear()
+    const mesNextCNorm = mesNextC === 12 ? 1 : mesNextC + 1
+    const fechaCobro = new Date(anioNextC, mesNextCNorm - 1, 10)
 
-    // Factor: primeras cuotas del partícipe (proporcional a firma) O primera cuota post-AP
     let factor
-    if (factorPostAP !== null) {
-      // Primera cuota tras AP: proporcional a días restantes del período
-      factor = factorPostAP
-    } else if (cuotasDelPartícipe === 1) {
-      if (diaFirma < diaCobro)        factor = (diaCobro - diaFirma) / 30
-      else if (diaFirma === diaCobro)  factor = 1
-      else                             factor = 0
+    if (cuotasDelPartícipe === 1) {
+      if (diaFirma < diaCobro)       factor = (diaCobro - diaFirma) / 30
+      else if (diaFirma === diaCobro) factor = 1
+      else                            factor = 0
     } else if (cuotasDelPartícipe === 2) {
-      if (diaFirma <= diaCobro)        factor = 1
-      else                             factor = (30 - diaFirma + diaCobro) / 30
+      factor = diaFirma <= diaCobro ? 1 : (30 - diaFirma + diaCobro) / 30
     } else {
       factor = 1
     }
 
-    if (factor === 0) { prevFechaStr = fechaStr; continue }
+    if (factor === 0) continue
 
-    const calc = calcCuota(factor, principalActual)
+    const calc = calcCuota(factor)
 
     cuotas.push({
       num: i,
@@ -421,11 +265,9 @@ export const generateCalendarioCCP = (contrato, prestamo, porcentajeIRPF = 19, c
       fecha_prestamo: fechaStr,
       fecha_cobro: fmtFecha(fechaCobro),
       factor: Math.round(factor * 10000) / 10000,
-      principalActual,
+      principalActual: principalInicial,
       ...calc
     })
-
-    prevFechaStr = fechaStr
   }
 
   return cuotas
@@ -458,57 +300,49 @@ export const calcularLineasCCP = (contrato, prestamo, cobros, pagosReales, pctIR
   const fJud = prestamo.estado === 'judicializado' && prestamo.fecha_judicializacion
     ? prestamo.fecha_judicializacion
     : null
-  const calTeórico = generateCalendarioCCP(contrato, prestamo, pctIRPF, cobros || [])
+  const calTeórico = generateCalendarioCCP(contrato, prestamo, pctIRPF)
     .filter(c => !fJud || c.fecha_prestamo <= fJud)
 
-  // ── 2. Agrupar cobros del préstamo por cuota_num ───────────────────────────
-  // Una cuota puede tener varios cobros parciales
-  const cobrosPorCuota = {}
-  for (const c of (cobros || [])) {
-    if (c.tipo !== 'pago_cuota' && c.tipo !== 'cancelacion') continue
-    const key = String(c.cuota_num)
-    if (!cobrosPorCuota[key]) cobrosPorCuota[key] = []
-    cobrosPorCuota[key].push(c)
+  // ── 2. Mapear cobros del préstamo a cuotas por distribución secuencial ────────
+  // Ordenamos los cobros por fecha y los imputamos secuencialmente al calendario
+  // del préstamo — igual que distribuirCobros. cuota_num se ignora.
+  const calPrestamo = generateCalendarioTeorico(prestamo)
+  const interesPorCuota = {}
+  for (const cuota of calPrestamo) {
+    interesPorCuota[String(cuota.num)] = cuota.interes
   }
 
-  // ── 3 + 4 + 5. Construir líneas con las 3 columnas: col_pagado, col_devengado, col_pendiente
-  //
-  // Cada línea representa una cuota del calendario del partícipe.
-  // El neto teórico (100%) se distribuye siempre entre estas 3 columnas que deben sumar neto:
-  //
-  //   col_pendiente  = parte del neto cuya cuota del préstamo NO ha sido cobrada todavía
-  //   col_devengado  = parte del neto cuya cuota SÍ fue cobrada pero aún no pagada al partícipe
-  //   col_pagado     = parte del neto cuya cuota SÍ fue cobrada Y ya fue pagada al partícipe
-  //
-  // Lógica de cálculo:
-  //   1. neto_cobrado_prestamo = neto × (totalCobradoPrestamo / cuotaTotalPrestamo)  [capped 0..neto]
-  //   2. neto_pendiente_prestamo = neto - neto_cobrado_prestamo
-  //   3. De neto_cobrado_prestamo, descontamos los pagos reales al partícipe (cronológicos):
-  //        col_pagado   = min(neto_cobrado_prestamo, pagosDisponibles)
-  //        col_devengado = neto_cobrado_prestamo - col_pagado
-  //   4. col_pendiente = neto_pendiente_prestamo  (independiente de pagos al partícipe)
-  //
-  // Cuota teórica del préstamo (denominador para el ratio de cobro parcial)
-  // cuotaTotalPrestamo se calcula por cuota (varía tras APs) — se obtiene del calendario teórico
-  // Mapa num_cuota → interés teórico del préstamo en ese momento
-  const tasaMensual = Number(prestamo.interes_ordinario) / 100 / 12
-  // Calcular saldo del préstamo en cada cuota teniendo en cuenta APs
-  const apsPrestamo = (cobros || [])
-    .filter(c => c.tipo === 'amortizacion_parcial' && Number(c.importe_principal || 0) > 0)
-    .map(c => ({ fecha: c.fecha_real || c.fecha_teorica, principal: Number(c.importe_principal) }))
-    .sort((a, b) => a.fecha.localeCompare(b.fecha))
-  // Mapa: num_cuota → interés esperado del préstamo (base para ratio cobro parcial)
-  const interesPorCuota = {}
-  let saldoPrestamo = Number(prestamo.importe)
-  let apPIdx = 0
-  for (const cuota of calTeórico) {
-    const fechaStr = cuota.fecha_prestamo
-    while (apPIdx < apsPrestamo.length && apsPrestamo[apPIdx].fecha < fechaStr) {
-      saldoPrestamo = Math.max(0, r(saldoPrestamo - apsPrestamo[apPIdx].principal))
-      apPIdx++
+  const cobrosOrdenados = [...(cobros || [])]
+    .filter(c => c.tipo === 'pago_cuota' || c.tipo === 'cancelacion')
+    .sort((a, b) => {
+      const fa = a.fecha_real || a.fecha_teorica || ''
+      const fb = b.fecha_real || b.fecha_teorica || ''
+      return fa > fb ? 1 : fa < fb ? -1 : 0
+    })
+
+  // Para cada cuota del préstamo, acumular los cobros que la cubren
+  // guardando también la fecha real del cobro (para calcular fecha de pago al partícipe)
+  const cobrosPorCuota = {}
+  let poolCobros = cobrosOrdenados.map(c => ({ ...c, restante: Number(c.importe) }))
+  for (const cuota of calPrestamo) {
+    const total = cuota.interes + (cuota.principal || 0)
+    let acumulado = 0
+    const cobrosEsta = []
+    for (const cobro of poolCobros) {
+      if (cobro.restante <= 0) continue
+      if (acumulado >= total) break
+      const tomar = Math.min(cobro.restante, total - acumulado)
+      acumulado = Math.round((acumulado + tomar) * 100) / 100
+      cobrosEsta.push({ ...cobro, importe: tomar })
+      cobro.restante = Math.round((cobro.restante - tomar) * 100) / 100
     }
-    interesPorCuota[String(cuota.num)] = r(saldoPrestamo * tasaMensual)
+    if (cobrosEsta.length) cobrosPorCuota[String(cuota.num)] = cobrosEsta
+    poolCobros = poolCobros.filter(c => c.restante > 0.005)
+    if (!poolCobros.length) break
   }
+
+  // ── 3. Pool de pagos reales al partícipe (ordenados cronológicamente) ─────────
+  const tasaMensual = Number(prestamo.interes_ordinario) / 100 / 12
 
   // Pagos reales al partícipe ordenados cronológicamente
   const pagosSorted = [...(pagosReales || [])].sort((a, b) =>
@@ -527,16 +361,19 @@ export const calcularLineasCCP = (contrato, prestamo, cobros, pagosReales, pctIR
     // ── Importes teóricos 100% (beneficio con factor de primeras cuotas, sin tocar) ──
     const { beneficio, gestion, bruto, irpf, neto, factor, num, numParticipe, fecha_prestamo } = cuota
 
-    // ── Fecha de cobro al partícipe: día 10 del mes siguiente al último cobro ──
+    // ── Fecha de cobro al partícipe: día 10 del mes siguiente al cobro más reciente ──
+    // Usamos la fecha más tardía entre los cobros asignados a esta cuota,
+    // ya que el pago al partícipe se produce cuando la cuota queda completamente cubierta.
     let fechaCobro = cuota.fecha_cobro  // fallback: fecha teórica ya calculada
     if (cobrosC.length) {
-      const cobrosOrdenados = [...cobrosC].sort((a,b) => (a.fecha_real || '') > (b.fecha_real || '') ? 1 : -1)
-      const fUltimo = cobrosOrdenados.slice(-1)[0].fecha_real || cobrosOrdenados.slice(-1)[0].fecha_teorica
-      if (fUltimo) {
-        const d = new Date(fUltimo + 'T00:00:00')
-        d.setMonth(d.getMonth() + 1)
-        d.setDate(10)
-        fechaCobro = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-10`
+      const fechas = cobrosC.map(c => c.fecha_real || c.fecha_teorica || '').filter(Boolean)
+      const fRef = fechas.sort().slice(-1)[0]
+      if (fRef) {
+        const d = new Date(fRef + 'T00:00:00')
+        const mesNext = d.getMonth() + 1
+        const anioNext = mesNext === 12 ? d.getFullYear() + 1 : d.getFullYear()
+        const mesNextNorm = mesNext === 12 ? 1 : mesNext + 1
+        fechaCobro = `${anioNext}-${String(mesNextNorm).padStart(2,'0')}-10`
       }
     }
 
@@ -602,74 +439,6 @@ export const calcularLineasCCP = (contrato, prestamo, cobros, pagosReales, pctIR
     })
   }
 
-  // ── Filas de Amortización Parcial ────────────────────────────────────────────
-  // Cada AP genera una fila especial en el calendario CCP con:
-  //   - principal_part: principal devuelto × pctPart (sin gestión ni IRPF)
-  //   - intereses sobre los ordinarios pagados en la AP × pctPart (con gestión e IRPF)
-  //   - se intercala en la posición cronológica correcta
-  const amortParcialesCobros = (cobros || [])
-    .filter(c => c.tipo === 'amortizacion_parcial' && Number(c.importe_principal || 0) > 0)
-    .sort((a, b) => (a.fecha_real || a.fecha_teorica || '').localeCompare(b.fecha_real || b.fecha_teorica || ''))
-
-  for (const ap of amortParcialesCobros) {
-    const fechaAP      = ap.fecha_real || ap.fecha_teorica
-    const principalAP  = Number(ap.importe_principal || 0)
-    const interesesAP  = Number(ap.importe_interes_ordinario || 0)
-
-    // Parte proporcional al partícipe
-    const principalPart = r(principalAP * pctPart)
-    const beneficioPart = r(interesesAP * pctPart)
-    const gestionPart   = r(beneficioPart * pctGest)
-    const brutoPart     = r(beneficioPart - gestionPart)
-    const irpfPart      = r(brutoPart * pctIRPFd)
-    const netoPart      = r(brutoPart - irpfPart)
-
-    // Fecha de pago al partícipe: día 10 del mes siguiente a la AP
-    const dAP = new Date(fechaAP + 'T00:00:00')
-    dAP.setMonth(dAP.getMonth() + 1)
-    dAP.setDate(10)
-    const fechaCobro = `${dAP.getFullYear()}-${String(dAP.getMonth()+1).padStart(2,'0')}-10`
-
-    // Estado: descontar del pool de pagos reales
-    const netoTotal    = r(principalPart + netoPart)  // lo que debe recibir el partícipe
-    const col_pagado   = r(Math.min(netoTotal, poolPagado))
-    poolPagado         = r(poolPagado - col_pagado)
-    const col_devengado = r(netoTotal - col_pagado)
-
-    // ¿Fue cobrada la AP por el prestamista? (existe el cobro en BD)
-    const cobrada = !!fechaAP
-
-    let estado
-    if (col_pagado >= netoTotal - 0.005)   estado = 'pagado'
-    else if (cobrada && col_devengado > 0)  estado = 'devengado'
-    else                                    estado = 'pendiente'
-
-    lineas.push({
-      tipo:             'amortizacion_parcial',
-      cuota_num:        `AP-${fechaAP}`,
-      num:              null,
-      numParticipe:     null,
-      fecha_prestamo:   fechaAP,
-      fecha_cobro:      fechaCobro,
-      fecha_cobro_prestamo: fechaAP,
-      factor:           1,
-      // Intereses (con gestión e IRPF)
-      beneficio:        beneficioPart,
-      gestion:          gestionPart,
-      bruto:            brutoPart,
-      irpf:             irpfPart,
-      neto:             netoPart,
-      // Principal (sin retenciones)
-      principal_part:   principalPart,
-      // Columnas calendario
-      col_pagado,
-      col_devengado,
-      col_pendiente:    0,  // ya se ha producido la AP, no hay pendiente
-      ratio:            1,
-      cuota_completa:   true,
-      estado,
-    })
-  }
 
   // Ordenar por fecha_prestamo cronológicamente (las filas AP se intercalan en su posición)
   lineas.sort((a, b) => (a.fecha_prestamo || '').localeCompare(b.fecha_prestamo || ''))
@@ -749,103 +518,132 @@ export const calcularLineasCCP = (contrato, prestamo, cobros, pagosReales, pctIR
 }
 
 // ── Distribución secuencial de cobros sobre calendario ───────────────────
-// Devuelve el calendario con cobrado/pendiente/estado calculados correctamente.
-// Usa la misma lógica que calendarioConEstado en PrestamoDetalle.
+// Distribución simple: sin tramos por AP (las APs generan un préstamo nuevo).
 export const distribuirCobros = (cal, cobros) => {
   const r = v => Math.round(v * 100) / 100
-
-  const cobrosOrdinarios = cobros
-    .filter(c => c.tipo === 'pago_cuota' || c.tipo === 'cancelacion')
-    .reduce((s, c) => s + Number(c.importe), 0)
-
-  // Tramos separados por amortizaciones parciales
-  const apFechas = cobros
-    .filter(c => c.tipo === 'amortizacion_parcial' && Number(c.importe_principal || 0) > 0)
-    .map(c => c.fecha_real || c.fecha_teorica)
-    .filter(Boolean)
-    .sort()
-
-  // Si no hay amortizaciones parciales, distribución simple
-  if (!apFechas.length) {
-    let restante = r(cobrosOrdinarios)
-    return cal.map(c => {
-      const cobrado   = r(Math.min(restante, c.total))
-      restante        = r(restante - cobrado)
-      const pendiente = r(c.total - cobrado)
-      const estado    = pendiente <= 0.005 ? 'cobrada'
-                      : cobrado > 0      ? 'parcial'
-                      :                   'pendiente'
-      return { ...c, cobrado, pendiente, estado }
-    })
-  }
-
-  // Con amortizaciones: tramos por fecha AP
-  const cobrosArr = cobros
-    .filter(c => c.tipo === 'pago_cuota' || c.tipo === 'cancelacion')
-    .map(c => ({ fecha: c.fecha_real || c.fecha_teorica, importe: Number(c.importe) }))
-    .sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''))
-
-  const limites = [...apFechas, null]
-  const tramos = []
-  let ci = 0
-  for (const limite of limites) {
-    let total = 0
-    while (ci < cobrosArr.length) {
-      if (limite !== null && (cobrosArr[ci].fecha || '') >= limite) break
-      total = r(total + cobrosArr[ci].importe)
-      ci++
-    }
-    tramos.push(total)
-  }
-
-  let tramoIdx = 0, restante = tramos[0] || 0, apIdx = 0
+  let restante = r(
+    cobros
+      .filter(c => c.tipo === 'pago_cuota' || c.tipo === 'cancelacion')
+      .reduce((s, c) => s + Number(c.importe), 0)
+  )
   return cal.map(c => {
-    // Avanzar tramo para APs anteriores a esta cuota
-    while (apIdx < apFechas.length && apFechas[apIdx] < c.fecha) {
-      apIdx++; tramoIdx++
-      restante = tramos[tramoIdx] || 0
-    }
-    // Si la AP cae el mismo día que esta cuota, los intereses de esa cuota
-    // ya están incluidos en la AP → la cuota se considera cobrada
-    const apMismoDia = apIdx < apFechas.length && apFechas[apIdx] === c.fecha
-    if (apMismoDia) {
-      return { ...c, cobrado: c.total, pendiente: 0, estado: 'cobrada' }
-    }
     const cobrado   = r(Math.min(restante, c.total))
     restante        = r(restante - cobrado)
     const pendiente = r(c.total - cobrado)
     const estado    = pendiente <= 0.005 ? 'cobrada'
-                    : cobrado > 0      ? 'parcial'
-                    :                   'pendiente'
+                    : cobrado > 0        ? 'parcial'
+                    :                     'pendiente'
     return { ...c, cobrado, pendiente, estado }
   })
 }
 
 // ── Calcular situación de un préstamo (al_dia / con_retraso) ─────────────
 // Requiere el préstamo y sus cobros. Usa distribución secuencial correcta.
-export const calcSituacionPrestamo = (prestamo, cobros) => {
+// fechaRef: fecha de referencia opcional (para el portal con fecha de cierre).
+//           Si se omite, usa today().
+export const calcSituacionPrestamo = (prestamo, cobros, fechaRef = null) => {
   if (prestamo.estado === 'cancelado' || prestamo.estado === 'judicializado') return null
-  const hoy = today()
-  const cal = generateCalendarioTeorico(prestamo, cobros)
+  const hoy = fechaRef || today()
+  const cal = generateCalendarioTeorico(prestamo)
   const calConEstado = distribuirCobros(cal, cobros)
   return calConEstado.some(c => c.fecha <= hoy && c.estado !== 'cobrada') ? 'con_retraso' : 'al_dia'
 }
 
 // ── Capital activo de un préstamo ──────────────────────────────────────────────
-// Descuenta amortizaciones parciales y, en préstamos franceses, el principal
-// amortizado mediante cuotas cobradas.
+// Americano: el importe es el capital (sin APs embebidas — generan préstamo nuevo).
+// Francés: importe menos el principal amortizado via cuotas cobradas.
 export const calcCapitalActivoPrestamo = (prestamo, cobros = []) => {
   const r = v => Math.round(v * 100) / 100
-  const totalAmort = cobros
-    .filter(c => c.tipo === 'amortizacion_parcial')
-    .reduce((s, c) => s + Number(c.importe_principal || 0), 0)
   if (prestamo.tipo_prestamo === 'Americano') {
-    return Math.max(0, Number(prestamo.importe) - totalAmort)
+    return Number(prestamo.importe)
   }
-  const cal = generateCalendarioTeorico(prestamo, cobros)
+  const cal = generateCalendarioTeorico(prestamo)
   const calConEstado = distribuirCobros(cal, cobros)
   const amortCuotas = calConEstado
     .filter(c => c.estado === 'cobrada')
     .reduce((s, c) => s + (c.principal || 0), 0)
-  return Math.max(0, r(Number(prestamo.importe) - totalAmort - amortCuotas))
+  return Math.max(0, r(Number(prestamo.importe) - amortCuotas))
+}
+
+// ── Devengado pendiente de un contrato CCP ────────────────────────────────────
+// Una cuota está devengada cuando el préstamo ha cobrado su cuota Y el mes
+// siguiente al cobro ya ha comenzado (el partícipe sabe el día 1 que cobrará).
+// Regla: primer día del mes siguiente al cobro del préstamo ≤ fechaRef.
+// Si el cobro es parcial, el devengado es proporcional al ratio cobrado/esperado.
+// pagosReales: pagos ya realizados al partícipe (se restan del total devengado).
+// fechaRef: fecha de referencia (fecha_cierre_portal o today()).
+export const calcDevengadoContrato = (contrato, prestamo, cobros = [], pagosReales = [], fechaRef = null) => {
+  const r = v => Math.round(v * 100) / 100
+  if (!prestamo || prestamo.estado === 'cancelado') return 0
+
+  const ref = fechaRef || today()
+
+  // Calendario teórico del partícipe (cuotas con fecha_prestamo y neto)
+  const cal = generateCalendarioCCP(contrato, prestamo)
+
+  // Interés esperado por cuota (para ratio en cobros parciales) + distribución secuencial
+  const calPrestamo = generateCalendarioTeorico(prestamo)
+  const interesPorCuota = {}
+  for (const c of calPrestamo) interesPorCuota[String(c.num)] = c.interes
+
+  // Distribuir cobros secuencialmente por fecha sobre el calendario del préstamo
+  const cobrosOrd = [...cobros.filter(c => c.tipo === 'pago_cuota' || c.tipo === 'cancelacion')]
+    .sort((a, b) => {
+      const fa = a.fecha_real || a.fecha_teorica || ''
+      const fb = b.fecha_real || b.fecha_teorica || ''
+      return fa > fb ? 1 : fa < fb ? -1 : 0
+    })
+
+  const cobrosPorCuota = {}
+  let poolCobros = cobrosOrd.map(c => ({ ...c, restante: Number(c.importe) }))
+  for (const cuota of calPrestamo) {
+    const total = cuota.interes + (cuota.principal || 0)
+    let acumulado = 0
+    const cobrosEsta = []
+    for (const cobro of poolCobros) {
+      if (cobro.restante <= 0) continue
+      if (acumulado >= total) break
+      const tomar = Math.min(cobro.restante, total - acumulado)
+      acumulado = Math.round((acumulado + tomar) * 100) / 100
+      cobrosEsta.push({ ...cobro, importe: tomar })
+      cobro.restante = Math.round((cobro.restante - tomar) * 100) / 100
+    }
+    if (cobrosEsta.length) cobrosPorCuota[String(cuota.num)] = cobrosEsta
+    poolCobros = poolCobros.filter(c => c.restante > 0.005)
+    if (!poolCobros.length) break
+  }
+
+  let totalDevengado = 0
+  for (const cuota of cal) {
+    const cobrosC = cobrosPorCuota[String(cuota.num)] || []
+    if (!cobrosC.length) continue  // préstamo no ha cobrado esta cuota → no devengado
+
+    // Fecha real del cobro más tardío (para cobros parciales en días diferentes)
+    const fechaCobro = cobrosC
+      .map(c => c.fecha_real || c.fecha_teorica || '')
+      .filter(Boolean)
+      .sort()
+      .slice(-1)[0]
+    if (!fechaCobro) continue
+
+    // Primer día del mes siguiente al cobro más tardío
+    const dc = new Date(fechaCobro + 'T00:00:00')
+    const mesNext = dc.getMonth() + 1  // 0-based → 1-based del mes siguiente
+    const anioNext = mesNext === 12 ? dc.getFullYear() + 1 : dc.getFullYear()
+    const mesNextNorm = mesNext === 12 ? 1 : mesNext + 1
+    const primerDiaSiguiente = `${anioNext}-${String(mesNextNorm).padStart(2, '0')}-01`
+
+    if (primerDiaSiguiente > ref) continue  // el mes siguiente aún no ha llegado
+
+    // Ratio de cobro: si es parcial, el devengado es proporcional
+    const totalCobrado = r(cobrosC.reduce((s, c) => s + Number(c.importe), 0))
+    const interesEsperado = interesPorCuota[String(cuota.num)] || 0
+    const ratio = interesEsperado > 0 ? Math.min(1, totalCobrado / interesEsperado) : 1
+
+    totalDevengado = r(totalDevengado + r(cuota.neto * ratio))
+  }
+
+  // Restar lo ya pagado al partícipe
+  const totalPagado = r(pagosReales.reduce((s, p) => s + Number(p.importe_neto || 0), 0))
+  return Math.max(0, r(totalDevengado - totalPagado))
 }
