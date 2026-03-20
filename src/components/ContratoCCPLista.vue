@@ -1,32 +1,72 @@
 <template>
   <div>
-    <!-- KPIs -->
-    <div class="kpi-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:20px">
+    <!-- KPIs: 3 tarjetas -->
+    <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">
+
+      <!-- Capital Participado -->
       <div class="kpi-card kc-purple">
-        <div class="kpi-label">Importe Participado En Curso <HelpTip :texto="help.participacion_en_curso" /></div>
+        <div class="kpi-label">Capital Participado <HelpTip :texto="help.participacion_en_curso" /></div>
         <div class="kpi-value">{{ fmtN(kliEnCurso) }}</div>
-        <div class="kpi-sub">{{ kliEnCursoN }} contrato{{ kliEnCursoN !== 1 ? 's' : '' }}</div>
+        <div style="margin-top:8px;display:grid;gap:4px">
+          <div class="kpi-row">
+            <span style="color:var(--text3)">En curso</span>
+            <span class="kpi-row-val">{{ fmtN(kliEnCurso) }}</span>
+          </div>
+          <div class="kpi-row">
+            <span style="color:var(--text3)">Activo</span>
+            <span class="kpi-row-val">{{ fmtN(kliActivo) }}</span>
+          </div>
+          <div class="kpi-row kpi-row-sep">
+            <span style="color:var(--text3)">Al día</span>
+            <span class="kpi-row-val">{{ fmtN(kliAlDia) }}</span>
+          </div>
+          <div class="kpi-row">
+            <span style="color:var(--text3)">Con retraso</span>
+            <span class="kpi-row-val">{{ fmtN(kliRetraso) }}</span>
+          </div>
+          <div class="kpi-row">
+            <span style="color:var(--text3)">Judicializado</span>
+            <span class="kpi-row-val">{{ fmtN(kliJudicial) }}</span>
+          </div>
+        </div>
       </div>
+
+      <!-- Rentabilidad Promocima -->
       <div class="kpi-card kc-green">
-        <div class="kpi-label">Al Día <HelpTip :texto="help.al_dia" /></div>
-        <div class="kpi-value">{{ fmtN(kliAlDia) }}</div>
-        <div class="kpi-sub">{{ kliAlDiaN }} ({{ kliAlDiaPct }}%)</div>
+        <div class="kpi-label">Rentabilidad Promocima</div>
+        <div class="kpi-value">{{ fmtN(kliRentPromoTotal) }}</div>
+        <div style="margin-top:8px;display:grid;gap:4px">
+          <div class="kpi-row">
+            <span>Gestión anual</span>
+            <span class="kpi-row-val">{{ fmtN(kliGestionAnual) }}</span>
+          </div>
+          <div class="kpi-row kpi-row-sep">
+            <span>Apertura LTM (part.)</span>
+            <span class="kpi-row-val">{{ fmtN(kliAperturaLTM) }}</span>
+          </div>
+          <div class="kpi-row kpi-row-sep" style="margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.15)">
+            <span style="font-size:11px;color:var(--text2)">Rent. capital Promocima</span>
+            <span class="kpi-row-val" style="font-size:11px">{{ kliRentCapPromo }}%</span>
+          </div>
+        </div>
       </div>
-      <div class="kpi-card kc-orange">
-        <div class="kpi-label">Con Retraso <HelpTip :texto="help.con_retraso" /></div>
-        <div class="kpi-value">{{ fmtN(kliRetraso) }}</div>
-        <div class="kpi-sub">{{ kliRetrasoN }} ({{ kliRetrasoPct }}%)</div>
-      </div>
-      <div class="kpi-card kc-red">
-        <div class="kpi-label">Judicializado <HelpTip :texto="help.judicializado" /></div>
-        <div class="kpi-value">{{ fmtN(kliJudicial) }}</div>
-        <div class="kpi-sub">{{ kliJudicialN }} ({{ kliJudicialPct }}%)</div>
-      </div>
+
+      <!-- Rentabilidad Partícipes -->
       <div class="kpi-card kc-blue">
-        <div class="kpi-label">Importe Cancelados <HelpTip :texto="help.cancelado" /></div>
-        <div class="kpi-value">{{ fmtN(kliCancelado) }}</div>
-        <div class="kpi-sub">{{ kliCanceladoN }} préstamo{{ kliCanceladoN !== 1 ? 's' : '' }}</div>
+        <div class="kpi-label">Rentabilidad Partícipes</div>
+        <div class="kpi-value">{{ fmtN(kliIngrAnuales) }}</div>
+        <div style="margin-top:8px;display:grid;gap:4px">
+          <div class="kpi-row">
+            <span>Ingresos anuales</span>
+            <span class="kpi-row-val">{{ fmtN(kliIngrAnuales) }}</span>
+          </div>
+          <div class="kpi-row kpi-row-sep">
+            <span>Rentabilidad media</span>
+            <span class="kpi-row-val">{{ kliRentMedia }}%</span>
+          </div>
+        </div>
       </div>
+
     </div>
 
     <!-- Header + filtro -->
@@ -105,7 +145,7 @@ import { ref, computed } from 'vue'
 import { useSort } from '../composables/useSort.js'
 import HelpTip from './HelpTip.vue'
 import { help } from '../helpTexts.js'
-import { fmt, fmtInt, fmtN, fmtDate , fmtDec } from '../utils.js'
+import { fmt, fmtInt, fmtN, fmtDate, fmtDec, generateCalendarioTeorico, today, calcCapitalEnCursoPrestamo } from '../utils.js'
 
 // ── Props / emits ──────────────────────────────
 const props = defineProps({
@@ -119,7 +159,12 @@ const emit = defineEmits(['seleccionar', 'nuevo', 'editar', 'eliminar'])
 // ── Filtro + orden ─────────────────────────────
 const filtroParticipe = ref('')
 const filtroActivo = ref('activos')  // 'activos' | 'todos'
-const contratosRef = computed(() => props.contratos)
+// Aplanar campos calculados para que useSort pueda ordenar por ellos directamente
+const contratosRef = computed(() => props.contratos.map(c => ({
+  ...c,
+  participe_nombre: c.participes?.nombre || '',
+  prestamo_alias:   c.prestamos?.alias   || '',
+})))
 const { sorted: contratosOrdenados, setSort, thIcon, thClass } = useSort(contratosRef, 'id')
 
 const contratosFiltrados = computed(() => {
@@ -143,6 +188,8 @@ const kliEnriquecidos = computed(() =>
 )
 const kliEnCursos     = computed(() => kliEnriquecidos.value.filter(c => c.activo && c.estadoPrestamo !== 'cancelado'))
 const kliEnCurso      = computed(() => kliEnCursos.value.reduce((s, c) => s + Number(c.importe_participacion), 0))
+const kliActivoArr    = computed(() => kliEnCursos.value.filter(c => c.estadoPrestamo !== 'judicializado'))
+const kliActivo       = computed(() => kliActivoArr.value.reduce((s, c) => s + Number(c.importe_participacion), 0))
 const kliEnCursoN     = computed(() => kliEnCursos.value.length)
 const kliAlDiaArr    = computed(() => kliEnCursos.value.filter(c => c.estadoPrestamo === 'al_dia'))
 const kliAlDia       = computed(() => kliAlDiaArr.value.reduce((s, c) => s + Number(c.importe_participacion), 0))
@@ -159,6 +206,77 @@ const kliJudicialPct = computed(() => kliEnCurso.value ? (kliJudicial.value / kl
 const kliCancelados  = computed(() => kliEnriquecidos.value.filter(c => c.estadoPrestamo === 'cancelado'))
 const kliCancelado   = computed(() => kliCancelados.value.reduce((s, c) => s + Number(c.importe_participacion), 0))
 const kliCanceladoN  = computed(() => new Set(kliCancelados.value.map(c => c.prestamo_id)).size)
+
+// ── KPI: Rentabilidad Partícipes ───────────────────────────────────────────────
+const anoActualKli = new Date().getFullYear()
+// Solo contratos activos en préstamos no cancelados y no judicializados
+const kliActNoJud = computed(() => kliEnCursos.value.filter(c => {
+  const pr = props.prestamos.find(p => p.id === c.prestamo_id)
+  return pr && pr.estado !== 'judicializado'
+}))
+const kliCapActivoNoJud = computed(() => kliActNoJud.value.reduce((s, c) => s + Number(c.importe_participacion || 0), 0))
+
+const kliIngrAnuales = computed(() =>
+  Math.round(kliActNoJud.value.reduce((s, c) => {
+    const pr = props.prestamos.find(p => p.id === c.prestamo_id)
+    if (!pr) return s
+    const pctPart = Number(c.porcentaje_participacion || 0) / 100
+    const pctGest = Number(c.porcentaje_gestion || 0) / 100
+    const tasaNet = Number(pr.interes_ordinario || 0) / 100 - pctGest
+    const capPart = Number(pr.importe) * pctPart
+    const cal = generateCalendarioTeorico(pr)
+    const cuotasAnio = cal.filter(cu => new Date(cu.fecha + 'T00:00:00').getFullYear() === anoActualKli).length
+    return s + capPart * tasaNet / 12 * cuotasAnio
+  }, 0) * 100) / 100
+)
+const kliRentMedia = computed(() => {
+  if (!kliCapActivoNoJud.value) return '0.00'
+  return (kliIngrAnuales.value / kliCapActivoNoJud.value * 100).toFixed(2)
+})
+
+// ── KPI: Rentabilidad Promocima ────────────────────────────────────────────────
+const kliGestionAnual = computed(() =>
+  Math.round(kliActNoJud.value.reduce((s, c) => {
+    return s + Number(c.importe_participacion || 0) * Number(c.porcentaje_gestion || 0) / 100
+  }, 0) * 100) / 100
+)
+const kliAperturaLTM = computed(() => {
+  const hoy    = today()
+  const hace12 = new Date(hoy + 'T00:00:00')
+  hace12.setFullYear(hace12.getFullYear() - 1)
+  const hace12Str = hace12.toISOString().slice(0, 10)
+  return Math.round(props.contratos.filter(c => c.activo).reduce((s, c) => {
+    const pr = props.prestamos.find(p => p.id === c.prestamo_id)
+    if (!pr || pr.estado === 'cancelado') return s
+    const fi = pr.fecha_inicio || ''
+    if (fi < hace12Str || fi > hoy) return s
+    return s + Number(pr.importe || 0) * Number(pr.comision_apertura || 0) / 100 * Number(c.porcentaje_participacion || 0) / 100
+  }, 0) * 100) / 100
+})
+// Total Rentabilidad Promocima = gestión + apertura
+const kliRentPromoTotal = computed(() =>
+  Math.round((kliGestionAnual.value + kliAperturaLTM.value) * 100) / 100
+)
+// Capital Promocima en curso = Σ importe préstamos en curso − Σ importe_participacion CCP en curso
+// Rentabilidad = (Gestión anual + Apertura LTM partícipes) / Capital Promocima en curso × 100
+const kliRentCapPromo = computed(() => {
+  // totalEnCurso: misma lógica que capitalEnCurso (subtítulo "En curso") del Dashboard
+  const totalEnCurso = props.prestamos
+    .filter(p => p.estado !== 'cancelado')
+    .reduce((s, p) => s + calcCapitalEnCursoPrestamo(p, p.cobrosP || []), 0)
+  // capPart: misma lógica que capitalParticipado del Dashboard
+  const capPart = props.contratos.reduce((s, c) => {
+    if (!c.activo) return s
+    const pr = props.prestamos.find(p => p.id === c.prestamo_id)
+    if (!pr || pr.estado === 'cancelado' || pr.estado === 'judicializado') return s
+    const impTotal = Number(pr.importe || 0)
+    const fraccion = impTotal > 0 ? Number(c.importe_participacion || 0) / impTotal : 0
+    return s + calcCapitalEnCursoPrestamo(pr, pr.cobrosP || []) * fraccion
+  }, 0)
+  const capPromo = totalEnCurso - capPart
+  if (!capPromo) return '0.00'
+  return (kliRentPromoTotal.value / capPromo * 100).toFixed(2)
+})
 
 // ── Helper ─────────────────────────────────────
 function calcInteresBruto(c) {

@@ -73,7 +73,6 @@
                 <th @click="setSortPrev('fecha')" :class="thClassPrev('fecha')" class="col-hide-mobile">Fecha teórica <span class="sort-icon">{{ thIconPrev('fecha') }}</span></th>
                 <th style="text-align:right">Importe</th>
                 <th @click="setSortPrev('diasRetraso')" :class="thClassPrev('diasRetraso')" style="text-align:right" class="col-hide-mobile">Días<br>retraso <span class="sort-icon">{{ thIconPrev('diasRetraso') }}</span></th>
-                <th style="text-align:center" class="col-hide-mobile">Fecha cobro</th>
                 <th></th>
               </tr>
             </thead>
@@ -98,12 +97,12 @@
                     </div>
                   </td>
                   <td class="td-mono td-right col-hide-mobile" style="color:var(--orange)">{{ c.diasRetraso }}</td>
-                  <td style="text-align:center" class="col-hide-mobile">
-                    <input v-if="!c.esJudicial" type="date" class="form-control" style="width:140px;padding:3px 8px;font-size:12px;display:inline-block" v-model="c.fechaEfectiva">
-                  </td>
-                  <td>
-                    <button v-if="!c.esJudicial" class="btn btn-sm btn-registrar" style="white-space:nowrap" :disabled="c.registrando" @click="cobrarCuota(c)">
+                  <td style="display:flex;gap:4px;align-items:center">
+                    <button v-if="!c.esJudicial" class="btn btn-sm" style="white-space:nowrap;background:var(--green);color:#fff;border-color:var(--green)" :disabled="c.registrando" @click="cobrarCuota(c)">
                       {{ c.registrando ? '…' : '✓ Cobrar' }}
+                    </button>
+                    <button v-if="!c.esJudicial" class="btn btn-sm btn-registrar" style="white-space:nowrap;background:var(--orange);color:#fff;border-color:var(--orange)" @click.stop="abrirModificar(c)">
+                      ✎ Modificar
                     </button>
                   </td>
                 </tr>
@@ -139,12 +138,12 @@
                       </div>
                     </td>
                     <td class="td-mono td-right col-hide-mobile" style="color:var(--orange)">{{ c.diasRetraso }}</td>
-                    <td style="text-align:center" class="col-hide-mobile">
-                      <input v-if="!c.esJudicial" type="date" class="form-control" style="width:140px;padding:3px 8px;font-size:12px;display:inline-block" v-model="c.fechaEfectiva">
-                    </td>
-                    <td>
-                      <button v-if="!c.esJudicial" class="btn btn-sm btn-registrar" style="white-space:nowrap" :disabled="c.registrando" @click="cobrarCuota(c)">
+                    <td style="display:flex;gap:4px;align-items:center">
+                      <button v-if="!c.esJudicial" class="btn btn-sm" style="white-space:nowrap;background:var(--green);color:#fff;border-color:var(--green)" :disabled="c.registrando" @click="cobrarCuota(c)">
                         {{ c.registrando ? '…' : '✓ Cobrar' }}
+                      </button>
+                      <button v-if="!c.esJudicial" class="btn btn-sm btn-registrar" style="white-space:nowrap;background:var(--orange);color:#fff;border-color:var(--orange)" @click.stop="abrirModificar(c)">
+                        ✎ Modificar
                       </button>
                     </td>
                   </tr>
@@ -204,6 +203,51 @@
             <tr v-if="!cobrosFiltrados.length"><td colspan="10" class="table-empty">Sin cobros</td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal Modificar Cobro ─────────────────────────────────── -->
+  <div class="modal-overlay" v-if="modalModificar">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Registrar cobro</h2>
+        <button class="btn btn-ghost btn-sm" @click="modalModificar = false">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid" style="gap:14px">
+          <div class="form-group">
+            <label class="form-label">Préstamo</label>
+            <input class="form-control" :value="formModificar.alias" disabled style="opacity:0.6">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cuota nº</label>
+            <input class="form-control" :value="formModificar.num" disabled style="opacity:0.6">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Fecha teórica</label>
+            <input class="form-control" :value="formModificar.fecha" disabled style="opacity:0.6">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Importe (€) <span class="req">*</span></label>
+            <input class="form-control" type="number" step="0.01" v-model="formModificar.importe">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Fecha real cobro <span class="req">*</span></label>
+            <input class="form-control" type="date" v-model="formModificar.fechaReal">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Notas</label>
+            <input class="form-control" v-model="formModificar.notas" placeholder="Observaciones opcionales">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" @click="modalModificar = false">Cancelar</button>
+        <button class="btn btn-primary" :disabled="guardandoModificar" @click="guardarModificar">
+          <span v-if="guardandoModificar" class="btn-spinner"></span>
+          Registrar cobro
+        </button>
       </div>
     </div>
   </div>
@@ -437,6 +481,47 @@ function inicioRangoMesAnterior(fechaRef) {
   // +1 día usando Date (mesAnt es 1-based, Date usa 0-based)
   const inicio = new Date(anioAnt, mesAnt - 1, diaEnMesAnt + 1)
   return inicio.getFullYear() + '-' + pad(inicio.getMonth() + 1) + '-' + pad(inicio.getDate())
+}
+
+// ── Modal Modificar ───────────────────────────────────────────────────────────
+const modalModificar    = ref(false)
+const guardandoModificar = ref(false)
+const formModificar     = ref({ cuotaRef: null, alias: '', num: '', fecha: '', importe: 0, fechaReal: '', notas: '' })
+
+function abrirModificar(cuota) {
+  formModificar.value = {
+    cuotaRef: cuota,
+    alias:     cuota.alias,
+    num:       cuota.num,
+    fecha:     cuota.fecha,
+    importe:   cuota.total,
+    fechaReal: cuota.fechaEfectiva || cuota.fecha,
+    notas:     '',
+  }
+  modalModificar.value = true
+}
+
+async function guardarModificar() {
+  const f = formModificar.value
+  if (!f.importe || !f.fechaReal) return alert('Importe y fecha son obligatorios')
+  guardandoModificar.value = true
+  const cuota = f.cuotaRef
+  const { error } = await supabase.from('cobros').insert({
+    id:                'CB' + uuid(),
+    prestamo_id:       cuota.prestamo_id,
+    cuota_num:         String(cuota.num),
+    fecha_teorica:     cuota.fecha,
+    fecha_real:        f.fechaReal,
+    importe:           Number(f.importe),
+    importe_principal: cuota.principal || 0,
+    tipo:              'pago_cuota',
+    notas:             f.notas || '',
+  })
+  guardandoModificar.value = false
+  if (error) return alert('Error: ' + error.message)
+  modalModificar.value = false
+  cuotasPendientes.value = cuotasPendientes.value.filter(c => c._key !== cuota._key)
+  await cargarCobros()
 }
 
 const cobrosUltimos30 = computed(() => {

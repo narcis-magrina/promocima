@@ -133,6 +133,7 @@ const {
   {
     ordenPor:   'id',
     prefixId:   'G',
+    idPadding:  6,
     idStrategy: 'max_num',
     secundaria: { tabla: 'prestamos', select: 'id, importe, garantia_id', orden: 'id' },
     validar: f => (!f.direccion || !f.valor_tasacion) ? 'Dirección y valor de tasación son obligatorios' : null,

@@ -14,15 +14,29 @@ export default async function handler(req, res) {
     if (!email) return res.status(400).json({ error: 'Email requerido' })
 
     const supabase = createSupabaseAdmin()
-    const tempPassword = crypto.randomBytes(6).toString('hex') + 'A1!'
+    // Password robusto: letras, números, mayúsculas y símbolo para superar cualquier política
+    const base   = crypto.randomBytes(12).toString('hex')       // 24 chars hex
+    const upper  = base.slice(0, 4).toUpperCase()
+    const tempPassword = upper + base.slice(4) + 'A1!'          // ≥ 28 chars, cumple complejidad
+
+    // Verificar si el usuario ya existe
+    const { data: existing } = await supabase.auth.admin.listUsers()
+    if (existing?.users?.some(u => u.email === email)) {
+      return res.status(400).json({ error: `Ya existe un usuario con el email ${email}` })
+    }
 
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password: tempPassword,
-      email_confirm: true
+      email_confirm: true,
     })
-    if (authError) throw authError
-
+    if (authError) {
+      // Supabase puede devolver este mensaje si el email ya está registrado
+      if (authError.message?.includes('already been registered') || authError.message?.includes('already exists')) {
+        return res.status(400).json({ error: `Ya existe un usuario con el email ${email}` })
+      }
+      throw authError
+    }
     await supabase.from('perfiles').insert({
       id: authData.user.id,
       email,

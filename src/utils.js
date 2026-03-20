@@ -552,7 +552,7 @@ export const calcSituacionPrestamo = (prestamo, cobros, fechaRef = null) => {
 // ── Capital activo de un préstamo ──────────────────────────────────────────────
 // Americano: el importe es el capital (sin APs embebidas — generan préstamo nuevo).
 // Francés: importe menos el principal amortizado via cuotas cobradas.
-export const calcCapitalActivoPrestamo = (prestamo, cobros = []) => {
+export const calcCapitalEnCursoPrestamo = (prestamo, cobros = []) => {
   const r = v => Math.round(v * 100) / 100
   if (prestamo.tipo_prestamo === 'Americano') {
     return Number(prestamo.importe)

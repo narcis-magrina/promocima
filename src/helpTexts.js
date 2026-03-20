@@ -53,26 +53,27 @@ export const glosario = [
 
 // ── Textos cortos para tooltips ? ─────────────────────────────────────────────
 export const help = {
-  // Estados
+  // Estados — usados en KPIs de capital (€)
   invertido:    'Nominal de las operaciones en curso (no canceladas).',
-  en_curso:      'Capital vivo real: activas + judicializadas, descontando principal amortizado.',
-  activo:        'Operaciones en curso no judicializadas (al día + con retraso).',
-  al_dia:        'Operaciones activas sin cuotas vencidas pendientes.',
-  con_retraso:   'Operaciones activas con cuotas vencidas sin cobrar.',
-  judicializado: 'Operaciones que han entrado en proceso judicial.',
-  cancelado:     'Operaciones canceladas y liquidadas.',
+  en_curso:     'Capital en curso: activas + judicializadas, descontando principal amortizado.',
+  activo:       'Operaciones activas (al día + con retraso).',
+  al_dia:       'Capital de las operaciones activas sin cuotas vencidas pendientes.',
+  con_retraso:  'Capital de las operaciones activas con cuotas vencidas sin cobrar.',
+  judicializado:'Capital de las operaciones que han entrado en proceso judicial.',
+  cancelado:    'Operaciones canceladas y liquidadas.',
 
-  // Capital
-  capital_en_curso:      'Nominal de las operaciones en curso (no canceladas).',
-  capital_activo:        'Capital vivo real: activas + judicializadas, descontando amortizaciones.',
-  capital_al_dia:        'Capital vivo de las operaciones al día.',
-  capital_con_retraso:   'Capital vivo de las operaciones con retraso.',
-  capital_judicializado: 'Capital vivo de las operaciones judicializadas.',
-  capital_participado:   'Suma de importes de participación (contratos CCP activos) en operaciones en curso.',
-  capital_cancelado:     'Nominal de las operaciones canceladas.',
+  // Usados en KPIs de número de operaciones (count)
+  ops_total:    'Operaciones firmadas (incluidas las canceladas).',
+  ops_en_curso: 'Operaciones en curso (Activas + Judicializadas).',
+  ops_activas:  'Operaciones activas (al día + con retraso).',
+
+  // Capital — KPI Capital Invertido (Dashboard)
+  capital_en_curso:           'Capital de las operaciones en curso (Activas + Judicializadas) descontando el principal amortizado.',
+  capital_participado:        'Capital activo participado (contratos CCP activos × % de participación), sin incluir judicializadas.',
+  capital_activo_participado: 'Capital activo participado: no se cuentan las operaciones judicializadas y se descuenta el principal amortizado.',
 
   // Partícipes / CCP
-  participacion_en_curso: 'Suma de importes CCP activos en operaciones no canceladas.',
+  participacion_en_curso: 'Capital activo participado (contratos CCP activos × % de participación).',
   prestamos_en_curso:     'Operaciones en curso donde este partícipe tiene algún contrato CCP activo.',
   rentabilidad_mes:       'Rendimiento neto mensual: devengado bruto menos gestión, antes de impuestos.',
   devengado:              'Importe pendiente de cobro. Se genera cuando el préstamo cobra su cuota y comienza el mes siguiente. Por ejemplo, cobro el 26/2 → devengado desde el 1/3. Se acumula hasta que Promocima realiza el pago al partícipe (habitualmente el día 10 del mes). Si el pago no se realiza en esa fecha, el importe sigue devengado hasta que se abone.',
@@ -82,18 +83,16 @@ export const help = {
   ingr_anuales_participes: 'Parte proporcional de los ingresos anuales correspondiente a participaciones CCP activas.',
   ingr_gestion:            'Ingresos por comisión de gestión (% gestión × participación × 12 meses).',
   ingr_apertura_ltm:       'Comisiones de apertura de operaciones firmadas en los últimos 12 meses.',
-  rent_activas:            'Ingresos anuales activas / capital activo.',
+  rent_activas:            'Ingresos anuales activas / capital en curso.',
   rent_participes:         'Ingresos anuales partícipes / capital participado activo.',
-  rent_total_promocima:    '(Ingresos propios + gestión + apertura LTM) / capital propio activo.',
+  rent_total_promocima:    '(Ingresos propios + gestión + apertura LTM) / capital propio en curso.',
 
   // Garantías
-  ltv:                 'Loan To Value: ratio entre el capital vivo en curso y el valor de tasación de las garantías.',
-  ltv_en_curso:        'Capital vivo en curso (activos + judicializados) / suma de tasaciones de garantías de esas operaciones.',
-  ltv_participes:      'Capital vivo participado en curso / garantías en curso proporcionales al % de participación CCP.',
-  garantias_en_curso:  'Suma del valor de tasación de garantías de operaciones en curso.',
-  ltv_en_curso:        'Capital en curso / total garantías en curso.',
-  garantias_participes:'Valor de tasación de garantías proporcional a la participación CCP.',
-  ltv_participes:      'Capital participado / garantías partícipes.',
+  ltv:                  'Loan To Value: ratio entre el capital en curso y el valor de tasación de las garantías.',
+  ltv_en_curso:         'Capital en curso (activas + judicializadas) / suma de tasaciones de garantías de esas operaciones.',
+  ltv_participes:       'Capital en curso participado / garantías en curso proporcionales al % de participación CCP.',
+  garantias_en_curso:   'Suma del valor de tasación de garantías de operaciones en curso.',
+  garantias_participes: 'Valor de tasación de garantías proporcional a la participación CCP.',
 
   // Duraciones
   duracion: 'Expresadas en meses. Días desde la fecha de inicio hasta hoy (canceladas: hasta fecha de cancelación), divididos entre 30 y redondeados.',

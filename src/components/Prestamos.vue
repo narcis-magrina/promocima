@@ -99,7 +99,7 @@
                 <td v-html="getTipoBadge(p.tipo_prestamo)" class="col-hide-mobile" />
                 <td class="td-mono td-right">{{ fmtN(p.importe) }}</td>
                 <td class="td-mono td-right" style="color:var(--green)">
-                  {{ p.estado !== 'cancelado' ? fmtN(calcCapitalActivoPrestamo(p)) : '—' }}
+                  {{ p.estado !== 'cancelado' ? fmtN(calcCapitalEnCursoPrestamo(p)) : '—' }}
                 </td>
                 <td style="font-size:12px" class="col-hide-mobile">{{ fmtDateShort(p.fecha_inicio) }}</td>
                 <td class="td-center col-hide-mobile">{{ p.duracion_meses }}</td>
@@ -344,7 +344,7 @@ const intermediariosSorted = computed(() => [...intermediarios.value].sort((a,b)
 const prestamosConSituacion = computed(() => prestamos.value)
 
 const activos        = computed(() => prestamosConSituacion.value.filter(p => esActivo(p)))
-function calcCapitalActivoPrestamo(p) {
+function calcCapitalEnCursoPrestamo(p) {
   if (p.tipo_prestamo === 'Americano') return Number(p.importe)
   const cobrosP = todosCobros.value.filter(c => c.prestamo_id === p.id)
   const cal = generateCalendarioTeorico(p)
@@ -358,7 +358,7 @@ function calcCapitalActivoPrestamo(p) {
 const capitalEnCurso = computed(() =>
   prestamosConSituacion.value
     .filter(p => p.estado !== 'cancelado')
-    .reduce((s, p) => s + calcCapitalActivoPrestamo(p), 0)
+    .reduce((s, p) => s + calcCapitalEnCursoPrestamo(p), 0)
 )
 const nActivos       = computed(() => activos.value.length)
 const nAlDia          = computed(() => activos.value.filter(p => p.situacion === 'al_dia').length)
@@ -369,9 +369,9 @@ const alDiaArr        = computed(() => activos.value.filter(p => p.situacion ===
 const retrasoArr      = computed(() => activos.value.filter(p => p.situacion === 'con_retraso'))
 const judicialArr     = computed(() => prestamosConSituacion.value.filter(p => p.estado === 'judicializado'))
 
-const capitalAlDia    = computed(() => alDiaArr.value.reduce((s,p) => s + calcCapitalActivoPrestamo(p), 0))
-const capitalConRetraso  = computed(() => retrasoArr.value.reduce((s,p) => s + calcCapitalActivoPrestamo(p), 0))
-const capitalJudicializado = computed(() => judicialArr.value.reduce((s,p) => s + calcCapitalActivoPrestamo(p), 0))
+const capitalAlDia    = computed(() => alDiaArr.value.reduce((s,p) => s + calcCapitalEnCursoPrestamo(p), 0))
+const capitalConRetraso  = computed(() => retrasoArr.value.reduce((s,p) => s + calcCapitalEnCursoPrestamo(p), 0))
+const capitalJudicializado = computed(() => judicialArr.value.reduce((s,p) => s + calcCapitalEnCursoPrestamo(p), 0))
 
 const capitalInicialAlDia    = computed(() => alDiaArr.value.reduce((s,p) => s + Number(p.importe), 0))
 const capitalInicialRetraso  = computed(() => retrasoArr.value.reduce((s,p) => s + Number(p.importe), 0))
@@ -521,7 +521,7 @@ async function guardarPrestamo() {
   } else {
     const nums = prestamos.value.map(p => parseInt(p.id.replace(/\D/g, '')) || 0)
     const siguiente = (nums.length ? Math.max(...nums) : 0) + 1
-    const nuevoId = 'P' + String(siguiente).padStart(3, '0')
+    const nuevoId = 'P' + String(siguiente).padStart(6, '0')
     ;({ error } = await supabase.from('prestamos').insert({ id: nuevoId, ...data, estado: 'activo', judicializado: false }))
   }
   if (error) return alert('Error al guardar: ' + error.message)

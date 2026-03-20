@@ -249,6 +249,7 @@ const {
   {
     ordenPor:   'nombre',
     prefixId:   'C',
+    idPadding:  6,
     secundaria: { tabla: 'prestamos', select: 'id, alias, importe, estado, cliente_id, cirbe', orden: 'id' },
     enriquecerItems: (clientes, prest) =>
       clientes.map(c => ({
@@ -349,7 +350,7 @@ async function guardarTitular() {
     const { data: existing } = await supabase.from('titulares').select('id')
     const nums = (existing || []).map(x => parseInt((x.id || '').replace(/\D/g, '')) || 0)
     const next = (nums.length ? Math.max(...nums) : 0) + 1
-    const nuevoId = 'T' + String(next).padStart(3, '0')
+    const nuevoId = 'T' + String(next).padStart(6, '0')
     const res = await supabase.from('titulares').insert({ id: nuevoId, ...data })
     error = res.error
     if (error && error.code === '22P02') {

@@ -22,7 +22,7 @@ export function useCrud(tabla, formVacio, opciones = {}) {
   const {
     ordenPor      = 'id',
     prefixId      = tabla[0].toUpperCase(),
-    idPadding     = 3,
+    idPadding     = 6,
     prepararData  = null,
     validar       = null,
     enriquecerItems = null,

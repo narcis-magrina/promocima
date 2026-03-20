@@ -116,6 +116,7 @@ const {
   {
     ordenPor:   'nombre',
     prefixId:   'I',
+    idPadding:  6,
     secundaria: { tabla: 'prestamos', select: 'id, alias, importe, estado, intermediario_id, clientes(nombre)', orden: 'id' },
     enriquecerItems: (ints, prest) =>
       ints.map(x => ({ ...x, nPrestamos: prest.filter(p => p.intermediario_id === x.id).length })),

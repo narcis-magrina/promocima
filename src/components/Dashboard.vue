@@ -1,8 +1,8 @@
 <template>
   <div>
     <!-- KPIs -->
-    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:14px">
-    <!-- Fila 1: Capital + Rentabilidad -->
+    <!-- Fila 1: Capital + Rentabilidad + LTV -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px">
 
       <!-- KPI 1: Capital -->
       <div class="kpi-card kc-green">
@@ -11,7 +11,7 @@
         <div style="margin-top:8px;display:grid;gap:4px">
           <div class="kpi-row">
             <span style="color:var(--text3)">En curso <HelpTip :texto="help.en_curso" pos="right" /></span>
-            <span class="kpi-row-val">{{ fmtN(capitalActivo) }}</span>
+            <span class="kpi-row-val">{{ fmtN(capitalEnCurso) }}</span>
           </div>
           <div class="kpi-row">
             <span style="color:var(--text3)">Activo <HelpTip :texto="help.activo" pos="right" /></span>
@@ -75,50 +75,10 @@
           </div>
         </div>
       </div>
-    </div>
-    <!-- Fila 2: Operaciones + LTV + Duración -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px">
-
-      <!-- KPI 3: Operaciones -->
-      <div class="kpi-card kc-purple">
-        <div class="kpi-label">Operaciones</div>
-        <div class="kpi-value" style="font-size:18px">{{ nOperacionesTotal }}</div>
-        <div style="margin-top:8px;display:grid;gap:4px">
-          <div class="kpi-row">
-            <span style="color:var(--text3)">Op. totales <HelpTip :texto="help.invertido" pos="right" /></span>
-            <span class="kpi-row-val">{{ nOperacionesTotal }}</span>
-          </div>
-          <div class="kpi-row">
-            <span style="color:var(--text3)">Canceladas <HelpTip :texto="help.cancelado" pos="right" /></span>
-            <span class="kpi-row-val">{{ nCanceladas }}</span>
-          </div>
-          <div class="kpi-row">
-            <span style="color:var(--text3)">En curso <HelpTip :texto="help.en_curso" pos="right" /></span>
-            <span class="kpi-row-val">{{ nEnCurso }}</span>
-          </div>
-          <div class="kpi-row">
-            <span style="color:var(--text3)">Judicializadas <HelpTip :texto="help.judicializado" pos="right" /></span>
-            <span class="kpi-row-val">{{ nJudicializados }}</span>
-          </div>
-          <div class="kpi-row">
-            <span style="color:var(--text3)">Activas <HelpTip :texto="help.activo" pos="right" /></span>
-            <span class="kpi-row-val">{{ nActivas }}</span>
-          </div>
-          <div class="kpi-row">
-            <span style="color:var(--text3)">Al día <HelpTip :texto="help.al_dia" pos="right" /></span>
-            <span class="kpi-row-val">{{ nAlDia }}</span>
-          </div>
-          <div class="kpi-row">
-            <span style="color:var(--text3)">Con retraso <HelpTip :texto="help.con_retraso" pos="right" /></span>
-            <span class="kpi-row-val">{{ nConRetraso }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- KPI 4: Garantías -->
+      <!-- KPI 3: LTV -->
       <div class="kpi-card kc-orange">
         <div class="kpi-label">LTV</div>
-        <div class="kpi-value" style="font-size:18px">{{ fmtN(garantiasEnCurso) }}</div>
+        <div class="kpi-value" style="font-size:18px">{{ ltvEnCurso }}%</div>
         <div style="margin-top:8px;display:grid;gap:4px">
           <div class="kpi-row">
             <span style="color:var(--text3)">Total garantías en curso</span>
@@ -138,8 +98,74 @@
           </div>
         </div>
       </div>
+    </div>
+    <!-- Fila 2: Operaciones + Op. por Cliente + Duración -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px">
 
-      <!-- KPI 5: Duraciones -->
+      <!-- KPI 3: Operaciones -->
+      <div class="kpi-card kc-purple">
+        <div class="kpi-label">Operaciones</div>
+        <div class="kpi-value" style="font-size:18px">{{ nOperacionesTotal }}</div>
+        <div style="margin-top:8px;display:grid;gap:4px">
+          <div class="kpi-row">
+            <span style="color:var(--text3)">Op. totales <HelpTip :texto="help.ops_total" pos="right" /></span>
+            <span class="kpi-row-val">{{ nOperacionesTotal }}</span>
+          </div>
+          <div class="kpi-row">
+            <span style="color:var(--text3)">Canceladas <HelpTip :texto="help.cancelado" pos="right" /></span>
+            <span class="kpi-row-val">{{ nCanceladas }}</span>
+          </div>
+          <div class="kpi-row">
+            <span style="color:var(--text3)">En curso <HelpTip :texto="help.ops_en_curso" pos="right" /></span>
+            <span class="kpi-row-val">{{ nEnCurso }}</span>
+          </div>
+          <div class="kpi-row">
+            <span style="color:var(--text3)">Judicializadas <HelpTip :texto="help.judicializado" pos="right" /></span>
+            <span class="kpi-row-val">{{ nJudicializados }}</span>
+          </div>
+          <div class="kpi-row">
+            <span style="color:var(--text3)">Activas <HelpTip :texto="help.ops_activas" pos="right" /></span>
+            <span class="kpi-row-val">{{ nActivas }}</span>
+          </div>
+          <div class="kpi-row">
+            <span style="color:var(--text3)">Al día <HelpTip :texto="help.al_dia" pos="right" /></span>
+            <span class="kpi-row-val">{{ nAlDia }}</span>
+          </div>
+          <div class="kpi-row">
+            <span style="color:var(--text3)">Con retraso <HelpTip :texto="help.con_retraso" pos="right" /></span>
+            <span class="kpi-row-val">{{ nConRetraso }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI 4: Operaciones por Cliente -->
+      <div class="kpi-card kc-blue">
+        <div class="kpi-label">Operaciones por Cliente</div>
+        <div class="kpi-value" style="font-size:18px">{{ fmtN(capitalEnCurso) }}</div>
+        <div style="margin-top:8px;display:grid;gap:4px">
+          <div class="kpi-row">
+            <span style="color:var(--text3)">En curso</span>
+            <span class="kpi-row-val">{{ fmtN(capitalEnCurso) }} <span style="color:var(--text3);font-size:11px">({{ nEnCurso }})</span></span>
+          </div>
+          <div class="kpi-row kpi-row-sep">
+            <span style="color:var(--text3)">Empresas</span>
+            <span class="kpi-row-val">{{ fmtN(capitalClientesEmpresa) }} <span style="color:var(--text3);font-size:11px">({{ nOpEmpresa }})</span></span>
+          </div>
+          <div class="kpi-row">
+            <span style="color:var(--text3)">Personas físicas</span>
+            <span class="kpi-row-val">{{ fmtN(capitalClientesPersona) }} <span style="color:var(--text3);font-size:11px">({{ nOpPersona }})</span></span>
+          </div>
+          <div class="kpi-row kpi-row-sep">
+            <span style="color:var(--text3)">Op. empresas (%)</span>
+            <span class="kpi-row-val">{{ pctClientesEmpresa }}%</span>
+          </div>
+          <div class="kpi-row">
+            <span style="color:var(--text3)">Op. pers. físicas (%)</span>
+            <span class="kpi-row-val">{{ pctClientesPersona }}%</span>
+          </div>
+        </div>
+      </div>
+
       <div class="kpi-card kc-gray-dim">
         <div class="kpi-label">Duración <HelpTip texto="Las duraciones se expresan en meses." /></div>
         <div class="kpi-value" style="font-size:18px">{{ durMediaEnCurso }}</div>
@@ -193,7 +219,7 @@
               </div>
             </td>
             <td class="td-mono td-right" style="color:var(--green)">
-              {{ row.capitalActivo !== null ? fmtN(row.capitalActivo) : '—' }}
+              {{ row.capitalEnCurso !== null ? fmtN(row.capitalEnCurso) : '—' }}
             </td>
             <td>
               <div v-if="row.est !== 'cancelado'" style="display:flex;align-items:center;gap:8px">
@@ -211,7 +237,7 @@
             <td style="text-align:center;font-size:13px;padding:10px 12px">{{ resumenEstados.filter(r => r.est !== 'cancelado').reduce((s,r) => s + r.count, 0) }}</td>
             <td style="text-align:right;font-family:var(--mono);font-size:12px;padding:10px 12px" class="col-hide-mobile">{{ fmtN(resumenEstados.filter(r => r.est !== 'cancelado').reduce((s,r) => s + r.capital, 0)) }}</td>
             <td style="padding:10px 12px" class="col-hide-mobile"></td>
-            <td style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--green);padding:10px 12px">{{ fmtN(resumenEstados.filter(r => r.est !== 'cancelado' && r.capitalActivo !== null).reduce((s,r) => s + r.capitalActivo, 0)) }}</td>
+            <td style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--green);padding:10px 12px">{{ fmtN(resumenEstados.filter(r => r.est !== 'cancelado' && r.capitalEnCurso !== null).reduce((s,r) => s + r.capitalEnCurso, 0)) }}</td>
             <td style="padding:10px 12px"></td>
           </tr>
         </tfoot>
@@ -400,7 +426,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../supabase.js'
-import { fmt, fmtInt, fmtN, calcInteresOrdinario, getEstadoBadge, generateCalendarioTeorico, today , distribuirCobros } from '../utils.js'
+import { fmt, fmtInt, fmtN, calcInteresOrdinario, getEstadoBadge, generateCalendarioTeorico, today, distribuirCobros } from '../utils.js'
 import HelpTip from './HelpTip.vue'
 import { help } from '../helpTexts.js'
 
@@ -430,7 +456,7 @@ onMounted(async () => {
       }
       return { data: all }
     })(),
-    supabase.from('clientes').select('id, nombre'),
+    supabase.from('clientes').select('id, nombre, tipo'),
     supabase.from('intermediarios').select('id, nombre'),
     supabase.from('contratos_ccp').select('prestamo_id, participe_id, importe_participacion, porcentaje_gestion, activo, participes(nombre)'),
     supabase.from('config').select('porcentaje_irpf').eq('id', 1).single()
@@ -492,15 +518,15 @@ const capitalParticipado = computed(() =>
     if (!p || p.estado === 'cancelado' || p.estado === 'judicializado') return s
     const impTotal = Number(p.importe || 0)
     const fraccion = impTotal > 0 ? Number(c.importe_participacion || 0) / impTotal : 0
-    return s + calcCapitalActivoPrestamo(p) * fraccion
+    return s + calcCapitalEnCursoPrestamo(p) * fraccion
   }, 0)
 )
 const nParticipados = computed(() => prestamosConCCP.value.length)
 
 // Capital activo real (descuenta principal ya amortizado en préstamos franceses)
-const capitalActivo = computed(() =>
+const capitalEnCurso = computed(() =>
   prestamosEnCurso.value
-    .reduce((s, p) => s + calcCapitalActivoPrestamo(p), 0)
+    .reduce((s, p) => s + calcCapitalEnCursoPrestamo(p), 0)
 )
 
 // Intereses devengados a partícipes = importe_participacion × tasa_mensual (bruto, sin IRPF ni gestión)
@@ -535,7 +561,7 @@ const rentabilidadMedia = computed(() => {
 })
 
 const rentabilidadPromocima = computed(() => {
-  const capitalPropioActivo = capitalActivo.value - capitalParticipado.value
+  const capitalPropioActivo = capitalEnCurso.value - capitalParticipado.value
   if (!capitalPropioActivo) return '0.0'
   return (netoPromocima.value / capitalPropioActivo * 100 * 12).toFixed(1)
 })
@@ -549,18 +575,18 @@ const importeJudicial = computed(() =>
 )
 
 const pctIncidencias = computed(() => {
-  if (!capitalActivo.value) return '0.0'
-  return ((importeRetraso.value + importeJudicial.value) / capitalActivo.value * 100).toFixed(1)
+  if (!capitalEnCurso.value) return '0.0'
+  return ((importeRetraso.value + importeJudicial.value) / capitalEnCurso.value * 100).toFixed(1)
 })
 
 // ── KPI 1: Capital ────────────────────────────────────────────────────────────
 const capitalJudicializado = computed(() =>
   prestamosEnCurso.value
     .filter(p => p.estado === 'judicializado')
-    .reduce((s, p) => s + calcCapitalActivoPrestamo(p), 0)
+    .reduce((s, p) => s + calcCapitalEnCursoPrestamo(p), 0)
 )
 // Capital activo = capital vivo de operaciones NO judicializadas (al día + con retraso)
-const capitalActivoNoJudicial = computed(() => capitalActivo.value - capitalJudicializado.value)
+const capitalActivoNoJudicial = computed(() => capitalEnCurso.value - capitalJudicializado.value)
 const pctJudicializado = computed(() =>
   capitalEnCurso.value ? (capitalJudicializado.value / capitalEnCurso.value * 100).toFixed(1) : '0.0'
 )
@@ -571,7 +597,7 @@ const capitalParticJudicializado = computed(() =>
     if (!p || p.estado !== 'judicializado') return s
     const impTotal = Number(p.importe || 0)
     const fraccion = impTotal > 0 ? Number(c.importe_participacion || 0) / impTotal : 0
-    return s + calcCapitalActivoPrestamo(p) * fraccion
+    return s + calcCapitalEnCursoPrestamo(p) * fraccion
   }, 0)
 )
 const pctJudicPartícipes = computed(() => {
@@ -672,6 +698,27 @@ const nEnCurso           = computed(() => prestamosEnCurso.value.length)
 const nActivas           = computed(() => prestamosEnCurso.value.filter(p => p.estado !== 'judicializado').length)
 const nAlDia             = computed(() => prestamosEnCurso.value.filter(p => p.estado !== 'judicializado' && !tieneRetraso(p)).length)
 
+// ── KPI: Operaciones por Cliente ──────────────────────────────────────────────
+// Todos los préstamos en curso (activos + judicializados, no cancelados)
+const capitalClientesEmpresa = computed(() =>
+  prestamosEnCurso.value
+    .filter(p => (p.clientes?.tipo || '').toLowerCase() === 'empresa')
+    .reduce((s, p) => s + calcCapitalEnCursoPrestamo(p), 0)
+)
+const capitalClientesPersona = computed(() =>
+  prestamosEnCurso.value
+    .filter(p => (p.clientes?.tipo || '').toLowerCase() === 'persona')
+    .reduce((s, p) => s + calcCapitalEnCursoPrestamo(p), 0)
+)
+const nOpEmpresa = computed(() => prestamosEnCurso.value.filter(p => (p.clientes?.tipo || '').toLowerCase() === 'empresa').length)
+const nOpPersona = computed(() => prestamosEnCurso.value.filter(p => (p.clientes?.tipo || '').toLowerCase() === 'persona').length)
+const pctClientesEmpresa = computed(() =>
+  capitalEnCurso.value ? (capitalClientesEmpresa.value / capitalEnCurso.value * 100).toFixed(1) : '0.0'
+)
+const pctClientesPersona = computed(() =>
+  capitalEnCurso.value ? (capitalClientesPersona.value / capitalEnCurso.value * 100).toFixed(1) : '0.0'
+)
+
 // ── KPI 4: Garantías ──────────────────────────────────────────────────────────
 // ── KPI 4: Garantías / LTV ────────────────────────────────────────────────────
 // Garantías = suma de garantia_tasacion de préstamos en curso (activos + judicializados)
@@ -682,7 +729,7 @@ const garantiasEnCurso = computed(() =>
 )
 // LTV en curso = capital vivo real (activo + judicializado) / garantías en curso
 const ltvEnCurso = computed(() =>
-  garantiasEnCurso.value ? (capitalActivo.value / garantiasEnCurso.value * 100).toFixed(1) : '0.0'
+  garantiasEnCurso.value ? (capitalEnCurso.value / garantiasEnCurso.value * 100).toFixed(1) : '0.0'
 )
 // Garantías partícipes = garantías en curso × % participación sobre el total de cada préstamo
 const garantiasParticipes = computed(() =>
@@ -702,7 +749,7 @@ const capitalVivoParticipado = computed(() =>
     if (!p || p.estado === 'cancelado') return s
     const impTotal = Number(p.importe || 0)
     const fraccion = impTotal > 0 ? Number(ccp.importe_participacion || 0) / impTotal : 0
-    return s + calcCapitalActivoPrestamo(p) * fraccion
+    return s + calcCapitalEnCursoPrestamo(p) * fraccion
   }, 0)
 )
 // LTV partícipes = capital vivo participado en curso / garantías partícipes
@@ -734,7 +781,7 @@ const durMediaActivas        = computed(() => durMedia(prestamosEnCurso.value.fi
 const durMediaJudicializadas = computed(() => durMedia(prestamosEnCurso.value.filter(p => p.estado === 'judicializado')))
 
 // ── Capital activo real de un préstamo ────────────────────────────────────────
-function calcCapitalActivoPrestamo(p) {
+function calcCapitalEnCursoPrestamo(p) {
   if (p.tipo_prestamo === 'Americano') return Number(p.importe)
   const cobrosP = todosCobros.value.filter(c => c.prestamo_id === p.id)
   const cal = generateCalendarioTeorico(p)
@@ -763,15 +810,15 @@ const resumenEstados = computed(() => {
   ].map(row => {
     const ps         = filtrar(row.est)
     const capital    = ps.reduce((s, p) => s + Number(p.importe), 0)
-    const capitalActivo = row.est !== 'cancelado'
-      ? ps.reduce((s, p) => s + calcCapitalActivoPrestamo(p), 0)
+    const capitalEnCurso = row.est !== 'cancelado'
+      ? ps.reduce((s, p) => s + calcCapitalEnCursoPrestamo(p), 0)
       : null
     const pct        = totalCapital   ? capital / totalCapital   * 100 : 0
-    const totalCapitalActivo = todos.filter(p => p.estado !== 'cancelado').reduce((s, p) => s + calcCapitalActivoPrestamo(p), 0)
-    const pctActiva  = row.est !== 'cancelado' && capitalActivo !== null && totalCapitalActivo
-      ? capitalActivo / totalCapitalActivo * 100
+    const totalCapitalActivo = todos.filter(p => p.estado !== 'cancelado').reduce((s, p) => s + calcCapitalEnCursoPrestamo(p), 0)
+    const pctActiva  = row.est !== 'cancelado' && capitalEnCurso !== null && totalCapitalActivo
+      ? capitalEnCurso / totalCapitalActivo * 100
       : null
-    return { ...row, count: ps.length, capital, capitalActivo, pct, pctActiva }
+    return { ...row, count: ps.length, capital, capitalEnCurso, pct, pctActiva }
   })
 })
 
@@ -785,7 +832,7 @@ function fila(ps, totalActivosCartera, totalCapitalActivoCartera) {
   const judicial   = ps.filter(p => p.estado === 'judicializado')
   const activosArr = [...al_dia, ...retraso, ...judicial]  // activos = no cancelados
   const activosImp = imp(activosArr)
-  const capitalActivoImp = activosArr.reduce((s, p) => s + calcCapitalActivoPrestamo(p), 0)
+  const capitalActivoImp = activosArr.reduce((s, p) => s + calcCapitalEnCursoPrestamo(p), 0)
   return {
     al_dia_imp: imp(al_dia),      al_dia_n: al_dia.length,
     retraso_imp: imp(retraso),    retraso_n: retraso.length,
@@ -799,7 +846,7 @@ function fila(ps, totalActivosCartera, totalCapitalActivoCartera) {
 
 // ── Por intermediario ─────────────────────────────────────────────────────────
 const porIntermediario = computed(() => {
-  const totalCapitalActivo = prestamosRaw.value.filter(p => p.estado !== 'cancelado').reduce((s, p) => s + calcCapitalActivoPrestamo(p), 0)
+  const totalCapitalActivo = prestamosRaw.value.filter(p => p.estado !== 'cancelado').reduce((s, p) => s + calcCapitalEnCursoPrestamo(p), 0)
   const interMap     = Object.fromEntries(intermediariosRaw.value.map(i => [i.id, i.nombre]))
   const grupos       = {}
   for (const p of prestamosRaw.value) {
@@ -819,7 +866,7 @@ const porIntermediario = computed(() => {
 // Cada fila muestra la PARTICIPACIÓN del partícipe (importe_participacion del CCP),
 // no el importe total del préstamo.
 const porParticipe = computed(() => {
-  const totalCapitalActivo = prestamosRaw.value.filter(p => p.estado !== 'cancelado').reduce((s, p) => s + calcCapitalActivoPrestamo(p), 0)
+  const totalCapitalActivo = prestamosRaw.value.filter(p => p.estado !== 'cancelado').reduce((s, p) => s + calcCapitalEnCursoPrestamo(p), 0)
   const prestamoMap = Object.fromEntries(prestamosRaw.value.map(p => [p.id, p]))
 
   // Agrupar contratos CCP por partícipe
@@ -854,7 +901,7 @@ const porParticipe = computed(() => {
                    : tieneRetraso(p) ? 'con_retraso' : 'al_dia'
 
       // Capital activo proporcional
-      const capActivo = calcCapitalActivoPrestamo(p) * fraccion
+      const capActivo = calcCapitalEnCursoPrestamo(p) * fraccion
 
       // Acumular por estado (usando el CCP como unidad, no el préstamo)
       if (estado === 'cancelado') {
@@ -895,7 +942,7 @@ const porParticipe = computed(() => {
 // 1. Préstamos que no tienen ningún CCP
 // 2. La parte NO participada de préstamos que sí tienen CCP
 const sinParticipe = computed(() => {
-  const totalCapitalActivo = prestamosRaw.value.filter(p => p.estado !== 'cancelado').reduce((s, p) => s + calcCapitalActivoPrestamo(p), 0)
+  const totalCapitalActivo = prestamosRaw.value.filter(p => p.estado !== 'cancelado').reduce((s, p) => s + calcCapitalEnCursoPrestamo(p), 0)
 
   // Suma de importe_participacion por préstamo (solo CCPs activos)
   const participadoPorPrestamo = {}
@@ -916,7 +963,7 @@ const sinParticipe = computed(() => {
     if (noParticipado <= 0) continue
 
     const fraccion = impTotal > 0 ? noParticipado / impTotal : 0
-    const capActivo = calcCapitalActivoPrestamo(p) * fraccion
+    const capActivo = calcCapitalEnCursoPrestamo(p) * fraccion
     const estado = p.estado === 'cancelado' ? 'cancelado'
                  : p.estado === 'judicializado' ? 'judicializado'
                  : tieneRetraso(p) ? 'con_retraso' : 'al_dia'

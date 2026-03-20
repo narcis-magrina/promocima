@@ -181,7 +181,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { supabase } from '../supabase.js'
-import { fmt, fmtInt, fmtN, fmtDate, getEstadoBadge, calcSituacionPrestamo, calcCapitalActivoPrestamo, generateCalendarioTeorico, calcDevengadoContrato, today } from '../utils.js'
+import { fmt, fmtInt, fmtN, fmtDate, getEstadoBadge, calcSituacionPrestamo, calcCapitalEnCursoPrestamo, generateCalendarioTeorico, calcDevengadoContrato, today } from '../utils.js'
 import { useAuth } from '../composables/useAuth.js'
 import HelpTip from './HelpTip.vue'
 import { help } from '../helpTexts.js'
@@ -287,7 +287,7 @@ const estadoContrato = c => {
 const capActivoContrato = c => {
   const pr = c.prestamos
   if (!pr || pr.estado === 'cancelado') return 0
-  return calcCapitalActivoPrestamo(pr, c.cobrosP || []) * Number(c.porcentaje_participacion) / 100
+  return calcCapitalEnCursoPrestamo(pr, c.cobrosP || []) * Number(c.porcentaje_participacion) / 100
 }
 
 // ── Grupos ───────────────────────────────────────────────────────────────────

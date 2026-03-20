@@ -32,7 +32,7 @@
                 <span class="kpi-row-val">{{ fmtN(kpartEnCurso) }}</span>
               </div>
               <div class="kpi-row">
-                <span>Activo <HelpTip :texto="help.activo" pos="right" /></span>
+                <span>Activo <HelpTip :texto="help.capital_activo_participado" pos="right" /></span>
                 <span class="kpi-row-val">{{ fmtN(kpartActivo) }}</span>
               </div>
               <template v-if="kpartJudicial > 0">
@@ -195,29 +195,107 @@
 
     <!-- LISTA -->
     <template v-else>
-      <!-- KPIs -->
-      <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
+      <!-- KPIs: 3 tarjetas -->
+      <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">
+
+        <!-- Capital Participado -->
         <div class="kpi-card kc-purple">
-          <div class="kpi-label">Importe Participación En Curso <HelpTip :texto="help.participacion_en_curso" /></div>
-          <div class="kpi-value">{{ fmtN(kpiImporteParticipado) }}</div>
-        </div>
-        <div class="kpi-card kc-green">
-          <div class="kpi-label">Préstamos En Curso <HelpTip :texto="help.prestamos_en_curso" /></div>
-          <div class="kpi-value">{{ kpiNPrestamosActivos }}</div>
-          <div class="kpi-sub">
-            Al día: {{ kpiAlDia }} · Retraso: {{ kpiConRetraso }} · Judicial: {{ kpiJudicializados }}
+          <div class="kpi-label">Capital Participado <HelpTip :texto="help.participacion_en_curso" /></div>
+          <div class="kpi-value">{{ fmtN(kpiCapEnCurso) }}</div>
+          <div style="margin-top:8px;display:grid;gap:4px">
+            <div class="kpi-row">
+              <span style="color:var(--text3)">En curso</span>
+              <span class="kpi-row-val">{{ fmtN(kpiCapEnCurso) }}</span>
+            </div>
+            <div class="kpi-row">
+              <span style="color:var(--text3)">Activo</span>
+              <span class="kpi-row-val">{{ fmtN(kpiCapActivo) }}</span>
+            </div>
+            <div class="kpi-row kpi-row-sep">
+              <span style="color:var(--text3)">Al día</span>
+              <span class="kpi-row-val">{{ fmtN(kpiCapAlDia) }}</span>
+            </div>
+            <div class="kpi-row">
+              <span style="color:var(--text3)">Con retraso</span>
+              <span class="kpi-row-val">{{ fmtN(kpiCapRetraso) }}</span>
+            </div>
+            <div class="kpi-row">
+              <span style="color:var(--text3)">Judicializado</span>
+              <span class="kpi-row-val">{{ fmtN(kpiCapJudicial) }}</span>
+            </div>
           </div>
         </div>
+
+        <!-- Rentabilidad Promocima -->
+        <div class="kpi-card kc-green">
+          <div class="kpi-label">Rentabilidad Promocima</div>
+          <div class="kpi-value">{{ fmtN(kpiRentPromoTotal) }}</div>
+          <div style="margin-top:8px;display:grid;gap:4px">
+            <div class="kpi-row">
+              <span>Gestión anual</span>
+              <span class="kpi-row-val">{{ fmtN(kpiGestionAnual) }}</span>
+            </div>
+            <div class="kpi-row kpi-row-sep">
+              <span>Apertura LTM (part.)</span>
+              <span class="kpi-row-val">{{ fmtN(kpiAperturaLTM) }}</span>
+            </div>
+            <div class="kpi-row kpi-row-sep" style="margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.15)">
+              <span style="font-size:11px;color:var(--text2)">Rent. capital Promocima</span>
+              <span class="kpi-row-val" style="font-size:11px">{{ kpiRentCapPromo }}%</span>
+            </div>
+            <!-- DEBUG -->
+            <div style="margin-top:10px;border-top:1px dashed rgba(255,255,255,0.2);padding-top:8px">
+              <button @click="showDebugPromo=!showDebugPromo" style="font-size:10px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:4px;padding:2px 8px;cursor:pointer;width:100%">
+                {{ showDebugPromo ? '▲ Ocultar debug' : '▼ Ver cálculo paso a paso' }}
+              </button>
+              <div v-if="showDebugPromo" style="margin-top:8px;font-size:11px;color:rgba(255,255,255,0.85);line-height:1.8;font-family:var(--mono)">
+                <div style="font-weight:700;margin-bottom:4px;color:#fff">— Préstamos en curso —</div>
+                <div>Nº préstamos: {{ kpiDebugPromo.nPrestamosEC }}</div>
+                <div>Capital activo en curso: {{ fmtN(kpiDebugPromo.totalEnCurso) }}</div>
+                <div style="margin-top:6px;font-size:10px;color:rgba(255,255,255,0.55);display:grid;gap:1px">
+                  <div v-for="l in kpiDebugPromo.lineasPrestamos" :key="l.alias" style="display:flex;justify-content:space-between;gap:8px;font-family:var(--mono)">
+                    <span>{{ l.alias }} ({{ l.tipo }}, {{ l.nCobros }}cb)</span>
+                    <span>{{ fmtN(l.importe) }} → <b style="color:rgba(255,255,255,0.8)">{{ fmtN(l.capActivo) }}</b></span>
+                  </div>
+                </div>
+                <div style="margin-top:6px;font-weight:700;color:#fff">— Capital participado en curso —</div>
+                <div>Nº contratos CCP: {{ kpiDebugPromo.nCCPEnCurso }}</div>
+                <div>Capital activo participado: {{ fmtN(kpiDebugPromo.capPart) }}</div>
+                <div style="margin-top:6px;font-weight:700;color:#fff">— Capital Promocima en curso —</div>
+                <div>{{ fmtN(kpiDebugPromo.totalEnCurso) }} − {{ fmtN(kpiDebugPromo.capPart) }} = <span style="color:#4ade80;font-weight:700">{{ fmtN(kpiDebugPromo.capPromo) }}</span></div>
+                <div style="margin-top:6px;font-weight:700;color:#fff">— Ingresos Promocima —</div>
+                <div>Gestión anual: {{ fmtN(kpiDebugPromo.gestion) }}</div>
+                <div style="margin-top:4px;font-size:10px;color:rgba(255,255,255,0.6)">
+                  <div v-for="l in kpiDebugPromo.lineasGestion" :key="l.prestamo" style="display:flex;justify-content:space-between;gap:8px">
+                    <span>{{ l.prestamo }} ({{ fmtN(l.imp_part) }} × {{ l.pct_gest }}%)</span>
+                    <span>{{ fmtN(l.gestion) }}</span>
+                  </div>
+                </div>
+                <div style="margin-top:4px">Apertura LTM (part.): {{ fmtN(kpiDebugPromo.apertura) }}</div>
+                <div>Total ingresos: {{ fmtN(kpiDebugPromo.gestion) }} + {{ fmtN(kpiDebugPromo.apertura) }} = <span style="color:#4ade80;font-weight:700">{{ fmtN(kpiDebugPromo.total) }}</span></div>
+                <div style="margin-top:6px;font-weight:700;color:#fff">— Rentabilidad —</div>
+                <div>{{ fmtN(kpiDebugPromo.total) }} / {{ fmtN(kpiDebugPromo.capPromo) }} × 100 = <span style="color:#4ade80;font-weight:700">{{ kpiDebugPromo.rentPct }}%</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rentabilidad Partícipes -->
         <div class="kpi-card kc-blue">
-          <div class="kpi-label">Nº Partícipes</div>
-          <div class="kpi-value">{{ items.length }}</div>
-          <div class="kpi-sub">{{ kpiNEmpresas }} empresa{{ kpiNEmpresas !== 1 ? 's' : '' }} · {{ kpiNPersonas }} persona{{ kpiNPersonas !== 1 ? 's' : '' }}</div>
+          <div class="kpi-label">Rentabilidad Partícipes</div>
+          <div class="kpi-value">{{ fmtN(kpiIngrAnuales) }}</div>
+          <div style="margin-top:8px;display:grid;gap:4px">
+            <div class="kpi-row">
+              <span>Ingresos anuales</span>
+              <span class="kpi-row-val">{{ fmtN(kpiIngrAnuales) }}</span>
+            </div>
+            <div class="kpi-row kpi-row-sep">
+              <span>Rentabilidad media</span>
+              <span class="kpi-row-val">{{ kpiRentMedia }}%</span>
+            </div>
+          </div>
         </div>
-        <div class="kpi-card kc-gray-dim">
-          <div class="kpi-label">Participación Cancelada</div>
-          <div class="kpi-value">{{ fmtN(kpiImporteCanceladoParticipado) }}</div>
-          <div class="kpi-sub">{{ kpiNCancelados }} préstamo{{ kpiNCancelados !== 1 ? 's' : '' }} cancelados</div>
-        </div>
+
       </div>
       <div class="section-header">
         <div>
@@ -335,7 +413,7 @@ import { useSort } from '../composables/useSort.js'
 import { useCrud } from '../composables/useCrud.js'
 import HelpTip from './HelpTip.vue'
 import { help } from '../helpTexts.js'
-import { fmt, fmtInt, fmtN, fmtDate, today, generateCalendarioTeorico, distribuirCobros, calcSituacionPrestamo, calcCapitalActivoPrestamo, getEstadoBadge, calcularLineasCCP, calcDevengadoContrato, fmtDec } from '../utils.js'
+import { fmt, fmtInt, fmtN, fmtDate, today, generateCalendarioTeorico, distribuirCobros, calcSituacionPrestamo, calcCapitalEnCursoPrestamo, getEstadoBadge, calcularLineasCCP, calcDevengadoContrato, fmtDec } from '../utils.js'
 import { supabase } from '../supabase.js'
 
 const props = defineProps({
@@ -355,16 +433,32 @@ const kpiPrestamos      = ref([])
 const kpiContratos      = ref([])
 
 onMounted(async () => {
-  const [{ data: pr }, { data: cc }, { data: cb }] = await Promise.all([
-    supabase.from('prestamos').select('id, importe, estado, interes_ordinario, fecha_inicio, dia_cobro, duracion_meses, tipo_prestamo, periodicidad'),
-    supabase.from('contratos_ccp').select('prestamo_id, participe_id, activo, importe_participacion'),
-    supabase.from('cobros').select('prestamo_id, importe, tipo, fecha_real, fecha_teorica, importe_principal, modalidad_recalculo').range(0, 9999),
+  // Paginar cobros igual que el Dashboard para no perder registros con el límite de 1000 de Supabase
+  const fetchAllCobros = async () => {
+    const PAGE = 1000
+    let all = [], from = 0
+    while (true) {
+      const { data } = await supabase
+        .from('cobros')
+        .select('prestamo_id, importe, tipo, fecha_real, fecha_teorica, importe_principal, modalidad_recalculo')
+        .order('id').range(from, from + PAGE - 1)
+      if (!data || data.length === 0) break
+      all = all.concat(data)
+      if (data.length < PAGE) break
+      from += PAGE
+    }
+    return all
+  }
+  const [{ data: pr }, { data: cc }, cb] = await Promise.all([
+    supabase.from('prestamos').select('id, importe, estado, interes_ordinario, fecha_inicio, dia_cobro, duracion_meses, tipo_prestamo, periodicidad, comision_apertura'),
+    supabase.from('contratos_ccp').select('prestamo_id, participe_id, activo, importe_participacion, porcentaje_participacion, porcentaje_gestion'),
+    fetchAllCobros(),
   ])
   kpiContratos.value  = cc || []
   // Enriquecer préstamos con situación calculada
   kpiPrestamos.value  = (pr || []).map(p => {
     const cobrosP = (cb || []).filter(c => c.prestamo_id === p.id)
-    return { ...p, situacion: calcSituacionPrestamo(p, cobrosP) }
+    return { ...p, cobrosP, situacion: calcSituacionPrestamo(p, cobrosP) }
   })
 })
 
@@ -390,6 +484,145 @@ const kpiImporteCanceladoParticipado = computed(() =>
 )
 const kpiNEmpresas      = computed(() => items.value.filter(p => p.tipo === 'empresa').length)
 const kpiNPersonas      = computed(() => items.value.filter(p => p.tipo === 'persona').length)
+
+// ── KPIs Capital participado desglosado ───────
+// CCP activos en préstamos NO cancelados (en curso)
+const ccpEnCurso  = computed(() => kpiContratos.value.filter(c => {
+  if (!c.activo) return false
+  const pr = kpiPrestamos.value.find(p => p.id === c.prestamo_id)
+  return pr && pr.estado !== 'cancelado'
+}))
+const ccpActivos2 = computed(() => ccpEnCurso.value.filter(c => {
+  const pr = kpiPrestamos.value.find(p => p.id === c.prestamo_id)
+  return pr && pr.estado !== 'cancelado' && pr.estado !== 'judicializado'
+}))
+const ccpAlDia    = computed(() => ccpActivos2.value.filter(c => {
+  const pr = kpiPrestamos.value.find(p => p.id === c.prestamo_id)
+  return pr && pr.situacion === 'al_dia'
+}))
+const ccpRetraso  = computed(() => ccpActivos2.value.filter(c => {
+  const pr = kpiPrestamos.value.find(p => p.id === c.prestamo_id)
+  return pr && pr.situacion === 'con_retraso'
+}))
+const ccpJudicial = computed(() => ccpEnCurso.value.filter(c => {
+  const pr = kpiPrestamos.value.find(p => p.id === c.prestamo_id)
+  return pr && pr.estado === 'judicializado'
+}))
+const kpiCapEnCurso   = computed(() => ccpEnCurso.value.reduce((s, c) => s + Number(c.importe_participacion || 0), 0))
+const kpiCapActivo    = computed(() => ccpActivos2.value.reduce((s, c) => s + Number(c.importe_participacion || 0), 0))
+const kpiCapAlDia     = computed(() => ccpAlDia.value.reduce((s, c) => s + Number(c.importe_participacion || 0), 0))
+const kpiCapRetraso   = computed(() => ccpRetraso.value.reduce((s, c) => s + Number(c.importe_participacion || 0), 0))
+const kpiCapJudicial  = computed(() => ccpJudicial.value.reduce((s, c) => s + Number(c.importe_participacion || 0), 0))
+
+// ── KPIs Rentabilidad Promocima ───────────────
+// Gestión anual: capital vivo participado × % gestión
+const kpiGestionAnual = computed(() => {
+  return Math.round(ccpEnCurso.value.reduce((s, c) => {
+    const pr = kpiPrestamos.value.find(p => p.id === c.prestamo_id)
+    if (!pr || pr.estado === 'judicializado') return s
+    return s + Number(c.importe_participacion || 0) * Number(c.porcentaje_gestion || 0) / 100
+  }, 0) * 100) / 100
+})
+// Apertura LTM por partícipes: aperturas de los 12 últimos meses × % participación
+const kpiAperturaLTM = computed(() => {
+  const hoy     = today()
+  const hace12  = new Date(hoy + 'T00:00:00')
+  hace12.setFullYear(hace12.getFullYear() - 1)
+  const hace12Str = hace12.toISOString().slice(0, 10)
+  return Math.round(kpiContratos.value.reduce((s, c) => {
+    if (!c.activo) return s
+    const pr = kpiPrestamos.value.find(p => p.id === c.prestamo_id)
+    if (!pr || pr.estado === 'cancelado') return s
+    const fi = pr.fecha_inicio || ''
+    if (fi < hace12Str || fi > hoy) return s
+    return s + Number(pr.importe || 0) * Number(pr.comision_apertura || 0) / 100 * Number(c.porcentaje_participacion || 0) / 100
+  }, 0) * 100) / 100
+})
+
+// ── KPIs Rentabilidad Partícipes ──────────────
+const anoActualKpi = new Date().getFullYear()
+const kpiIngrAnuales = computed(() => {
+  return Math.round(ccpActivos2.value.reduce((s, c) => {
+    const pr = kpiPrestamos.value.find(p => p.id === c.prestamo_id)
+    if (!pr) return s
+    const pctPart = Number(c.porcentaje_participacion || 0) / 100
+    const pctGest = Number(c.porcentaje_gestion || 0) / 100
+    const tasaNet = (Number(pr.interes_ordinario || 0) / 100) - pctGest
+    const capPart = Number(pr.importe) * pctPart
+    const cal     = generateCalendarioTeorico(pr)
+    const cuotasAnio = cal.filter(cu => new Date(cu.fecha + 'T00:00:00').getFullYear() === anoActualKpi).length
+    return s + capPart * tasaNet / 12 * cuotasAnio
+  }, 0) * 100) / 100
+})
+const kpiRentMedia = computed(() => {
+  if (!kpiCapActivo.value) return '0.00'
+  return (kpiIngrAnuales.value / kpiCapActivo.value * 100).toFixed(2)
+})
+// Rentabilidad Promocima: total = gestión + apertura
+const kpiRentPromoTotal = computed(() =>
+  Math.round((kpiGestionAnual.value + kpiAperturaLTM.value) * 100) / 100
+)
+// Capital Promocima en curso = Σ importe préstamos en curso − Σ importe_participacion CCP en curso
+// Rentabilidad = (Gestión anual + Apertura LTM partícipes) / Capital Promocima en curso × 100
+const kpiRentCapPromo = computed(() => {
+  // Misma lógica que el Dashboard KPI Capital, subtítulo "En curso"
+  // totalEnCurso = Σ calcCapitalEnCursoPrestamo(p) de préstamos no cancelados
+  const totalEnCurso = kpiPrestamos.value
+    .filter(p => p.estado !== 'cancelado')
+    .reduce((s, p) => s + calcCapitalEnCursoPrestamo(p, p.cobrosP || []), 0)
+  // capPart = Σ calcCapitalEnCursoPrestamo(p) × (importe_participacion / importe) de CCPs activos no cancelados no judicializados
+  // (misma lógica que capitalParticipado en Dashboard)
+  const capPart = kpiContratos.value.reduce((s, c) => {
+    if (!c.activo) return s
+    const pr = kpiPrestamos.value.find(p => p.id === c.prestamo_id)
+    if (!pr || pr.estado === 'cancelado' || pr.estado === 'judicializado') return s
+    const impTotal = Number(pr.importe || 0)
+    const fraccion = impTotal > 0 ? Number(c.importe_participacion || 0) / impTotal : 0
+    return s + calcCapitalEnCursoPrestamo(pr, pr.cobrosP || []) * fraccion
+  }, 0)
+  const capPromo = totalEnCurso - capPart
+  if (!capPromo) return '0.00'
+  return (kpiRentPromoTotal.value / capPromo * 100).toFixed(2)
+})
+
+// ── DEBUG Rentabilidad Promocima ─────────────────────────────────────────────
+const kpiDebugPromo = computed(() => {
+  const prestamosEnCurso = kpiPrestamos.value.filter(p => p.estado !== 'cancelado')
+  const totalEnCurso     = prestamosEnCurso.reduce((s, p) => s + calcCapitalEnCursoPrestamo(p, p.cobrosP || []), 0)
+  const nPrestamosEC     = prestamosEnCurso.length
+  // capPart: misma lógica que capitalParticipado del Dashboard
+  const capPart = kpiContratos.value.reduce((s, c) => {
+    if (!c.activo) return s
+    const pr = kpiPrestamos.value.find(p => p.id === c.prestamo_id)
+    if (!pr || pr.estado === 'cancelado' || pr.estado === 'judicializado') return s
+    const impTotal = Number(pr.importe || 0)
+    const fraccion = impTotal > 0 ? Number(c.importe_participacion || 0) / impTotal : 0
+    return s + calcCapitalEnCursoPrestamo(pr, pr.cobrosP || []) * fraccion
+  }, 0)
+  const nCCPEnCurso      = ccpEnCurso.value.length
+  const capPromo         = totalEnCurso - capPart
+  const gestion          = kpiGestionAnual.value
+  const apertura         = kpiAperturaLTM.value
+  const total            = kpiRentPromoTotal.value
+  const rentPct          = kpiRentCapPromo.value
+  // Desglose gestión: contrato a contrato
+  const lineasGestion = ccpEnCurso.value
+    .filter(c => { const pr = kpiPrestamos.value.find(p => p.id === c.prestamo_id); return pr && pr.estado !== 'judicializado' })
+    .map(c => {
+      const pr = kpiPrestamos.value.find(p => p.id === c.prestamo_id)
+      const g  = Math.round(Number(c.importe_participacion || 0) * Number(c.porcentaje_gestion || 0) / 100 * 100) / 100
+      return { prestamo: pr?.alias || c.prestamo_id, imp_part: Number(c.importe_participacion || 0), pct_gest: Number(c.porcentaje_gestion || 0), gestion: g }
+    })
+  const lineasPrestamos = prestamosEnCurso.map(p => ({
+    alias: p.alias || p.id,
+    tipo: p.tipo_prestamo,
+    importe: Number(p.importe || 0),
+    capActivo: Math.round(calcCapitalEnCursoPrestamo(p, p.cobrosP || []) * 100) / 100,
+    nCobros: (p.cobrosP || []).length,
+  }))
+  return { nPrestamosEC, totalEnCurso, nCCPEnCurso, capPart, capPromo, gestion, apertura, total, rentPct, lineasGestion, lineasPrestamos }
+})
+const showDebugPromo = ref(false)
 
 // Capital participado por partícipe (usando kpiContratos, igual que Dashboard)
 const capitalPorParticipe = computed(() => {
@@ -437,6 +670,7 @@ const {
   {
     ordenPor:   'nombre',
     prefixId:   'PT',
+    idPadding:  6,
     secundaria: { tabla: 'contratos_ccp', select: '*, prestamos(id, alias, importe, estado, tipo_prestamo, fecha_inicio, duracion_meses, dia_cobro, periodicidad, interes_ordinario)', orden: 'id' },
     enriquecerItems: (parts, conts) => {
       // Igual que Dashboard: contratos activos cruzados con prestamos no cancelados por ID
@@ -601,7 +835,7 @@ const kpiPartEnr = computed(() =>
 const capActivoPorContrato = (c) => {
   const pr = c.prestamos
   if (!pr || pr.estado === 'cancelado') return 0
-  return calcCapitalActivoPrestamo(pr, c.cobrosP || []) * Number(c.porcentaje_participacion) / 100
+  return calcCapitalEnCursoPrestamo(pr, c.cobrosP || []) * Number(c.porcentaje_participacion) / 100
 }
 
 // Por estado de préstamo
