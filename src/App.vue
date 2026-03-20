@@ -36,7 +36,7 @@
       <div class="sidebar-logo">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
           <img src="/src/logo.png" class="sidebar-logo-img" alt="Logo">
-          <div class="brand">PROMOCIMA</div>
+          <div class="brand">PROMOCIMA <span style="font-size:10px;font-weight:400;opacity:0.6;letter-spacing:0">v1.0</span></div>
         </div>
         <div class="sub">Portal Partícipe</div>
       </div>
@@ -122,7 +122,7 @@
       <div class="sidebar-logo">
         <div class="sidebar-logo-img-wrap">
           <img src="/src/logo.png" class="sidebar-logo-img" alt="Logo">
-          <div class="brand sidebar-logo-text">PROMOCIMA</div>
+          <div class="brand sidebar-logo-text">PROMOCIMA <span style="font-size:10px;font-weight:400;opacity:0.6;letter-spacing:0">v1.0</span></div>
         </div>
         <div class="sub sidebar-logo-text">Capital Privado · Gestión Interna</div>
         <button class="sidebar-collapse-btn" @click="toggleCollapse" :title="sidebarCollapsed ? 'Expandir menú' : 'Colapsar menú'">
@@ -239,7 +239,7 @@ function toggleCollapse() {
 }
 
 // ── Tema claro / oscuro ────────────────────────
-const darkMode = ref(localStorage.getItem('theme') !== 'light')
+const darkMode = ref(localStorage.getItem('theme') === 'dark')
 function applyTheme(dark) {
   document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
   localStorage.setItem('theme', dark ? 'dark' : 'light')
