@@ -59,6 +59,10 @@
         </div>
       </nav>
       <div class="sidebar-footer">
+        <button @click="toggleTheme" class="theme-toggle-btn" style="margin-bottom:8px" :title="darkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'">
+          <span>{{ darkMode ? '☀️' : '🌙' }}</span>
+          <span style="font-size:11px;margin-left:6px">{{ darkMode ? 'Modo claro' : 'Modo oscuro' }}</span>
+        </button>
         <div style="display:flex;align-items:center;gap:8px">
           <div class="user-avatar">{{ initiales }}</div>
           <div class="user-info">
@@ -178,11 +182,15 @@
       <div class="sidebar-footer">
         <div class="sidebar-footer-inner">
           <div class="user-avatar">{{ initiales }}</div>
-          <div class="user-info">
+          <div class="user-info sidebar-footer-text">
             <div class="name">{{ nombre }}</div>
             <div class="role">{{ rolLabel }}</div>
           </div>
         </div>
+        <button @click="toggleTheme" class="theme-toggle-btn" :title="darkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'">
+          <span>{{ darkMode ? '☀️' : '🌙' }}</span>
+          <span class="sidebar-footer-text" style="font-size:11px;margin-left:6px">{{ darkMode ? 'Modo claro' : 'Modo oscuro' }}</span>
+        </button>
       </div>
     </aside>
 
@@ -228,6 +236,19 @@ const sidebarCollapsed = ref(localStorage.getItem('sidebarCollapsed') === 'true'
 function toggleCollapse() {
   sidebarCollapsed.value = !sidebarCollapsed.value
   localStorage.setItem('sidebarCollapsed', sidebarCollapsed.value)
+}
+
+// ── Tema claro / oscuro ────────────────────────
+const darkMode = ref(localStorage.getItem('theme') !== 'light')
+function applyTheme(dark) {
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
+  localStorage.setItem('theme', dark ? 'dark' : 'light')
+}
+// Aplicar al cargar
+applyTheme(darkMode.value)
+function toggleTheme() {
+  darkMode.value = !darkMode.value
+  applyTheme(darkMode.value)
 }
 const participeCcpId    = ref(null)
 const participeActivoId = ref(null)

@@ -7,7 +7,7 @@
       <!-- KPI 1: Capital -->
       <div class="kpi-card kc-green">
         <div class="kpi-label">Capital Invertido <HelpTip :texto="help.invertido" /></div>
-        <div class="kpi-value" style="font-size:18px">{{ fmtN(capitalEnCurso) }}</div>
+        <div class="kpi-value" style="font-size:18px">{{ fmtN(capitalInvertido) }}</div>
         <div style="margin-top:8px;display:grid;gap:4px">
           <div class="kpi-row">
             <span style="color:var(--text3)">En curso <HelpTip :texto="help.en_curso" pos="right" /></span>
@@ -488,7 +488,7 @@ function calcEstadoPrestamo(p) {
 
 // ── KPIs ─────────────────────────────────────────────────────────────────────
 const prestamosEnCurso = computed(() => prestamosRaw.value.filter(p => p.estado !== 'cancelado'))
-const capitalEnCurso   = computed(() => prestamosEnCurso.value.reduce((s, p) => s + Number(p.importe), 0))
+const capitalInvertido = computed(() => prestamosEnCurso.value.reduce((s, p) => s + Number(p.importe), 0))
 const nConRetraso        = computed(() => prestamosEnCurso.value.filter(p => tieneRetraso(p)).length)
 const nJudicializados   = computed(() => prestamosEnCurso.value.filter(p => p.estado === 'judicializado').length)
 const incidencias      = computed(() => nConRetraso.value + nJudicializados.value)
@@ -588,7 +588,7 @@ const capitalJudicializado = computed(() =>
 // Capital activo = capital vivo de operaciones NO judicializadas (al día + con retraso)
 const capitalActivoNoJudicial = computed(() => capitalEnCurso.value - capitalJudicializado.value)
 const pctJudicializado = computed(() =>
-  capitalEnCurso.value ? (capitalJudicializado.value / capitalEnCurso.value * 100).toFixed(1) : '0.0'
+  capitalInvertido.value ? (capitalJudicializado.value / capitalInvertido.value * 100).toFixed(1) : '0.0'
 )
 // Capital participado judicializado: capital vivo proporcional de CCPs en préstamos judicializados
 const capitalParticJudicializado = computed(() =>

@@ -243,40 +243,6 @@
               <span style="font-size:11px;color:var(--text2)">Rent. capital Promocima</span>
               <span class="kpi-row-val" style="font-size:11px">{{ kpiRentCapPromo }}%</span>
             </div>
-            <!-- DEBUG -->
-            <div style="margin-top:10px;border-top:1px dashed rgba(255,255,255,0.2);padding-top:8px">
-              <button @click="showDebugPromo=!showDebugPromo" style="font-size:10px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:4px;padding:2px 8px;cursor:pointer;width:100%">
-                {{ showDebugPromo ? '▲ Ocultar debug' : '▼ Ver cálculo paso a paso' }}
-              </button>
-              <div v-if="showDebugPromo" style="margin-top:8px;font-size:11px;color:rgba(255,255,255,0.85);line-height:1.8;font-family:var(--mono)">
-                <div style="font-weight:700;margin-bottom:4px;color:#fff">— Préstamos en curso —</div>
-                <div>Nº préstamos: {{ kpiDebugPromo.nPrestamosEC }}</div>
-                <div>Capital activo en curso: {{ fmtN(kpiDebugPromo.totalEnCurso) }}</div>
-                <div style="margin-top:6px;font-size:10px;color:rgba(255,255,255,0.55);display:grid;gap:1px">
-                  <div v-for="l in kpiDebugPromo.lineasPrestamos" :key="l.alias" style="display:flex;justify-content:space-between;gap:8px;font-family:var(--mono)">
-                    <span>{{ l.alias }} ({{ l.tipo }}, {{ l.nCobros }}cb)</span>
-                    <span>{{ fmtN(l.importe) }} → <b style="color:rgba(255,255,255,0.8)">{{ fmtN(l.capActivo) }}</b></span>
-                  </div>
-                </div>
-                <div style="margin-top:6px;font-weight:700;color:#fff">— Capital participado en curso —</div>
-                <div>Nº contratos CCP: {{ kpiDebugPromo.nCCPEnCurso }}</div>
-                <div>Capital activo participado: {{ fmtN(kpiDebugPromo.capPart) }}</div>
-                <div style="margin-top:6px;font-weight:700;color:#fff">— Capital Promocima en curso —</div>
-                <div>{{ fmtN(kpiDebugPromo.totalEnCurso) }} − {{ fmtN(kpiDebugPromo.capPart) }} = <span style="color:#4ade80;font-weight:700">{{ fmtN(kpiDebugPromo.capPromo) }}</span></div>
-                <div style="margin-top:6px;font-weight:700;color:#fff">— Ingresos Promocima —</div>
-                <div>Gestión anual: {{ fmtN(kpiDebugPromo.gestion) }}</div>
-                <div style="margin-top:4px;font-size:10px;color:rgba(255,255,255,0.6)">
-                  <div v-for="l in kpiDebugPromo.lineasGestion" :key="l.prestamo" style="display:flex;justify-content:space-between;gap:8px">
-                    <span>{{ l.prestamo }} ({{ fmtN(l.imp_part) }} × {{ l.pct_gest }}%)</span>
-                    <span>{{ fmtN(l.gestion) }}</span>
-                  </div>
-                </div>
-                <div style="margin-top:4px">Apertura LTM (part.): {{ fmtN(kpiDebugPromo.apertura) }}</div>
-                <div>Total ingresos: {{ fmtN(kpiDebugPromo.gestion) }} + {{ fmtN(kpiDebugPromo.apertura) }} = <span style="color:#4ade80;font-weight:700">{{ fmtN(kpiDebugPromo.total) }}</span></div>
-                <div style="margin-top:6px;font-weight:700;color:#fff">— Rentabilidad —</div>
-                <div>{{ fmtN(kpiDebugPromo.total) }} / {{ fmtN(kpiDebugPromo.capPromo) }} × 100 = <span style="color:#4ade80;font-weight:700">{{ kpiDebugPromo.rentPct }}%</span></div>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -585,45 +551,6 @@ const kpiRentCapPromo = computed(() => {
   return (kpiRentPromoTotal.value / capPromo * 100).toFixed(2)
 })
 
-// ── DEBUG Rentabilidad Promocima ─────────────────────────────────────────────
-const kpiDebugPromo = computed(() => {
-  const prestamosEnCurso = kpiPrestamos.value.filter(p => p.estado !== 'cancelado')
-  const totalEnCurso     = prestamosEnCurso.reduce((s, p) => s + calcCapitalEnCursoPrestamo(p, p.cobrosP || []), 0)
-  const nPrestamosEC     = prestamosEnCurso.length
-  // capPart: misma lógica que capitalParticipado del Dashboard
-  const capPart = kpiContratos.value.reduce((s, c) => {
-    if (!c.activo) return s
-    const pr = kpiPrestamos.value.find(p => p.id === c.prestamo_id)
-    if (!pr || pr.estado === 'cancelado' || pr.estado === 'judicializado') return s
-    const impTotal = Number(pr.importe || 0)
-    const fraccion = impTotal > 0 ? Number(c.importe_participacion || 0) / impTotal : 0
-    return s + calcCapitalEnCursoPrestamo(pr, pr.cobrosP || []) * fraccion
-  }, 0)
-  const nCCPEnCurso      = ccpEnCurso.value.length
-  const capPromo         = totalEnCurso - capPart
-  const gestion          = kpiGestionAnual.value
-  const apertura         = kpiAperturaLTM.value
-  const total            = kpiRentPromoTotal.value
-  const rentPct          = kpiRentCapPromo.value
-  // Desglose gestión: contrato a contrato
-  const lineasGestion = ccpEnCurso.value
-    .filter(c => { const pr = kpiPrestamos.value.find(p => p.id === c.prestamo_id); return pr && pr.estado !== 'judicializado' })
-    .map(c => {
-      const pr = kpiPrestamos.value.find(p => p.id === c.prestamo_id)
-      const g  = Math.round(Number(c.importe_participacion || 0) * Number(c.porcentaje_gestion || 0) / 100 * 100) / 100
-      return { prestamo: pr?.alias || c.prestamo_id, imp_part: Number(c.importe_participacion || 0), pct_gest: Number(c.porcentaje_gestion || 0), gestion: g }
-    })
-  const lineasPrestamos = prestamosEnCurso.map(p => ({
-    alias: p.alias || p.id,
-    tipo: p.tipo_prestamo,
-    importe: Number(p.importe || 0),
-    capActivo: Math.round(calcCapitalEnCursoPrestamo(p, p.cobrosP || []) * 100) / 100,
-    nCobros: (p.cobrosP || []).length,
-  }))
-  return { nPrestamosEC, totalEnCurso, nCCPEnCurso, capPart, capPromo, gestion, apertura, total, rentPct, lineasGestion, lineasPrestamos }
-})
-const showDebugPromo = ref(false)
-
 // Capital participado por partícipe (usando kpiContratos, igual que Dashboard)
 const capitalPorParticipe = computed(() => {
   const map = {}
@@ -833,9 +760,12 @@ const kpiPartEnr = computed(() =>
 
 // ── Capital activo real por contrato (descuenta cuotas cobradas en Francés) ──
 const capActivoPorContrato = (c) => {
+  // Usa importe_participacion nominal (lo que el partícipe invirtió realmente),
+  // no el capital activo proporcional por %, para evitar diferencias de céntimos
+  // debidas a amortizaciones en préstamos franceses.
   const pr = c.prestamos
   if (!pr || pr.estado === 'cancelado') return 0
-  return calcCapitalEnCursoPrestamo(pr, c.cobrosP || []) * Number(c.porcentaje_participacion) / 100
+  return Number(c.importe_participacion || 0)
 }
 
 // Por estado de préstamo
