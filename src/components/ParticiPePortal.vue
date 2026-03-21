@@ -5,7 +5,7 @@
     <template v-else>
 
       <!-- Fila 1: Capital Invertido + Rentabilidad -->
-      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:14px">
+      <div class="portal-kpi-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:14px">
 
         <!-- Capital Invertido -->
         <div class="kpi-card kc-purple">
@@ -51,7 +51,7 @@
       </div>
 
       <!-- Fila 2: Operaciones + LTV -->
-      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:20px">
+      <div class="portal-kpi-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:20px">
 
         <!-- Operaciones -->
         <div class="kpi-card kc-green">
@@ -142,7 +142,7 @@
         <button class="btn btn-sm" :class="filtroEstado==='todos' ? 'btn-primary' : ''" @click="filtroEstado='todos'">Todos</button>
         <span style="font-size:12px;color:var(--text3)">{{ contratosFiltrados.length }} contrato{{ contratosFiltrados.length !== 1 ? 's' : '' }}</span>
       </div>
-      <div class="table-card" style="margin-bottom:20px">
+      <div class="table-card" style="margin-bottom:20px;overflow-x:auto">
         <div class="table-header"><h3>Contratos ({{ contratosFiltrados.length }})</h3></div>
         <table>
           <thead>
@@ -217,6 +217,7 @@ async function cargar() {
   if (!pids.length) { loading.value = false; return }
   loading.value = true
   try {
+    // Buscar por participe_id
     const { data: cc } = await supabase
       .from('contratos_ccp')
       .select('*, participes(nombre), prestamos(id, alias, estado, interes_ordinario, importe, fecha_inicio, dia_cobro, duracion_meses, tipo_prestamo, periodicidad, garantia_tasacion, meses_carencia)')
@@ -236,10 +237,10 @@ async function cargar() {
 
     // Aplicar fecha de cierre: filtrar contratos, cobros y pagos posteriores a la fecha
     const cierre = props.fechaCierre || null
-    const ccFiltrados = (cc || []).filter(c => !cierre || (c.fecha_firma || '') <= cierre)
+    const ccFiltrados = (cc || []).filter(c => !cierre || ((c.fecha_firma || '9999') <= cierre))
 
     contratos.value = ccFiltrados
-      .filter(c => !cierre || !c.prestamos || (c.prestamos.fecha_inicio || '') <= cierre)
+      .filter(c => !cierre || !c.prestamos || ((c.prestamos.fecha_inicio || '9999') <= cierre))
       .map(c => {
         const pr = c.prestamos
         if (!pr) return c

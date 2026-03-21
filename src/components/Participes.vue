@@ -9,7 +9,7 @@
           <div class="section-sub">{{ participe.id }} · NIF: {{ participe.nif }}</div>
         </div>
         <div style="display:flex;gap:8px">
-          <button v-if="!readOnly || soloEditarContacto" class="btn btn-sm btn-registrar" @click="editar(participe)">✎ Editar</button>
+          <button v-if="!readOnly" class="btn btn-sm btn-registrar" @click="editar(participe)">✎ Editar</button>
           <button v-if="!readOnly" class="btn btn-sm btn-danger" @click="eliminarParticipe(participe.id)">✕ Eliminar</button>
           <button v-if="!readOnly" class="btn btn-sm btn-primary" @click="$emit('navigate','contratos-ccp')">Ver Contratos CCP →</button>
         </div>
@@ -651,10 +651,13 @@ const contratosParticipe = computed(() => {
 })
 const filtroEstadoP = ref('activos')
 const contratosParticipeFiltrados = computed(() => {
-  if (filtroEstadoP.value === 'todos') return contratosParticipe.value
-  return contratosParticipe.value.filter(c =>
-    c.prestamos?.estado !== 'cancelado'
-  )
+  const cierre = props.fechaCierre || null
+  // Aplicar filtro de fecha cierre: excluir contratos con fecha_firma posterior al cierre
+  const base = cierre
+    ? contratosParticipe.value.filter(c => (c.fecha_firma || '9999') <= cierre)
+    : contratosParticipe.value
+  if (filtroEstadoP.value === 'todos') return base
+  return base.filter(c => c.prestamos?.estado !== 'cancelado')
 })
 const filtroActivoP = ref('activos')
 const participesFiltrados = computed(() => {
@@ -708,8 +711,8 @@ async function cargarKPIsPart(pid) {
 
     // Filtrar contratos y préstamos por fecha de cierre
     const ccFiltrados = (cc || [])
-      .filter(c => !cierre || (c.fecha_firma || '') <= cierre)
-      .filter(c => !cierre || !c.prestamos || (c.prestamos.fecha_inicio || '') <= cierre)
+      .filter(c => !cierre || ((c.fecha_firma || '9999') <= cierre))
+      .filter(c => !cierre || !c.prestamos || ((c.prestamos.fecha_inicio || '9999') <= cierre))
 
     // Cargar cobros y filtrar por fecha de cierre
     const prestamoIds = [...new Set(ccFiltrados.map(c => c.prestamo_id))]

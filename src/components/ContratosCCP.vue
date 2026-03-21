@@ -2,8 +2,13 @@
   <div>
 
     <!-- ── DETALLE ─────────────────────────────── -->
+    <!-- Bloqueo por fecha cierre: contrato posterior al cierre no se muestra en portal -->
+    <div v-if="viewId && contrato && fechaCierre && (contrato.fecha_firma || '9999') > fechaCierre"
+      style="padding:40px;text-align:center;color:var(--text3);font-size:14px">
+      Este contrato no está disponible en la fecha de cierre del portal ({{ fechaCierre }}).
+    </div>
     <ContratoCCPDetalle
-      v-if="viewId && contrato"
+      v-else-if="viewId && contrato"
       :contrato="contrato"
       :prestamo-detalle="prestamoDetalle"
       :cobros-prestamo="cobrosPrestamo"

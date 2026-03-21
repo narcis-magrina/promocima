@@ -102,6 +102,10 @@
             <span style="font-size:12px;color:var(--text3)">Día de cobro</span>
             <span style="font-size:13px;font-weight:500;font-family:var(--mono)">{{ prestamoDetalle?.dia_cobro || '—' }}</span>
           </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-size:12px;color:var(--text3)">Fecha de firma</span>
+            <span style="font-size:13px;font-weight:500">{{ fmtDate(prestamoDetalle?.fecha_inicio) || '—' }}</span>
+          </div>
         </div>
       </div>
 
