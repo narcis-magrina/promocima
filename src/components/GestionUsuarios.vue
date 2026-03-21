@@ -26,9 +26,11 @@
             <td style="font-weight:500">{{ u.nombre || '—' }}</td>
             <td style="font-size:12px;color:var(--text3)">{{ u.email }}</td>
             <td class="col-hide-mobile"><span class="badge" :class="rolBadge(u.rol)">{{ u.rol }}</span></td>
-            <td style="font-size:12px" class="col-hide-mobile">
+            <td style="font-size:12px;max-width:160px" class="col-hide-mobile">
               <template v-if="u.rol === 'participe' && u.participe_ids?.length">
-                <span v-for="pid in u.participe_ids" :key="pid" class="badge badge-outline-yellow" style="font-size:10px;margin-right:3px">{{ nombreParticipe(pid) }}</span>
+                <div style="display:flex;flex-direction:column;gap:3px">
+                  <span v-for="pid in u.participe_ids" :key="pid" class="badge badge-outline-yellow" style="font-size:10px;width:fit-content">{{ nombreParticipe(pid) }}</span>
+                </div>
               </template>
               <span v-else-if="u.rol === 'participe'" style="color:var(--text3)">Sin vincular</span>
               <span v-else>—</span>
@@ -36,10 +38,17 @@
             <td><span class="badge" :class="u.activo ? 'badge-outline-green' : 'badge-outline-gray'">{{ u.activo ? 'Activo' : 'Pendiente' }}</span></td>
             <td style="display:flex;gap:6px;flex-wrap:wrap">
               <button class="btn btn-sm btn-registrar" style="font-size:11px;padding:3px 9px" @click="editar(u)">✎ Editar</button>
+              <button v-if="isAdmin && !u.activo" class="btn btn-sm" style="font-size:11px;padding:3px 9px;background:var(--orange);color:#fff;border-color:var(--orange)"
+                title="Reinvitar: envía una nueva invitación con nuevas credenciales"
+                @click="reinvitar(u)">↺ Reinvitar</button>
               <button v-if="isAdmin" class="btn btn-sm btn-danger" style="font-size:11px;padding:3px 9px"
                 :disabled="u.id === usuarioActualId"
-                :title="u.id === usuarioActualId ? 'No puedes eliminarte a ti mismo' : 'Eliminar usuario'"
-                @click="confirmarEliminar(u)">✕ Eliminar</button>
+                :title="u.id === usuarioActualId ? 'No puedes desactivarte a ti mismo' : u.activo ? 'Desactivar usuario' : 'Reactivar usuario'"
+                @click="confirmarEliminar(u)">{{ u.activo ? '✕ Desactivar' : '✓ Activar' }}</button>
+              <button v-if="isAdmin" class="btn btn-sm btn-danger-solid" style="font-size:11px;padding:3px 9px"
+                :disabled="u.id === usuarioActualId"
+                :title="u.id === usuarioActualId ? 'No puedes eliminarte a ti mismo' : 'Eliminar usuario definitivamente'"
+                @click="eliminarUsuario(u)">✕</button>
             </td>
           </tr>
           <tr v-if="!usuarios.length">
@@ -229,7 +238,28 @@ function rolBadge(rol) {
 const usuarioActualId = computed(() => user.value?.id)
 
 async function confirmarEliminar(u) {
-  if (!confirm(`¿Eliminar el usuario "${u.nombre || u.email}"?\nEsto eliminará su acceso de forma permanente.`)) return
+  const activar = !u.activo
+  const msg = activar
+    ? `¿Reactivar el usuario "${u.nombre || u.email}"?`
+    : `¿Desactivar el usuario "${u.nombre || u.email}"?\nEl usuario perderá el acceso de forma inmediata.`
+  if (!confirm(msg)) return
+  try {
+    const { error } = await supabase
+      .from('perfiles')
+      .update({ activo: activar })
+      .eq('id', u.id)
+    if (error) throw error
+    await cargar()
+  } catch (e) {
+    alert(`Error al ${activar ? 'reactivar' : 'desactivar'}: ` + e.message)
+  }
+}
+
+async function eliminarUsuario(u) {
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return alert('⚠️ Eliminar usuarios solo funciona en producción.')
+  }
+  if (!confirm(`¿Eliminar definitivamente a "${u.nombre || u.email}"?\nEsta acción no se puede deshacer.`)) return
   try {
     const { data: { session } } = await supabase.auth.getSession()
     const res = await fetch(`/api/usuarios/${u.id}`, {
@@ -242,6 +272,14 @@ async function confirmarEliminar(u) {
   } catch (e) {
     alert('Error al eliminar: ' + e.message)
   }
+}
+
+async function reinvitar(u) {
+  if (!confirm(`¿Reinvitar a "${u.nombre || u.email}"?\nSe enviará una nueva invitación con nuevas credenciales.`)) return
+  // Abre el modal con el email precargado — la Edge Function gestiona el borrado del anterior
+  formInvitar.value = { email: u.email, nombre: u.nombre || '', rol: u.rol || 'interno', participe_ids: u.participe_ids || [] }
+  msgInvitar.value  = null
+  modalInvitar.value = true
 }
 
 const modalInvitar  = ref(false)
@@ -257,19 +295,27 @@ function abrirInvitar() {
 
 async function enviarInvitacion() {
   if (!formInvitar.value.email) return alert('El email es obligatorio')
+  // En local no hay API routes — solo funciona en producción
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    msgInvitar.value = { ok: false, text: '⚠️ La invitación de usuarios solo funciona en producción. Despliega con vercel --prod y pruébalo desde promocima-prestamos.vercel.app' }
+    return
+  }
   savingInvitar.value = true
   msgInvitar.value    = null
   try {
-    const { data, error } = await supabase.functions.invoke('invite-user', {
-      body: {
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/invitar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+      body: JSON.stringify({
         email:        formInvitar.value.email,
         nombre:       formInvitar.value.nombre,
         rol:          formInvitar.value.rol,
         participe_ids: formInvitar.value.rol === 'participe' ? formInvitar.value.participe_ids : [],
-      }
+      })
     })
-    if (error) throw new Error(error.message || JSON.stringify(error))
-    if (data?.error) throw new Error(data.error)
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error)
     msgInvitar.value = { ok: true, text: `Invitación enviada a ${formInvitar.value.email}.` }
     formInvitar.value = { email: '', nombre: '', rol: 'interno', participe_ids: [] }
     await cargar()

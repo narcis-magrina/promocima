@@ -240,7 +240,7 @@
               <span class="kpi-row-val">{{ fmtN(kpiAperturaLTM) }}</span>
             </div>
             <div class="kpi-row kpi-row-sep" style="margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.15)">
-              <span style="font-size:11px;color:var(--text2)">Rent. capital Promocima</span>
+              <span style="font-size:11px;color:var(--text2)">Rentabilidad añadida</span>
               <span class="kpi-row-val" style="font-size:11px">{{ kpiRentCapPromo }}%</span>
             </div>
           </div>

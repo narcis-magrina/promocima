@@ -450,10 +450,10 @@
             </tr>
           </tbody>
           <tfoot>
-            <tr style="border-top:2px solid var(--border);font-weight:700">
-              <td>Total</td>
-              <td class="td-mono td-right" style="color:var(--purple)">{{ fmtInt(ccpActivos.reduce((s,c) => s + Number(c.importe_participacion), 0)) }}</td>
-              <td class="td-mono td-right">
+            <tr style="border-top:2px solid var(--border2);font-weight:700;background:var(--bg3)">
+              <td style="padding:10px 12px">Total</td>
+              <td class="td-mono td-right" style="color:var(--purple);padding:10px 12px">{{ fmtInt(ccpActivos.reduce((s,c) => s + Number(c.importe_participacion), 0)) }}</td>
+              <td class="td-mono td-right" style="padding:10px 12px">
                 {{ prestamo.importe > 0 ? ((ccpActivos.reduce((s,c) => s + Number(c.importe_participacion), 0) / Number(prestamo.importe)) * 100).toFixed(1) : '—' }}%
               </td>
             </tr>

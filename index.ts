@@ -31,10 +31,19 @@ Deno.serve(async (req) => {
     const hex = Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('')
     const tempPassword = hex.slice(0, 4).toUpperCase() + hex.slice(4) + 'A1!'
 
-    // Verificar si ya existe
+    // Verificar si ya existe — si es una reinvitación, borrar el usuario anterior
     const { data: { users } } = await supabaseAdmin.auth.admin.listUsers()
-    if (users?.some((u: any) => u.email === email)) {
-      return json({ error: `Ya existe un usuario con el email ${email}` }, 400)
+    const existingUser = users?.find((u: any) => u.email === email)
+    if (existingUser) {
+      // Solo se permite reinvitar si el perfil está inactivo (invitación pendiente)
+      const { data: perfilExistente } = await supabaseAdmin
+        .from('perfiles').select('activo').eq('id', existingUser.id).single()
+      if (perfilExistente?.activo) {
+        return json({ error: `Ya existe un usuario activo con el email ${email}` }, 400)
+      }
+      // Borrar perfil y usuario Auth anteriores para reinvitar limpio
+      await supabaseAdmin.from('perfiles').delete().eq('id', existingUser.id)
+      await supabaseAdmin.auth.admin.deleteUser(existingUser.id)
     }
 
     // Crear usuario en Auth
