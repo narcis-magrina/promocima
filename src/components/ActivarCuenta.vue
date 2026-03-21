@@ -15,13 +15,21 @@
 
         <div class="form-group">
           <label class="form-label">Nueva contraseña</label>
-          <input class="form-control" type="password" v-model="newPassword"
-            placeholder="Mínimo 8 caracteres" @keydown.enter="activar" />
+          <div style="position:relative">
+            <input class="form-control" :type="showPass ? 'text' : 'password'" v-model="newPassword"
+              placeholder="Mínimo 8 caracteres" @keydown.enter="activar" style="padding-right:38px" />
+            <button type="button" @click="showPass=!showPass"
+              style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:2px">
+              {{ showPass ? '🙈' : '👁' }}
+            </button>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Confirmar contraseña</label>
-          <input class="form-control" type="password" v-model="confirmPassword"
-            placeholder="Repite la contraseña" @keydown.enter="activar" />
+          <div style="position:relative">
+            <input class="form-control" :type="showPass ? 'text' : 'password'" v-model="confirmPassword"
+              placeholder="Repite la contraseña" @keydown.enter="activar" style="padding-right:38px" />
+          </div>
         </div>
 
         <div v-if="error" class="login-error">{{ error }}</div>
@@ -53,6 +61,7 @@ import { supabase } from '../supabase.js'
 const props = defineProps({ perfil: Object })
 const emit  = defineEmits(['activado', 'logout'])
 
+const showPass        = ref(false)
 const newPassword     = ref('')
 const confirmPassword = ref('')
 const saving          = ref(false)

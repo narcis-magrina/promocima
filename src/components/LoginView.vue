@@ -15,23 +15,33 @@
         </div>
         <div class="form-group">
           <label class="form-label">Nueva contraseña</label>
-          <input
-            class="form-control"
-            type="password"
-            v-model="newPassword"
-            placeholder="Mínimo 6 caracteres"
-            @keydown.enter="handleSetPassword"
-          />
+          <div style="position:relative">
+            <input
+              class="form-control"
+              :type="showPass ? 'text' : 'password'"
+              v-model="newPassword"
+              placeholder="Mínimo 6 caracteres"
+              @keydown.enter="handleSetPassword"
+              style="padding-right:38px"
+            />
+            <button type="button" @click="showPass=!showPass"
+              style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:2px">
+              {{ showPass ? '🙈' : '👁' }}
+            </button>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Confirmar contraseña</label>
-          <input
-            class="form-control"
-            type="password"
-            v-model="confirmPassword"
-            placeholder="Repita la contraseña"
-            @keydown.enter="handleSetPassword"
-          />
+          <div style="position:relative">
+            <input
+              class="form-control"
+              :type="showPass ? 'text' : 'password'"
+              v-model="confirmPassword"
+              placeholder="Repita la contraseña"
+              @keydown.enter="handleSetPassword"
+              style="padding-right:38px"
+            />
+          </div>
         </div>
 
         <div v-if="error" class="login-error">{{ error }}</div>
@@ -62,14 +72,21 @@
         </div>
         <div class="form-group">
           <label class="form-label">Contraseña</label>
-          <input
-            class="form-control"
-            type="password"
-            v-model="password"
-            placeholder="••••••••"
-            autocomplete="current-password"
-            @keydown.enter="handleLogin"
-          />
+          <div style="position:relative">
+            <input
+              class="form-control"
+              :type="showPass ? 'text' : 'password'"
+              v-model="password"
+              placeholder="••••••••"
+              autocomplete="current-password"
+              @keydown.enter="handleLogin"
+              style="padding-right:38px"
+            />
+            <button type="button" @click="showPass=!showPass"
+              style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:2px">
+              {{ showPass ? '🙈' : '👁' }}
+            </button>
+          </div>
         </div>
 
         <div style="display:flex;align-items:center;gap:8px;margin-top:-4px">
@@ -135,6 +152,7 @@ const { login, authError, loading, isRecoveryMode } = useAuth()
 
 const email           = ref('')
 const password        = ref('')
+const showPass        = ref(false)
 const recordar        = ref(false)
 const newPassword     = ref('')
 const confirmPassword = ref('')
