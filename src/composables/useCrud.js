@@ -1,5 +1,6 @@
 import { ref, onMounted, watch } from 'vue'
 import { supabase } from '../supabase.js'
+import { useAuth } from './useAuth.js'
 
 /**
  * useCrud — composable genérico para operaciones CRUD sobre una tabla de Supabase.
@@ -19,6 +20,8 @@ import { supabase } from '../supabase.js'
  *   @param {Function} opciones.onGuardado     Callback tras guardar exitoso (async opcional)
  */
 export function useCrud(tabla, formVacio, opciones = {}) {
+  const { empresaId } = useAuth()
+
   const {
     ordenPor      = 'id',
     prefixId      = tabla[0].toUpperCase(),
@@ -121,6 +124,8 @@ export function useCrud(tabla, formVacio, opciones = {}) {
       if (error) return alert('Error al guardar: ' + error.message)
     } else {
       const nuevoId = await generarId()
+      // Inyectar empresa_id automáticamente en todos los inserts
+      if (empresaId.value && !data.empresa_id) data.empresa_id = empresaId.value
       const { error } = await supabase.from(tabla).insert({ id: nuevoId, ...data })
       if (error) return alert('Error al guardar: ' + error.message)
     }

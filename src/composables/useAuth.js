@@ -126,6 +126,7 @@ export function useAuth() {
   const isParticipe  = computed(() => rol.value === 'participe')
   const participeIds = computed(() => perfil.value?.participe_ids || [])
   const participeId  = computed(() => participeIds.value[0] || null)  // primer partícipe (compatibilidad)
+  const empresaId    = computed(() => perfil.value?.empresa_id || null)
 
   async function login(email, password, recordar = false) {
     authError.value = null
@@ -177,7 +178,7 @@ export function useAuth() {
     session, perfil, loading, authError,
     // Derived
     user, rol, nombre, initiales,
-    isAdmin, isInterno, isParticipe, participeId, participeIds,
+    isAdmin, isInterno, isParticipe, participeId, participeIds, empresaId,
     // Actions
     login, logout, guardarPerfil, listarUsuarios,
     isRecoveryMode,

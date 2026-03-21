@@ -135,6 +135,13 @@
               <input class="form-control" v-model="formInvitar.nombre" placeholder="Nombre y apellidos">
             </div>
             <div class="form-group">
+              <label class="form-label">Empresa</label>
+              <select class="form-control" v-model="formInvitar.empresa_id">
+                <option value="">-- Selecciona empresa --</option>
+                <option v-for="e in empresas" :key="e.id" :value="e.id">{{ e.nombre }}</option>
+              </select>
+            </div>
+            <div class="form-group">
               <label class="form-label">Rol</label>
               <select class="form-control" v-model="formInvitar.rol">
                 <option value="interno">Interno</option>
@@ -175,25 +182,30 @@ import { ref, computed, onMounted } from 'vue'
 import { useAuth } from '../composables/useAuth.js'
 import { supabase } from '../supabase.js'
 
-const { listarUsuarios, user, isAdmin } = useAuth()
+const { listarUsuarios, user, isAdmin , empresaId } = useAuth()
 
 const usuarios     = ref([])
 const participes   = ref([])
+const empresas     = ref([])
 const modalAbierto = ref(false)
 const saving       = ref(false)
 const msgEditar    = ref(null)
 const form         = ref(formVacio())
 
 function formVacio() {
-  return { id: null, email: '', nombre: '', rol: 'interno', participe_ids: [], activo: true }
+  return { id: null, email: '', nombre: '', rol: 'interno', participe_ids: [], activo: true, empresa_id: '' }
 }
 
 onMounted(cargar)
 
 async function cargar() {
   try { usuarios.value = await listarUsuarios() } catch { usuarios.value = [] }
-  const { data } = await supabase.from('participes').select('id, nombre').eq('activo', true).order('nombre')
-  participes.value = data || []
+  const [{ data: pts }, { data: emps }] = await Promise.all([
+    supabase.from('participes').select('id, nombre').eq('activo', true).order('nombre'),
+    supabase.from('empresas').select('id, nombre').eq('activa', true).order('id'),
+  ])
+  participes.value = pts || []
+  empresas.value   = emps || []
 }
 
 function nombreParticipe(id) {
@@ -220,6 +232,7 @@ async function guardar() {
       activo:        form.value.activo,
       participe_ids: ids,
       participe_id:  ids.length > 0 ? ids[0] : null,
+      empresa_id:    form.value.empresa_id || empresaId.value,
     }).eq('id', form.value.id)
     if (error) throw error
     modalAbierto.value = false
@@ -285,10 +298,10 @@ async function reinvitar(u) {
 const modalInvitar  = ref(false)
 const savingInvitar = ref(false)
 const msgInvitar    = ref(null)
-const formInvitar   = ref({ email: '', nombre: '', rol: 'interno', participe_ids: [] })
+const formInvitar   = ref({ email: '', nombre: '', rol: 'interno', participe_ids: [], empresa_id: '' })
 
 function abrirInvitar() {
-  formInvitar.value  = { email: '', nombre: '', rol: 'interno', participe_ids: [] }
+  formInvitar.value  = { email: '', nombre: '', rol: 'interno', participe_ids: [], empresa_id: empresaId.value || '' }
   msgInvitar.value   = null
   modalInvitar.value = true
 }
@@ -312,6 +325,7 @@ async function enviarInvitacion() {
         nombre:       formInvitar.value.nombre,
         rol:          formInvitar.value.rol,
         participe_ids: formInvitar.value.rol === 'participe' ? formInvitar.value.participe_ids : [],
+        empresa_id:   formInvitar.value.empresa_id || empresaId.value,
       })
     })
     const data = await res.json()

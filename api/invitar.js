@@ -10,7 +10,8 @@ export default async function handler(req, res) {
 
   try {
     await verificarAdmin(req)
-    const { email, nombre, rol, participe_ids } = req.body
+    const { email, nombre, rol, participe_ids, empresa_id } = req.body
+    if (!empresa_id) return res.status(400).json({ error: 'empresa_id requerido' })
     if (!email) return res.status(400).json({ error: 'Email requerido' })
     console.log('[invitar] Inicio para:', email)
 
@@ -51,6 +52,7 @@ export default async function handler(req, res) {
       nombre: nombre || '',
       rol: rol || 'interno',
       participe_ids: rol === 'participe' ? (participe_ids || []) : [],
+      empresa_id,
       activo: false
     })
     if (perfilError) {
