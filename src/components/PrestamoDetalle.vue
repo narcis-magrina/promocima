@@ -525,6 +525,9 @@
 </template>
 
 <script setup>
+import { useAuth } from '../composables/useAuth.js'
+import { traducirErrorSupabase } from '../utils/validar.js'
+const { empresaId } = useAuth()
 import { ref, computed, watch, onMounted } from 'vue'
 import { supabase } from '../supabase.js'
 import { fmt, fmtInt, fmtDate, generateCalendarioTeorico, getCuotaEstado, getEstadoBadge, getTipoBadge, uuid, today , fmtDec } from '../utils.js'
@@ -793,6 +796,7 @@ async function cobrarCuotaDirecto(c) {
       importe,
       tipo: 'pago_cuota',
       notas: '',
+      empresa_id: empresaId.value,
     })
     emit('recargar')
     tabActivo.value = 'calendario'
@@ -848,10 +852,11 @@ async function guardarCobro() {
     notas,
     fecha_real_cobro:    formCobro.value.fecha_real_cobro    || null,
     importe_real_cobro:  formCobro.value.importe_real_cobro  ? Math.round(Number(formCobro.value.importe_real_cobro) * 100) / 100 : null,
+    empresa_id:          empresaId.value,
   }
 
   const { error } = await supabase.from('cobros').insert(insert)
-  if (error) return alert('Error al registrar: ' + error.message)
+  if (error) return alert(traducirErrorSupabase(error))
 
   modalCuota.value = false
   emit('recargar')
@@ -1024,9 +1029,10 @@ async function procesarArchivoExcel(file) {
       return
     }
 
+    inserts.forEach(i => { i.empresa_id = empresaId.value })
     const { error } = await supabase.from('cobros').insert(inserts)
     if (error) {
-      importResult.value = { error: 'Error al guardar: ' + error.message }
+      importResult.value = { error: traducirErrorSupabase(error) }
       return
     }
 
@@ -1054,9 +1060,10 @@ async function registrarHastaHoy() {
       importe: Math.round(c.total * 100) / 100,
       tipo: 'pago_cuota',
       notas: 'Registrado automáticamente',
+      empresa_id: empresaId.value,
     }))
     const { error } = await supabase.from('cobros').insert(inserts)
-    if (error) return alert('Error al registrar: ' + error.message)
+    if (error) return alert(traducirErrorSupabase(error))
     emit('recargar')
   } finally { saving.value = false }
 }

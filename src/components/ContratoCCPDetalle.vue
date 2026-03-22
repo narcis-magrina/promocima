@@ -419,6 +419,9 @@
 </template>
 
 <script setup>
+import { useAuth } from '../composables/useAuth.js'
+import { validarCampos, traducirErrorSupabase } from '../utils/validar.js'
+const { empresaId } = useAuth()
 import { ref, computed, onMounted, watch } from 'vue'
 import { supabase } from '../supabase.js'
 import { fmt, fmtDate, today, uuid, calcularLineasCCP , fmtDec } from '../utils.js'
@@ -450,7 +453,7 @@ function formPagoVacio() {
 const formPago = ref(formPagoVacio())
 
 async function cargarConfig() {
-  const { data } = await supabase.from('config').select('porcentaje_irpf').eq('id', 1).single()
+  const { data } = await supabase.from('config').select('porcentaje_irpf').limit(1).single()
   if (data?.porcentaje_irpf) pctIRPF.value = data.porcentaje_irpf
 }
 
@@ -602,10 +605,11 @@ function abrirRegistrarPago() {
 }
 
 async function guardarPago() {
-  if (!formPago.value.fecha_pago_real || !formPago.value.importe_devengado)
-    return alert('Fecha e importe devengado son obligatorios')
-  if (Number(formPago.value.importe_devengado) <= 0)
-    return alert('El importe debe ser mayor que cero')
+  const errores = validarCampos(formPago.value, [
+    { campo: 'fecha_pago_real',   label: 'Fecha Pago',            requerido: true, tipo: 'fecha' },
+    { campo: 'importe_devengado', label: 'Importe Devengado (€)', requerido: true, tipo: 'numero', min: 0.01 },
+  ])
+  if (errores.length) return alert(errores.join('\n'))
   saving.value = true
   try {
     const { error } = await supabase.from('pagos_reales_participe').insert({
@@ -618,8 +622,9 @@ async function guardarPago() {
       importe_retencion: Number(formPago.value.importe_retencion),
       importe_neto:      Number(formPago.value.importe_neto),
       observaciones:     formPago.value.observaciones || null,
+      empresa_id:        empresaId.value,
     })
-    if (error) { alert('Error al guardar: ' + error.message); return }
+    if (error) { alert(traducirErrorSupabase(error)); return }
     modalPago.value = false
     await cargarPagos()
   } finally { saving.value = false }

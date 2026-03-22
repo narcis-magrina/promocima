@@ -137,7 +137,7 @@
         <div class="modal-body">
           <!-- Datos del préstamo -->
           <div class="form-grid">
-            <div class="form-group"><label class="form-label">Alias <span class="req">*</span></label><input class="form-control" v-model="formP.alias"></div>
+            <div class="form-group"><label class="form-label">Alias <span class="req">*</span></label><input class="form-control" v-focus v-model="formP.alias"></div>
             <div class="form-group"><label class="form-label">Centro de Coste</label><input class="form-control" v-model="formP.centro_coste"></div>
             <div class="form-group"><label class="form-label">Cliente <span class="req">*</span></label>
               <select class="form-control" :class="{'filter-active': !!formP.cliente_id}" v-model="formP.cliente_id" :style="!!formP.cliente_id ? 'border-color:var(--accent);border-width:2px;color:var(--accent)' : ''">
@@ -250,6 +250,9 @@
 </template>
 
 <script setup>
+import { validarCampos, traducirErrorSupabase } from '../utils/validar.js'
+import { useAuth } from '../composables/useAuth.js'
+const { empresaId } = useAuth()
 import { ref, computed, onMounted, watch } from 'vue'
 import { useSort } from '../composables/useSort.js'
 import { usePersistedRef } from '../composables/usePersistedRef.js'
@@ -498,9 +501,27 @@ function editarPrestamo(p) {
 }
 
 async function guardarPrestamo() {
-  if (!formP.value.alias || !formP.value.importe) return alert('Completa los campos obligatorios')
-  if (formP.value.tipo_prestamo === 'Francés con carencia' && !formP.value.meses_carencia)
-    return alert('Indica los meses de carencia del préstamo')
+  // Limpiar campos numéricos vacíos antes de validar (evita error de Supabase)
+  const camposNumericos = ['importe','duracion_meses','dia_cobro','meses_carencia',
+    'garantia_tasacion','interes_ordinario','interes_demora','comision_apertura']
+  for (const c of camposNumericos) {
+    if (formP.value[c] === '' || formP.value[c] === null) formP.value[c] = null
+  }
+  const reglas = [
+    { campo: 'alias',          label: 'Alias',              requerido: true },
+    { campo: 'cliente_id',     label: 'Cliente',            requerido: true },
+    { campo: 'importe',        label: 'Importe (€)',        requerido: true, tipo: 'numero', min: 0.01 },
+    { campo: 'fecha_inicio',   label: 'Fecha Inicio',       requerido: true, tipo: 'fecha' },
+    { campo: 'duracion_meses', label: 'Duración (meses)',   requerido: true, tipo: 'numero', min: 1 },
+    { campo: 'dia_cobro',      label: 'Día de Cobro',       requerido: true, tipo: 'numero', min: 1, max: 31 },
+    { campo: 'meses_carencia', label: 'Meses de carencia',  requerido: formP.value.tipo_prestamo === 'Francés con carencia', tipo: 'numero', min: 0 },
+    { campo: 'garantia_tasacion', label: 'Tasación (€)',    requerido: true, tipo: 'numero', min: 0.01 },
+    { campo: 'interes_ordinario', label: 'Interés Ordinario (%)', tipo: 'numero', min: 0 },
+    { campo: 'interes_demora',    label: 'Interés Demora (%)',    tipo: 'numero', min: 0 },
+    { campo: 'comision_apertura', label: 'Comisión Apertura (%)', tipo: 'numero', min: 0 },
+  ]
+  const errores = validarCampos(formP.value, reglas)
+  if (errores.length) return alert(errores.join('\n'))
   // Validación campos bloqueados en americano: la duración nueva debe superar el último cobro
   if (cobrosVencimientoExisten.value && formP.value.tipo_prestamo === 'Americano') {
     if (Number(formP.value.duracion_meses) <= ultimaCuotaCobrada.value) {
@@ -512,6 +533,8 @@ async function guardarPrestamo() {
     if (ltv > 40 && !confirm(`Aviso: el LTV es del ${ltv.toFixed(1)}%, por encima del 40% recomendado. ¿Desea guardar igualmente?`)) return
   }
   const data = { ...formP.value, intermediario_id: formP.value.intermediario_id || null }
+  // Inyectar empresa_id
+  data.empresa_id = empresaId.value
   // Limpiar meses_carencia si no es carencia
   if (data.tipo_prestamo !== 'Francés con carencia') data.meses_carencia = null
   delete data.id
@@ -519,12 +542,14 @@ async function guardarPrestamo() {
   if (formP.value.id) {
     ;({ error } = await supabase.from('prestamos').update(data).eq('id', formP.value.id))
   } else {
-    const nums = prestamos.value.map(p => parseInt(p.id.replace(/\D/g, '')) || 0)
+    // Filtrar por empresa para secuencia de IDs independiente por empresa
+    const { data: idsEmpresa } = await supabase.from('prestamos').select('id').eq('empresa_id', empresaId.value)
+    const nums = (idsEmpresa || []).map(p => parseInt(p.id.replace(/\D/g, '')) || 0)
     const siguiente = (nums.length ? Math.max(...nums) : 0) + 1
     const nuevoId = 'P' + String(siguiente).padStart(6, '0')
     ;({ error } = await supabase.from('prestamos').insert({ id: nuevoId, ...data, estado: 'activo', judicializado: false }))
   }
-  if (error) return alert('Error al guardar: ' + error.message)
+  if (error) return alert(traducirErrorSupabase(error))
   modalPrestamo.value = false
   await cargarTodo()
 }

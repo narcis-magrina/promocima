@@ -11,7 +11,6 @@
         <div style="display:flex;gap:8px">
           <button v-if="!readOnly" class="btn btn-sm btn-registrar" @click="editar(participe)">✎ Editar</button>
           <button v-if="!readOnly" class="btn btn-sm btn-danger" @click="eliminarParticipe(participe.id)">✕ Eliminar</button>
-          <button v-if="!readOnly" class="btn btn-sm btn-primary" @click="$emit('navigate','contratos-ccp')">Ver Contratos CCP →</button>
         </div>
       </div>
 
@@ -19,8 +18,8 @@
       <div v-if="kpiPartLoading" style="color:var(--text3);font-size:12px;margin-bottom:16px">Calculando KPIs…</div>
       <template v-else>
 
-        <!-- Fila 1: Capital Invertido + Rentabilidad -->
-        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:14px">
+        <!-- Fila 1: Capital Invertido + Rentabilidad + Situación mes -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px">
 
           <!-- Capital Invertido -->
           <div class="kpi-card kc-purple">
@@ -60,6 +59,25 @@
               <div class="kpi-row kpi-row-sep">
                 <span>Rentabilidad</span>
                 <span class="kpi-row-val">{{ kpartRentPct }}%</span>
+              </div>
+            </div>
+          </div>
+          <!-- Situación mes — ahora en Fila 1 -->
+          <div class="kpi-card kc-orange">
+            <div class="kpi-label">Situación mes</div>
+            <div class="kpi-value" style="font-size:20px">{{ fmtN(kpartBrutoMes) }}</div>
+            <div style="margin-top:8px;display:grid;gap:4px">
+              <div class="kpi-row">
+                <span>Beneficio/mes</span>
+                <span class="kpi-row-val">{{ fmtN(kpartBrutoMes) }}</span>
+              </div>
+              <div class="kpi-row">
+                <span>Neto/mes</span>
+                <span class="kpi-row-val">{{ fmtN(kpartNetoMes) }}</span>
+              </div>
+              <div class="kpi-row kpi-row-sep">
+                <span>Devengado pendiente</span>
+                <span class="kpi-row-val">{{ kpartDevengadoTotal > 0 ? fmtN(kpartDevengadoTotal) : '—' }}</span>
               </div>
             </div>
           </div>
@@ -113,43 +131,17 @@
           </div>
         </div>
 
-        <!-- Fila 3: Situación mes -->
-        <div style="margin-bottom:20px">
-          <div class="kpi-card kc-orange">
-            <div class="kpi-label">Situación mes</div>
-            <div class="kpi-value" style="font-size:20px">{{ fmtN(kpartBrutoMes) }}</div>
-            <div style="margin-top:8px;display:grid;gap:4px">
-              <div class="kpi-row">
-                <span>Beneficio/mes</span>
-                <span class="kpi-row-val">{{ fmtN(kpartBrutoMes) }}</span>
-              </div>
-              <div class="kpi-row">
-                <span>Neto/mes</span>
-                <span class="kpi-row-val">{{ fmtN(kpartNetoMes) }}</span>
-              </div>
-              <div class="kpi-row kpi-row-sep">
-                <span>Devengado pendiente</span>
-                <span class="kpi-row-val">{{ kpartDevengadoTotal > 0 ? fmtN(kpartDevengadoTotal) : '—' }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
       </template>
 
       <!-- Datos del partícipe — oculto en el portal -->
-      <div v-if="!esPortalParticipe" class="detail-grid">
-        <div class="detail-item"><div class="detail-label">Tipo</div><div class="detail-value">{{ participe.tipo }}</div></div>
-        <div class="detail-item"><div class="detail-label">Teléfono</div><div class="detail-value">{{ participe.telefono || '—' }}</div></div>
-        <div class="detail-item"><div class="detail-label">Email</div><div class="detail-value">{{ participe.email || '—' }}</div></div>
-        <div class="detail-item"><div class="detail-label">Centro de Coste</div><div class="detail-value mono">{{ participe.centro_coste || '—' }}</div></div>
-        <div class="detail-item"><div class="detail-label">Fecha Alta</div><div class="detail-value">{{ fmtDate(participe.fecha_alta) }}</div></div>
-        <div class="detail-item"><div class="detail-label">Estado</div>
-          <div><span class="badge" :class="participe.activo ? 'badge-green' : 'badge-gray'">{{ participe.activo ? 'Activo' : 'Inactivo' }}</span></div>
-        </div>
-        <div class="detail-item" v-if="participe.direccion" style="grid-column:span 3">
-          <div class="detail-label">Dirección</div><div class="detail-value">{{ participe.direccion }}</div>
-        </div>
+      <div v-if="!esPortalParticipe" class="detail-grid" style="margin-bottom:20px">
+        <div class="detail-item"><span class="detail-label">Tipo</span><span class="detail-value">{{ participe.tipo || '—' }}</span></div>
+        <div class="detail-item"><span class="detail-label">Centro de Coste</span><span class="detail-value mono">{{ participe.centro_coste || '—' }}</span></div>
+        <div class="detail-item"><span class="detail-label">Teléfono</span><span class="detail-value">{{ participe.telefono || '—' }}</span></div>
+        <div class="detail-item"><span class="detail-label">Email</span><span class="detail-value">{{ participe.email || '—' }}</span></div>
+        <div class="detail-item"><span class="detail-label">Fecha Alta</span><span class="detail-value">{{ fmtDate(participe.fecha_alta) || '—' }}</span></div>
+        <div class="detail-item"><span class="detail-label">Estado</span><span class="detail-value"><span class="badge" :class="participe.activo ? 'badge-green' : 'badge-gray'">{{ participe.activo ? 'Activo' : 'Inactivo' }}</span></span></div>
+        <div class="detail-item span-2" v-if="participe.direccion"><span class="detail-label">Dirección</span><span class="detail-value">{{ participe.direccion }}</span></div>
       </div>
         <!-- Filtro de estado — solo si hay cancelados -->
       <div v-if="contratosParticipe.some(c => c.prestamos?.estado === 'cancelado')" style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
@@ -334,7 +326,7 @@
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label">Centro de Coste <span class="req">*</span></label>
-              <input class="form-control" type="number" v-model="form.centro_coste">
+              <input class="form-control" v-focus type="number" v-model="form.centro_coste">
             </div>
             <div class="form-group">
               <label class="form-label">Tipo</label>
@@ -373,6 +365,7 @@
 </template>
 
 <script setup>
+import { validarCampos, traducirErrorSupabase } from '../utils/validar.js'
 import { ref, computed, toRef, onMounted, watch } from 'vue'
 import { usePersistedRef } from '../composables/usePersistedRef.js'
 import { useSort } from '../composables/useSort.js'
@@ -614,7 +607,14 @@ const {
         return { ...x, nContratos: conts.filter(c => c.participe_id === x.id).length, capitalParticipado, capitalParticipActivo }
       })
     },
-    validar: f => (!(f.nombre || '').trim() || f.centro_coste === '' || f.centro_coste === null || f.centro_coste === undefined) ? 'Nombre y Centro de Coste son obligatorios' : null,
+    validar: f => {
+      const errores = validarCampos(f, [
+        { campo: 'nombre',       label: 'Nombre / Razón Social', requerido: true },
+        { campo: 'centro_coste', label: 'Centro de Coste',       requerido: true, tipo: 'numero' },
+        { campo: 'email',        label: 'Email',                  tipo: 'email' },
+      ])
+      return errores.length ? errores.join('\n') : null
+    },
     prepararData: f => {
       const data = { ...f }
       delete data.id
@@ -706,7 +706,7 @@ async function cargarKPIsPart(pid) {
       supabase.from('contratos_ccp')
         .select('*, prestamos(id, alias, estado, importe, interes_ordinario, fecha_inicio, dia_cobro, duracion_meses, tipo_prestamo, periodicidad, garantia_tasacion, meses_carencia)')
         .eq('participe_id', pid),
-      supabase.from('config').select('porcentaje_irpf').eq('id', 1).single(),
+      supabase.from('config').select('porcentaje_irpf').limit(1).single(),
     ])
 
     // Filtrar contratos y préstamos por fecha de cierre

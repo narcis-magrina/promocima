@@ -1,6 +1,7 @@
 import { ref, onMounted, watch } from 'vue'
 import { supabase } from '../supabase.js'
 import { useAuth } from './useAuth.js'
+import { traducirErrorSupabase } from '../utils/validar.js'
 
 /**
  * useCrud — composable genérico para operaciones CRUD sobre una tabla de Supabase.
@@ -88,7 +89,10 @@ export function useCrud(tabla, formVacio, opciones = {}) {
   // Esto evita duplicados tanto por race conditions como por items en memoria desactualizados.
   // Los IDs tienen formato: prefixId + número con padding, ej: 'C001', 'PT003', 'I010'.
   async function generarId() {
-    const { data } = await supabase.from(tabla).select('id')
+    // Filtrar por empresa_id para que cada empresa tenga su propia secuencia de IDs
+    let query = supabase.from(tabla).select('id')
+    if (empresaId.value) query = query.eq('empresa_id', empresaId.value)
+    const { data } = await query
     const registros = data || []
     const nums = registros.map(x => {
       // Extraer solo los dígitos del ID (funciona con 'C001', 'PT001', 'I001', etc.)
@@ -121,13 +125,13 @@ export function useCrud(tabla, formVacio, opciones = {}) {
     // Upsert
     if (form.value.id) {
       const { error } = await supabase.from(tabla).update(data).eq('id', form.value.id)
-      if (error) return alert('Error al guardar: ' + error.message)
+      if (error) return alert(traducirErrorSupabase(error))
     } else {
       const nuevoId = await generarId()
       // Inyectar empresa_id automáticamente en todos los inserts
       if (empresaId.value && !data.empresa_id) data.empresa_id = empresaId.value
       const { error } = await supabase.from(tabla).insert({ id: nuevoId, ...data })
-      if (error) return alert('Error al guardar: ' + error.message)
+      if (error) return alert(traducirErrorSupabase(error))
     }
 
     modalAbierto.value = false

@@ -218,7 +218,7 @@
         <div class="form-grid" style="gap:14px">
           <div class="form-group">
             <label class="form-label">Préstamo</label>
-            <input class="form-control" :value="formModificar.alias" disabled style="opacity:0.6">
+            <input class="form-control" v-focus :value="formModificar.alias" disabled style="opacity:0.6">
           </div>
           <div class="form-group">
             <label class="form-label">Cuota nº</label>
@@ -254,6 +254,9 @@
 </template>
 
 <script setup>
+import { validarCampos, traducirErrorSupabase } from '../utils/validar.js'
+import { useAuth } from '../composables/useAuth.js'
+const { empresaId } = useAuth()
 import { ref, computed, onMounted, watch } from 'vue'
 import { useSort } from '../composables/useSort.js'
 import { usePersistedRef } from '../composables/usePersistedRef.js'
@@ -423,8 +426,9 @@ async function cobrarCuota(cuota) {
     importe_principal: cuota.principal,
     tipo:              'pago_cuota',  // judicialización no genera cobro en BD
     notas:             '',
+    empresa_id:        empresaId.value,
   })
-  if (error) { alert('Error: ' + error.message); cuota.registrando = false; return }
+  if (error) { alert(traducirErrorSupabase(error)); cuota.registrando = false; return }
   // Quitar de la lista
   cuotasPendientes.value = cuotasPendientes.value.filter(c => c._key !== cuota._key)
   await cargarCobros()
@@ -503,7 +507,11 @@ function abrirModificar(cuota) {
 
 async function guardarModificar() {
   const f = formModificar.value
-  if (!f.importe || !f.fechaReal) return alert('Importe y fecha son obligatorios')
+  const errores = validarCampos(f, [
+    { campo: 'importe',   label: 'Importe (€)',       requerido: true, tipo: 'numero', min: 0.01 },
+    { campo: 'fechaReal', label: 'Fecha real de cobro', requerido: true, tipo: 'fecha' },
+  ])
+  if (errores.length) return alert(errores.join('\n'))
   guardandoModificar.value = true
   const cuota = f.cuotaRef
   const { error } = await supabase.from('cobros').insert({
@@ -516,9 +524,10 @@ async function guardarModificar() {
     importe_principal: cuota.principal || 0,
     tipo:              'pago_cuota',
     notas:             f.notas || '',
+    empresa_id:        empresaId.value,
   })
   guardandoModificar.value = false
-  if (error) return alert('Error: ' + error.message)
+  if (error) return alert(traducirErrorSupabase(error))
   modalModificar.value = false
   cuotasPendientes.value = cuotasPendientes.value.filter(c => c._key !== cuota._key)
   await cargarCobros()

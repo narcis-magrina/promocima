@@ -1,3 +1,4 @@
+import { validarCampos, traducirErrorSupabase } from '../utils/validar.js'
 <template>
   <div>
     <div class="section-header">
@@ -8,51 +9,69 @@
       <button class="btn btn-primary" @click="abrirInvitar">+ Invitar Usuario</button>
     </div>
 
-    <div class="table-card">
-      <div class="table-header"><h3>Usuarios ({{ usuarios.length }})</h3></div>
+    <!-- Un bloque por empresa -->
+    <template v-for="emp in empresas" :key="emp.id">
+      <div v-if="usuariosPorEmpresa(emp.id).length" class="table-card" style="margin-bottom:20px">
+        <div class="table-header" style="display:flex;align-items:center;justify-content:space-between">
+          <h3>🏢 {{ emp.nombre }} <span style="font-size:12px;font-weight:400;color:var(--text3)">({{ usuariosPorEmpresa(emp.id).length }} usuario{{ usuariosPorEmpresa(emp.id).length !== 1 ? 's' : '' }})</span></h3>
+          <span class="badge" :class="emp.activa ? 'badge-outline-green' : 'badge-outline-gray'" style="font-size:10px">{{ emp.activa ? 'Activa' : 'Inactiva' }}</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Email</th>
+              <th class="col-hide-mobile">Rol</th>
+              <th class="col-hide-mobile">Partícipe vinculado</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="u in usuariosPorEmpresa(emp.id)" :key="u.id">
+              <td style="font-weight:500">{{ u.nombre || '—' }}</td>
+              <td style="font-size:12px;color:var(--text3)">{{ u.email }}</td>
+              <td class="col-hide-mobile"><span class="badge" :class="rolBadge(u.rol)">{{ u.rol }}</span></td>
+              <td style="font-size:12px;max-width:160px" class="col-hide-mobile">
+                <template v-if="u.rol === 'participe' && u.participe_ids?.length">
+                  <div style="display:flex;flex-direction:column;gap:3px">
+                    <span v-for="pid in u.participe_ids" :key="pid" class="badge badge-outline-yellow" style="font-size:10px;width:fit-content">{{ nombreParticipe(pid) }}</span>
+                  </div>
+                </template>
+                <span v-else-if="u.rol === 'participe'" style="color:var(--text3)">Sin vincular</span>
+                <span v-else>—</span>
+              </td>
+              <td><span class="badge" :class="u.activo ? 'badge-outline-green' : 'badge-outline-gray'">{{ u.activo ? 'Activo' : 'Pendiente' }}</span></td>
+              <td style="display:flex;gap:6px;flex-wrap:wrap">
+                <button class="btn btn-sm btn-registrar" style="font-size:11px;padding:3px 9px" @click="editar(u)">✎ Editar</button>
+                <button v-if="isAdmin && !u.activo" class="btn btn-sm" style="font-size:11px;padding:3px 9px;background:var(--orange);color:#fff;border-color:var(--orange)"
+                  title="Reinvitar: envía una nueva invitación con nuevas credenciales"
+                  @click="reinvitar(u)">↺ Reinvitar</button>
+                <button v-if="isAdmin" class="btn btn-sm btn-danger" style="font-size:11px;padding:3px 9px"
+                  :disabled="u.id === usuarioActualId"
+                  :title="u.id === usuarioActualId ? 'No puedes desactivarte a ti mismo' : u.activo ? 'Desactivar usuario' : 'Reactivar usuario'"
+                  @click="confirmarEliminar(u)">{{ u.activo ? '✕ Desactivar' : '✓ Activar' }}</button>
+                <button v-if="isAdmin" class="btn btn-sm btn-danger-solid" style="font-size:11px;padding:3px 9px"
+                  :disabled="u.id === usuarioActualId"
+                  :title="u.id === usuarioActualId ? 'No puedes eliminarte a ti mismo' : 'Eliminar usuario definitivamente'"
+                  @click="eliminarUsuario(u)">✕</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
+    <!-- Usuarios sin empresa asignada -->
+    <div v-if="usuariosSinEmpresa.length" class="table-card" style="margin-bottom:20px">
+      <div class="table-header"><h3>⚠️ Sin empresa asignada ({{ usuariosSinEmpresa.length }})</h3></div>
       <table>
-        <thead>
-          <tr>
-            <th>Nombre</th>
-            <th>Email</th>
-            <th class="col-hide-mobile">Rol</th>
-            <th class="col-hide-mobile">Partícipe vinculado</th>
-            <th>Estado</th>
-            <th></th>
-          </tr>
-        </thead>
+        <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th></th></tr></thead>
         <tbody>
-          <tr v-for="u in usuarios" :key="u.id">
-            <td style="font-weight:500">{{ u.nombre || '—' }}</td>
+          <tr v-for="u in usuariosSinEmpresa" :key="u.id">
+            <td>{{ u.nombre || '—' }}</td>
             <td style="font-size:12px;color:var(--text3)">{{ u.email }}</td>
-            <td class="col-hide-mobile"><span class="badge" :class="rolBadge(u.rol)">{{ u.rol }}</span></td>
-            <td style="font-size:12px;max-width:160px" class="col-hide-mobile">
-              <template v-if="u.rol === 'participe' && u.participe_ids?.length">
-                <div style="display:flex;flex-direction:column;gap:3px">
-                  <span v-for="pid in u.participe_ids" :key="pid" class="badge badge-outline-yellow" style="font-size:10px;width:fit-content">{{ nombreParticipe(pid) }}</span>
-                </div>
-              </template>
-              <span v-else-if="u.rol === 'participe'" style="color:var(--text3)">Sin vincular</span>
-              <span v-else>—</span>
-            </td>
-            <td><span class="badge" :class="u.activo ? 'badge-outline-green' : 'badge-outline-gray'">{{ u.activo ? 'Activo' : 'Pendiente' }}</span></td>
-            <td style="display:flex;gap:6px;flex-wrap:wrap">
-              <button class="btn btn-sm btn-registrar" style="font-size:11px;padding:3px 9px" @click="editar(u)">✎ Editar</button>
-              <button v-if="isAdmin && !u.activo" class="btn btn-sm" style="font-size:11px;padding:3px 9px;background:var(--orange);color:#fff;border-color:var(--orange)"
-                title="Reinvitar: envía una nueva invitación con nuevas credenciales"
-                @click="reinvitar(u)">↺ Reinvitar</button>
-              <button v-if="isAdmin" class="btn btn-sm btn-danger" style="font-size:11px;padding:3px 9px"
-                :disabled="u.id === usuarioActualId"
-                :title="u.id === usuarioActualId ? 'No puedes desactivarte a ti mismo' : u.activo ? 'Desactivar usuario' : 'Reactivar usuario'"
-                @click="confirmarEliminar(u)">{{ u.activo ? '✕ Desactivar' : '✓ Activar' }}</button>
-              <button v-if="isAdmin" class="btn btn-sm btn-danger-solid" style="font-size:11px;padding:3px 9px"
-                :disabled="u.id === usuarioActualId"
-                :title="u.id === usuarioActualId ? 'No puedes eliminarte a ti mismo' : 'Eliminar usuario definitivamente'"
-                @click="eliminarUsuario(u)">✕</button>
-            </td>
-          </tr>
-          <tr v-if="!usuarios.length">
-            <td colspan="6" class="table-empty">Sin usuarios registrados</td>
+            <td><span class="badge" :class="rolBadge(u.rol)">{{ u.rol }}</span></td>
+            <td><button class="btn btn-sm btn-registrar" style="font-size:11px;padding:3px 9px" @click="editar(u)">✎ Editar</button></td>
           </tr>
         </tbody>
       </table>
@@ -69,7 +88,7 @@
           <div class="form-grid cols-1" style="gap:12px">
             <div class="form-group">
               <label class="form-label">Nombre</label>
-              <input class="form-control" v-model="form.nombre" placeholder="Nombre y apellidos">
+              <input class="form-control" v-focus v-model="form.nombre" placeholder="Nombre y apellidos">
             </div>
             <div class="form-group">
               <label class="form-label">Email</label>
@@ -86,13 +105,13 @@
             <div v-if="form.rol === 'participe'" class="form-group">
               <label class="form-label">Partícipes vinculados</label>
               <div style="border:1px solid var(--border);border-radius:6px;max-height:160px;overflow-y:auto;padding:6px 8px;background:var(--bg2)">
-                <label v-for="p in participes" :key="p.id"
+                <label v-for="p in participesPorEmpresa(form.empresa_id)" :key="p.id"
                   style="display:flex;align-items:center;gap:8px;padding:3px 0;cursor:pointer;font-size:13px">
                   <input type="checkbox" :value="p.id" v-model="form.participe_ids">
                   <span>{{ p.nombre }}</span>
                   <span style="font-size:11px;color:var(--text3);font-family:var(--mono)">{{ p.id }}</span>
                 </label>
-                <div v-if="!participes.length" style="font-size:12px;color:var(--text3);padding:4px 0">Sin partícipes disponibles</div>
+                <div v-if="!participesPorEmpresa(form.empresa_id).length" style="font-size:12px;color:var(--text3);padding:4px 0">Sin partícipes en esta empresa</div>
               </div>
             </div>
             <div class="form-group">
@@ -128,7 +147,7 @@
           <div class="form-grid cols-1" style="gap:12px">
             <div class="form-group">
               <label class="form-label">Email <span class="req">*</span></label>
-              <input class="form-control" type="email" v-model="formInvitar.email" placeholder="usuario@ejemplo.com">
+              <input class="form-control" v-focus type="email" v-model="formInvitar.email" placeholder="usuario@ejemplo.com">
             </div>
             <div class="form-group">
               <label class="form-label">Nombre</label>
@@ -157,7 +176,7 @@
                   <input type="checkbox" :value="p.id" v-model="formInvitar.participe_ids">
                   {{ p.nombre }}
                 </label>
-                <div v-if="!participes.length" style="font-size:12px;color:var(--text3);padding:4px 0">Sin partícipes disponibles</div>
+                <div v-if="!participesPorEmpresa(form.empresa_id).length" style="font-size:12px;color:var(--text3);padding:4px 0">Sin partícipes en esta empresa</div>
               </div>
             </div>
           </div>
@@ -184,9 +203,13 @@ import { supabase } from '../supabase.js'
 
 const { listarUsuarios, user, isAdmin , empresaId } = useAuth()
 
-const usuarios     = ref([])
-const participes   = ref([])
-const empresas     = ref([])
+const usuarios          = ref([])
+const todosParticipes   = ref([])
+const empresas          = ref([])
+
+// Partícipes filtrados por la empresa del usuario que se está editando/invitando
+const participesPorEmpresa = (empresaId) =>
+  todosParticipes.value.filter(p => p.empresa_id === empresaId)
 const modalAbierto = ref(false)
 const saving       = ref(false)
 const msgEditar    = ref(null)
@@ -201,15 +224,15 @@ onMounted(cargar)
 async function cargar() {
   try { usuarios.value = await listarUsuarios() } catch { usuarios.value = [] }
   const [{ data: pts }, { data: emps }] = await Promise.all([
-    supabase.from('participes').select('id, nombre').eq('activo', true).order('nombre'),
-    supabase.from('empresas').select('id, nombre').eq('activa', true).order('id'),
+    supabase.from('participes').select('id, nombre, empresa_id').eq('activo', true).order('nombre'),
+    supabase.from('empresas').select('id, nombre, activa').eq('activa', true).order('id'),
   ])
-  participes.value = pts || []
-  empresas.value   = emps || []
+  todosParticipes.value = pts || []
+  empresas.value        = emps || []
 }
 
 function nombreParticipe(id) {
-  return participes.value.find(p => p.id === id)?.nombre || id
+  return todosParticipes.value.find(p => p.id === id)?.nombre || id
 }
 
 function editar(u) {
@@ -219,7 +242,13 @@ function editar(u) {
 }
 
 async function guardar() {
-  if (!form.value.id || !form.value.rol) return
+  const errores = validarCampos(form.value, [
+    { campo: 'nombre',     label: 'Nombre',   requerido: true },
+    { campo: 'rol',        label: 'Rol',      requerido: true },
+    { campo: 'empresa_id', label: 'Empresa',  requerido: true },
+  ])
+  if (errores.length) return (msgEditar.value = { ok: false, text: errores.join('\n') })
+  if (!form.value.id) return
   saving.value = true
   msgEditar.value = null
   try {
@@ -249,6 +278,13 @@ function rolBadge(rol) {
 }
 
 const usuarioActualId = computed(() => user.value?.id)
+
+const usuariosPorEmpresa = (empresaId) =>
+  usuarios.value.filter(u => u.empresa_id === empresaId)
+
+const usuariosSinEmpresa = computed(() =>
+  usuarios.value.filter(u => !u.empresa_id)
+)
 
 async function confirmarEliminar(u) {
   const activar = !u.activo
@@ -307,7 +343,13 @@ function abrirInvitar() {
 }
 
 async function enviarInvitacion() {
-  if (!formInvitar.value.email) return alert('El email es obligatorio')
+  const erroresInv = validarCampos(formInvitar.value, [
+    { campo: 'email',      label: 'Email',   requerido: true, tipo: 'email' },
+    { campo: 'nombre',     label: 'Nombre',  requerido: true },
+    { campo: 'empresa_id', label: 'Empresa', requerido: true },
+    { campo: 'rol',        label: 'Rol',     requerido: true },
+  ])
+  if (erroresInv.length) return (msgInvitar.value = { ok: false, text: erroresInv.join('\n') })
   // En local no hay API routes — solo funciona en producción
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     msgInvitar.value = { ok: false, text: '⚠️ La invitación de usuarios solo funciona en producción. Despliega con vercel --prod y pruébalo desde promocima-prestamos.vercel.app' }

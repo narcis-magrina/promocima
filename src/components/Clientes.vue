@@ -21,10 +21,10 @@
 
         <!-- Datos generales -->
         <div class="detail-grid">
-          <div class="detail-item"><div class="detail-label">CIF / NIF</div><div class="detail-value mono">{{ cliente.cif || '—' }}</div></div>
-          <div class="detail-item"><div class="detail-label">Teléfono</div><div class="detail-value">{{ cliente.telefono || '—' }}</div></div>
-          <div class="detail-item"><div class="detail-label">Email</div><div class="detail-value">{{ cliente.email || '—' }}</div></div>
-          <div class="detail-item" style="grid-column:span 3"><div class="detail-label">Notas</div><div class="detail-value">{{ cliente.notas || '—' }}</div></div>
+          <div class="detail-item"><span class="detail-label">CIF / NIF</span><span class="detail-value mono">{{ cliente.cif || '—' }}</span></div>
+          <div class="detail-item"><span class="detail-label">Teléfono</span><span class="detail-value">{{ cliente.telefono || '—' }}</span></div>
+          <div class="detail-item"><span class="detail-label">Email</span><span class="detail-value">{{ cliente.email || '—' }}</span></div>
+          <div class="detail-item span-2"><span class="detail-label">Notas</span><span class="detail-value">{{ cliente.notas || '—' }}</span></div>
         </div>
 
         <!-- Titulares y garantes -->
@@ -155,7 +155,7 @@
           <div class="form-grid">
             <div class="form-group span-2">
               <label class="form-label">Nombre / Razón Social <span class="req">*</span></label>
-              <input class="form-control" v-model="form.nombre" placeholder="Nombre completo o razón social">
+              <input class="form-control" v-focus v-model="form.nombre" placeholder="Nombre completo o razón social">
             </div>
             <div class="form-group">
               <label class="form-label">Tipo</label>
@@ -200,7 +200,7 @@
           <div class="form-grid cols-1">
             <div class="form-group">
               <label class="form-label">Nombre <span class="req">*</span></label>
-              <input class="form-control" v-model="formTitular.nombre">
+              <input class="form-control" v-focus v-model="formTitular.nombre">
             </div>
             <div class="form-group">
               <label class="form-label">CIF / NIF</label>
@@ -225,6 +225,7 @@
 </template>
 
 <script setup>
+import { validarCampos, traducirErrorSupabase } from '../utils/validar.js'
 import { ref, computed, toRef } from 'vue'
 import { useSort } from '../composables/useSort.js'
 import { usePersistedRef } from '../composables/usePersistedRef.js'
@@ -258,7 +259,12 @@ const {
         // CIRBE calculado: true si algún préstamo del cliente tiene cirbe=true
         cirbe: prest.some(p => p.cliente_id === c.id && p.cirbe),
       })),
-    validar: f => !f.nombre.trim() ? 'El nombre es obligatorio' : null,
+    validar: f => {
+      const errores = validarCampos(f, [
+        { campo: 'nombre', label: 'Nombre / Razón Social', requerido: true },
+      ])
+      return errores.length ? errores.join('\n') : null
+    },
     prepararData: f => ({
       nombre:   f.nombre.trim(),
       tipo:     f.tipo,
@@ -358,7 +364,7 @@ async function guardarTitular() {
       return alert('La columna id de la tabla titulares es UUID. Ejecuta fix_titulares_id.sql en Supabase SQL Editor para cambiarla a TEXT.')
     }
   }
-  if (error) return alert('Error al guardar: ' + error.message)
+  if (error) return alert(traducirErrorSupabase(error))
   modalTitular.value = false
   await cargarTitulares()
 }

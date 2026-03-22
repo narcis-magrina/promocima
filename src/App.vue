@@ -185,9 +185,21 @@
           <div class="user-info sidebar-footer-text">
             <div class="name">{{ nombre }}</div>
             <div class="role">{{ rolLabel }}</div>
+            <div v-if="empresaId" style="font-size:10px;color:var(--text3);margin-top:1px;font-family:var(--mono)">{{ empresaId }}</div>
           </div>
         </div>
-        <button @click="toggleTheme" class="theme-toggle-btn" :title="darkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'">
+        <!-- Entorno forzado: mostrar info, no permitir cambio -->
+        <div v-if="temaForzado" style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;background:var(--bg2);font-size:12px">
+          <span>{{ temaForzado === 'dark' ? '🌙' : '☀️' }}</span>
+          <span style="color:var(--text3)">Entorno: </span>
+          <div style="display:flex;flex-direction:column;gap:1px">
+            <span :style="temaForzado === 'dark' ? 'color:var(--orange);font-weight:600' : 'color:var(--green);font-weight:600'">
+              {{ entorno }}
+            </span>
+            <span style="color:var(--text3);font-size:10px">{{ temaForzado === 'dark' ? '(Modo Oscuro)' : '(Modo Claro)' }}</span>
+          </div>
+        </div>
+        <button v-else @click="toggleTheme" class="theme-toggle-btn" :title="darkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'">
           <span>{{ darkMode ? '☀️' : '🌙' }}</span>
           <span class="sidebar-footer-text" style="font-size:11px;margin-left:6px">{{ darkMode ? 'Modo claro' : 'Modo oscuro' }}</span>
         </button>
@@ -230,7 +242,7 @@ import './styles.css'
 
 // ── Auth ───────────────────────────────────────
 import { initAuth, useAuth } from './composables/useAuth.js'
-const { user, perfil, loading, nombre, initiales, isAdmin, isInterno, isParticipe, participeId, participeIds, rol, logout, isRecoveryMode } = useAuth()
+const { user, perfil, loading, nombre, initiales, isAdmin, isInterno, isParticipe, participeId, participeIds, rol, logout, isRecoveryMode, empresaId } = useAuth()
 const sidebarOpen = ref(false)
 const sidebarCollapsed = ref(localStorage.getItem('sidebarCollapsed') === 'true')
 function toggleCollapse() {
@@ -239,14 +251,18 @@ function toggleCollapse() {
 }
 
 // ── Tema claro / oscuro ────────────────────────
-const darkMode = ref(localStorage.getItem('theme') === 'dark')
+// En PRUEBAS siempre modo oscuro, en PRODUCCIÓN siempre modo claro
+const entorno = import.meta.env.VITE_ENTORNO || 'PRODUCCIÓN'
+const temaForzado = entorno === 'PRUEBAS' ? 'dark' : entorno === 'PRODUCCIÓN' ? 'light' : null
+const darkMode = ref(temaForzado !== null ? temaForzado === 'dark' : localStorage.getItem('theme') === 'dark')
 function applyTheme(dark) {
   document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
-  localStorage.setItem('theme', dark ? 'dark' : 'light')
+  if (!temaForzado) localStorage.setItem('theme', dark ? 'dark' : 'light')
 }
 // Aplicar al cargar
 applyTheme(darkMode.value)
 function toggleTheme() {
+  if (temaForzado) return  // No permitir cambio si el tema está forzado por entorno
   darkMode.value = !darkMode.value
   applyTheme(darkMode.value)
 }
@@ -298,6 +314,13 @@ async function recargarPerfil() {
 // ── Router ─────────────────────────────────────
 import { useRouter } from './composables/useRouter.js'
 const { page, id, navigate } = useRouter()
+
+// Al hacer login, redirigir según rol siempre al punto de entrada correcto
+watch(perfil, (p) => {
+  if (!p) return
+  if (p.rol === 'participe') return  // portal tiene su propio layout
+  navigate('dashboard')              // admin/interno siempre al dashboard
+}, { immediate: true })
 
 // ── Títulos ────────────────────────────────────
 const titles = {

@@ -48,7 +48,7 @@
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label">Partícipe <span class="req">*</span></label>
-              <select class="form-control" v-model="form.participe_id"
+              <select class="form-control" v-focus v-model="form.participe_id"
                 :disabled="!!form.id || tienePagosRealizados"
                 :style="(form.id || tienePagosRealizados) ? 'opacity:0.5;cursor:not-allowed' : ''">
                 <option v-for="p in participesSorted" :key="p.id" :value="p.id">{{ p.nombre }}</option>
@@ -104,6 +104,9 @@
 </template>
 
 <script setup>
+import { validarCampos, traducirErrorSupabase } from '../utils/validar.js'
+import { useAuth } from '../composables/useAuth.js'
+const { empresaId } = useAuth()
 import { ref, computed, onMounted, watch } from 'vue'
 import { supabase } from '../supabase.js'
 import { today, generateCalendarioTeorico, distribuirCobros, calcSituacionPrestamo } from '../utils.js'
@@ -234,8 +237,15 @@ async function cargarDatos() {
 
 // ── Acciones ───────────────────────────────────
 async function guardar() {
-  if (!form.value.participe_id || !form.value.prestamo_id || !form.value.importe_participacion)
-    return alert('Completa los campos obligatorios')
+  const errores = validarCampos(form.value, [
+    { campo: 'participe_id',        label: 'Partícipe',              requerido: true },
+    { campo: 'prestamo_id',         label: 'Préstamo',               requerido: true },
+    { campo: 'fecha_firma',         label: 'Fecha Firma',            requerido: true, tipo: 'fecha' },
+    { campo: 'importe_participacion', label: 'Importe Participación', requerido: true, tipo: 'numero', min: 0.01 },
+    { campo: 'porcentaje_gestion',  label: '% Gestión',              tipo: 'numero', min: 0 },
+    { campo: 'porcentaje_apertura', label: '% Apertura',             tipo: 'numero', min: 0 },
+  ])
+  if (errores.length) return alert(errores.join('\n'))
   const prestamo = prestamos.value.find(p => p.id === form.value.prestamo_id)
   if (!prestamo) return alert('Préstamo no encontrado')
   // La fecha de firma del CCP debe ser igual o posterior a la fecha de inicio del préstamo
@@ -274,7 +284,7 @@ async function guardar() {
       porcentaje_apertura: form.value.porcentaje_apertura,
     }
     const { error } = await supabase.from('contratos_ccp').update(data).eq('id', form.value.id)
-    if (error) return alert('Error al guardar: ' + error.message)
+    if (error) return alert(traducirErrorSupabase(error))
   } else {
     // Creación — ID único consultando el máximo existente
     const { data: existentes } = await supabase.from('contratos_ccp').select('id')
@@ -286,8 +296,8 @@ async function guardar() {
       activo: prestamo.estado !== 'cancelado',
     }
     delete contratoNuevo.id_  // limpieza
-    const { error } = await supabase.from('contratos_ccp').insert({ ...contratoNuevo, id: nuevoId })
-    if (error) return alert('Error al guardar: ' + error.message)
+    const { error } = await supabase.from('contratos_ccp').insert({ ...contratoNuevo, id: nuevoId, empresa_id: empresaId.value })
+    if (error) return alert(traducirErrorSupabase(error))
   }
   modalAbierto.value = false
   await cargarDatos()

@@ -1,3 +1,4 @@
+import { validarCampos, traducirErrorSupabase } from '../utils/validar.js'
 <template>
   <div>
     <div class="section-header">
@@ -51,7 +52,7 @@
           <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:14px">
             <div class="form-group">
               <label class="form-label">ID <span style="color:var(--text3);font-size:10px">(no editable)</span></label>
-              <input class="form-control" v-model="form.id" :disabled="!!editando"
+              <input class="form-control" v-focus v-model="form.id" :disabled="!!editando"
                 placeholder="Ej: PROMOCIMA, PRUEBAS"
                 style="text-transform:uppercase"
                 @input="form.id = form.id.toUpperCase()" />
@@ -120,7 +121,11 @@ function cerrar() {
 }
 
 async function guardar() {
-  if (!form.value.id || !form.value.nombre) return (error.value = 'ID y nombre son obligatorios')
+  const errores = validarCampos(form.value, [
+    { campo: 'id',     label: 'ID',     requerido: true },
+    { campo: 'nombre', label: 'Nombre', requerido: true },
+  ])
+  if (errores.length) return (error.value = errores.join('\n'))
   guardando.value = true
   error.value = null
   try {
@@ -137,7 +142,7 @@ async function guardar() {
     modalAbierto.value = false
     await cargar()
   } catch (e) {
-    error.value = e.message
+    error.value = traducirErrorSupabase(e)
   } finally {
     guardando.value = false
   }

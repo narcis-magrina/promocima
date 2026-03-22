@@ -459,7 +459,7 @@ onMounted(async () => {
     supabase.from('clientes').select('id, nombre, tipo'),
     supabase.from('intermediarios').select('id, nombre'),
     supabase.from('contratos_ccp').select('prestamo_id, participe_id, importe_participacion, porcentaje_gestion, activo, participes(nombre)'),
-    supabase.from('config').select('porcentaje_irpf').eq('id', 1).single()
+    supabase.from('config').select('porcentaje_irpf').limit(1).single()
   ])
   const clientesMap = Object.fromEntries((cl || []).map(x => [x.id, x]))
   prestamosRaw.value      = (p || []).map(x => ({ ...x, clientes: clientesMap[x.cliente_id] || null }))

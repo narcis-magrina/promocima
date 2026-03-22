@@ -12,9 +12,9 @@
           </div>
         </div>
         <div class="detail-grid">
-          <div class="detail-item"><div class="detail-label">Empresa</div><div class="detail-value">{{ intermediario.empresa || '—' }}</div></div>
-          <div class="detail-item"><div class="detail-label">Teléfono</div><div class="detail-value">{{ intermediario.telefono || '—' }}</div></div>
-          <div class="detail-item"><div class="detail-label">Email</div><div class="detail-value">{{ intermediario.email || '—' }}</div></div>
+          <div class="detail-item"><span class="detail-label">Empresa</span><span class="detail-value">{{ intermediario.empresa || '—' }}</span></div>
+          <div class="detail-item"><span class="detail-label">Teléfono</span><span class="detail-value">{{ intermediario.telefono || '—' }}</span></div>
+          <div class="detail-item"><span class="detail-label">Email</span><span class="detail-value">{{ intermediario.email || '—' }}</span></div>
         </div>
         <div class="table-card">
           <div class="table-header"><h3>Préstamos Intermediados <span style="font-weight:400;color:var(--text3);font-size:11px">(importes en €)</span></h3></div>
@@ -81,7 +81,7 @@
         </div>
         <div class="modal-body">
           <div class="form-grid">
-            <div class="form-group"><label class="form-label">Nombre <span class="req">*</span></label><input class="form-control" v-model="form.nombre"></div>
+            <div class="form-group"><label class="form-label">Nombre <span class="req">*</span></label><input class="form-control" v-focus v-model="form.nombre"></div>
             <div class="form-group"><label class="form-label">Empresa</label><input class="form-control" v-model="form.empresa"></div>
             <div class="form-group"><label class="form-label">Teléfono</label><input class="form-control" v-model="form.telefono"></div>
             <div class="form-group"><label class="form-label">Email</label><input class="form-control" v-model="form.email"></div>
@@ -97,6 +97,7 @@
 </template>
 
 <script setup>
+import { validarCampos, traducirErrorSupabase } from '../utils/validar.js'
 import { computed, toRef } from 'vue'
 import { useSort } from '../composables/useSort.js'
 import { useCrud } from '../composables/useCrud.js'
@@ -120,7 +121,13 @@ const {
     secundaria: { tabla: 'prestamos', select: 'id, alias, importe, estado, intermediario_id, clientes(nombre)', orden: 'id' },
     enriquecerItems: (ints, prest) =>
       ints.map(x => ({ ...x, nPrestamos: prest.filter(p => p.intermediario_id === x.id).length })),
-    validar: f => !f.nombre.trim() ? 'El nombre es obligatorio' : null,
+    validar: f => {
+      const errores = validarCampos(f, [
+        { campo: 'nombre', label: 'Nombre', requerido: true },
+        { campo: 'email',  label: 'Email',  tipo: 'email' },
+      ])
+      return errores.length ? errores.join('\n') : null
+    },
     prepararData: f => ({
       nombre:   f.nombre.trim(),
       empresa:  (f.empresa  || '').trim(),

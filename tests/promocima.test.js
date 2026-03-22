@@ -4,7 +4,7 @@
  *
  * Hojas cubiertas:
  *   1_Calculo_cuota    → generateCalendarioTeorico()
- *   2_Capital_Activo   → calcCapitalActivoPrestamo()
+ *   2_Capital_Activo   → calcCapitalEnCursoPrestamo()
  *   3_Situacion        → calcSituacionPrestamo()
  *   4_KPIs_Dashboard   → lógica del Dashboard con dataset fijo (fecha sistema: 2026-03-20)
  *
@@ -20,7 +20,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import {
   generateCalendarioTeorico,
-  calcCapitalActivoPrestamo,
+  calcCapitalEnCursoPrestamo,
   calcSituacionPrestamo,
   distribuirCobros,
   setToday,
@@ -102,20 +102,20 @@ describe('Hoja 1 — generateCalendarioTeorico', () => {
 
 // ─── Hoja 2: Capital Activo ───────────────────────────────────────────────────
 
-describe('Hoja 2 — calcCapitalActivoPrestamo', () => {
+describe('Hoja 2 — calcCapitalEnCursoPrestamo', () => {
   const pA = prest('Americano', 100000, 6, 12, '2024-01-15', 15)
   const pF = prest('Francés', 100000, 6, 12, '2024-01-15', 15)
   const PMT = generateCalendarioTeorico(pF)[0].total
 
   it('CA1: Americano sin cobros → importe íntegro', () =>
-    tol(calcCapitalActivoPrestamo(pA, []), 100000))
+    tol(calcCapitalEnCursoPrestamo(pA, []), 100000))
 
   it('CF1: Francés sin cobros → importe íntegro', () =>
-    tol(calcCapitalActivoPrestamo(pF, []), 100000))
+    tol(calcCapitalEnCursoPrestamo(pF, []), 100000))
 
   it('CF2: Francés 3 cuotas cobradas → saldo reducido', () => {
     const cobros = [1, 2, 3].map(i => cobro('pago_cuota', PMT, `2024-0${i+1}-15`))
-    tol(calcCapitalActivoPrestamo(pF, cobros), 75558.27, 0.1)
+    tol(calcCapitalEnCursoPrestamo(pF, cobros), 75558.27, 0.1)
   })
 
   it('CF3: Francés 12 cuotas cobradas → capital ≈ 0', () => {
@@ -124,7 +124,7 @@ describe('Hoja 2 — calcCapitalActivoPrestamo', () => {
       .map(m => `2024-${m}-15`)
     fechas.push('2025-01-15')
     const cobros = cal.map((cu, i) => cobro('pago_cuota', cu.total, fechas[i]))
-    tol(calcCapitalActivoPrestamo(pF, cobros), 0, 0.1)
+    tol(calcCapitalEnCursoPrestamo(pF, cobros), 0, 0.1)
   })
 })
 
@@ -216,7 +216,7 @@ describe('Hoja 4 — KPIs Dashboard (fecha sistema: 2026-03-20)', () => {
   const cap = id => {
     const p = prestamos.find(p => p.id === id)
     if (p.estado === 'cancelado') return 0
-    return calcCapitalActivoPrestamo(p, cxid[id])
+    return calcCapitalEnCursoPrestamo(p, cxid[id])
   }
   const enCurso  = () => prestamos.filter(p => p.estado !== 'cancelado').reduce((s, p) => s + cap(p.id), 0)
   const activo   = () => prestamos.filter(p => p.estado === 'activo').reduce((s, p) => s + cap(p.id), 0)

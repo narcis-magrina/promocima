@@ -231,7 +231,7 @@
           <div class="form-grid">
             <div class="form-group span-2">
               <label class="form-label">Contrato CCP <span class="req">*</span></label>
-              <select class="form-control" v-model="form.contrato_ccp_id">
+              <select class="form-control" v-focus v-model="form.contrato_ccp_id">
                 <option value="">— Selecciona contrato —</option>
                 <option v-for="c in contratos" :key="c.id" :value="c.id">{{ c.participes?.nombre }} · {{ c.prestamos?.alias }}</option>
               </select>
@@ -278,6 +278,9 @@
 </template>
 
 <script setup>
+import { validarCampos, traducirErrorSupabase } from '../utils/validar.js'
+import { useAuth } from '../composables/useAuth.js'
+const { empresaId } = useAuth()
 import { ref, computed, onMounted } from 'vue'
 import { useSort } from '../composables/useSort.js'
 import { usePersistedRef } from '../composables/usePersistedRef.js'
@@ -316,7 +319,7 @@ async function cargar() {
       .order('fecha_pago_real', { ascending: false }),
     supabase.from('contratos_ccp')
       .select('id, prestamo_id, participe_id, importe_participacion, porcentaje_participacion, porcentaje_gestion, porcentaje_apertura, fecha_firma, activo, participes(id, nombre)'),
-    supabase.from('config').select('porcentaje_irpf').eq('id', 1).single(),
+    supabase.from('config').select('porcentaje_irpf').limit(1).single(),
     supabase.from('prestamos').select('id, alias, interes_ordinario, importe, tipo_prestamo, periodicidad, fecha_inicio, dia_cobro, duracion_meses, estado'),
     supabase.from('cobros').select('id, prestamo_id, cuota_num, fecha_real, fecha_teorica, importe, tipo').in('tipo', ['pago_cuota','cancelacion']).limit(9999),
   ])
@@ -462,6 +465,7 @@ async function pagarTodosProximos() {
 
 async function pagarDevengado(d) {
   d.pagando = true
+  if (!empresaId.value) { alert('Error: empresa no identificada. Recarga la página.'); d.pagando = false; return }
   try {
     const { error } = await supabase.from('pagos_reales_participe').insert({
       id:                'PRP' + uuid(),
@@ -473,8 +477,9 @@ async function pagarDevengado(d) {
       importe_retencion: d.irpf,
       importe_neto:      d.neto,
       observaciones:     null,
+      empresa_id:        empresaId.value,
     })
-    if (error) { alert('Error: ' + error.message); return }
+    if (error) { alert(traducirErrorSupabase(error)); return }
     await cargar()
   } finally { d.pagando = false }
 }
@@ -537,10 +542,12 @@ function abrirRegistrar() {
 }
 
 async function guardar() {
-  if (!form.value.contrato_ccp_id || !form.value.importe_devengado)
-    return alert('Contrato e importe devengado son obligatorios')
-  if (Number(form.value.importe_devengado) <= 0)
-    return alert('El importe debe ser mayor que cero')
+  const errores = validarCampos(form.value, [
+    { campo: 'contrato_ccp_id',   label: 'Contrato CCP',          requerido: true },
+    { campo: 'fecha_pago_real',   label: 'Fecha Pago',            requerido: true, tipo: 'fecha' },
+    { campo: 'importe_devengado', label: 'Importe Devengado (€)', requerido: true, tipo: 'numero', min: 0.01 },
+  ])
+  if (errores.length) return alert(errores.join('\n'))
   saving.value = true
   try {
     const { error } = await supabase.from('pagos_reales_participe').insert({
@@ -553,8 +560,9 @@ async function guardar() {
       importe_retencion: Number(form.value.importe_retencion),
       importe_neto:      Number(form.value.importe_neto),
       observaciones:     form.value.observaciones || null,
+      empresa_id:        empresaId.value,
     })
-    if (error) { alert('Error: ' + error.message); return }
+    if (error) { alert(traducirErrorSupabase(error)); return }
     modalAbierto.value = false
     await cargar()
   } finally { saving.value = false }

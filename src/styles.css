@@ -232,7 +232,6 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); min-
 
 /* ── TABLES ─────────────────────────────────────────────────────────────────── */
 .table-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 20px; }
-.table-card > table, .table-card > div > table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .table-header { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
 .table-header h3 { font-size: 13px; font-weight: 600; }
 .table-tools { display: flex; gap: 8px; align-items: center; }
@@ -292,9 +291,11 @@ textarea.form-control { resize: vertical; min-height: 70px; }
 .section-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
 
 /* ── DETAIL ─────────────────────────────────────────────────────────────────── */
-.detail-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
-.detail-item { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; }
-.detail-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; margin-bottom: 4px; }
+.detail-grid { display: grid; grid-template-columns: repeat(2, 1fr); margin-bottom: 20px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--bg2); }
+.detail-item { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 10px 16px; border-bottom: 1px solid var(--border); }
+.detail-item:nth-last-child(1), .detail-item:nth-last-child(2) { border-bottom: none; }
+.detail-item.span-2 { grid-column: span 2; }
+.detail-label { font-size: 12px; color: var(--text3); white-space: nowrap; }
 .detail-value { font-size: 14px; font-weight: 500; }
 .detail-value.mono { font-family: var(--mono); font-size: 13px; }
 
@@ -480,7 +481,8 @@ input[type="number"] { -moz-appearance: textfield; }
 
   /* Tablas: scroll horizontal */
   .table-card { overflow-x: auto !important; }
-  .table-card table { min-width: 500px; display: table; }
+  .table-card { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+  .table-card table { min-width: 500px; }
 
   /* Ocultar columnas menos importantes en tablas */
   .col-hide-mobile { display: none !important; }
@@ -517,6 +519,8 @@ input[type="number"] { -moz-appearance: textfield; }
 
   /* Detalle préstamo/CCP: 1 columna */
   .detail-grid { grid-template-columns: 1fr; }
+  .detail-item:nth-last-child(1) { border-bottom: none; }
+  .detail-item:nth-last-child(2) { border-bottom: 1px solid var(--border); }
 }
 
 @media (max-width: 480px) {

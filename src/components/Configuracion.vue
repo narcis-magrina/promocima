@@ -17,7 +17,7 @@
           <div class="form-grid">
             <div class="form-group span-2">
               <label class="form-label">Nombre de la Empresa</label>
-              <input class="form-control" v-model="form.nombre_empresa" placeholder="Nombre de la empresa">
+              <input class="form-control" v-focus v-model="form.nombre_empresa" placeholder="Nombre de la empresa">
             </div>
             <div class="form-group">
               <label class="form-label">Código BdE <span style="color:var(--text3);font-size:10px">(4 dígitos)</span></label>
@@ -93,6 +93,9 @@
 </template>
 
 <script setup>
+import { validarCampos, traducirErrorSupabase } from '../utils/validar.js'
+import { useAuth } from '../composables/useAuth.js'
+const { empresaId } = useAuth()
 import { ref, onMounted } from 'vue'
 import { supabase } from '../supabase.js'
 import { fmtDate } from '../utils.js'
@@ -114,15 +117,19 @@ const form = ref({
 })
 
 onMounted(async () => {
-  const { data } = await supabase.from('config').select('*').eq('id', 1).single()
+  const { data } = await supabase.from('config').select('*').limit(1).single()
   if (data) form.value = { ...form.value, ...data }
   loading.value = false
 })
 
 async function guardar() {
-  const { error } = await supabase.from('config').upsert({ ...form.value, id: 1 }).eq('id', 1)
+  const errores = validarCampos(form.value, [
+    { campo: 'porcentaje_irpf', label: 'Porcentaje IRPF (%)', tipo: 'numero', min: 0, max: 100 },
+  ])
+  if (errores.length) return alert(errores.join('\n'))
+  const { error } = await supabase.from('config').upsert({ ...form.value, id: 1, empresa_id: empresaId.value })
   if (error) {
-    alert('Error al guardar: ' + error.message)
+    alert(traducirErrorSupabase(error))
     return
   }
   guardado.value = true

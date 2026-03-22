@@ -106,7 +106,7 @@ async function cargar() {
     supabase.from('participes').select('id, nombre').order('nombre'),
     supabase.from('pagos_reales_participe').select('id, contrato_ccp_id, importe_neto, fecha_pago_real'),
     supabase.from('cobros').select('id, prestamo_id, cuota_num, importe, tipo, fecha_real'),
-    supabase.from('config').select('porcentaje_irpf').eq('id', 1).single(),
+    supabase.from('config').select('porcentaje_irpf').limit(1).single(),
   ])
   contratos.value  = ct || []
   participes.value = pt || []
