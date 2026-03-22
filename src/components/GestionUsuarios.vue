@@ -1,4 +1,3 @@
-import { validarCampos, traducirErrorSupabase } from '../utils/validar.js'
 <template>
   <div>
     <div class="section-header">
@@ -180,8 +179,35 @@ import { validarCampos, traducirErrorSupabase } from '../utils/validar.js'
               </div>
             </div>
           </div>
-          <div v-if="msgInvitar" class="alert" :class="msgInvitar.ok ? 'alert-success' : 'alert-danger'" style="margin-top:12px;font-size:12px">
+          <!-- Mensaje normal -->
+          <div v-if="msgInvitar && !msgInvitar.sql" class="alert" :class="msgInvitar.ok ? 'alert-success' : 'alert-danger'" style="margin-top:12px;font-size:12px">
             {{ msgInvitar.text }}
+          </div>
+
+          <!-- Instrucciones entorno local -->
+          <div v-if="msgInvitar && msgInvitar.sql" style="margin-top:16px;border:1px solid var(--orange);border-radius:8px;overflow:hidden;font-size:13px">
+            <div style="background:var(--orange);color:#fff;padding:10px 14px;font-weight:600">
+              ⚠️ Entorno local — crea el usuario manualmente
+            </div>
+            <div style="padding:14px;display:flex;flex-direction:column;gap:14px">
+
+              <div>
+                <div style="font-weight:600;margin-bottom:8px">1. En Supabase → Authentication → Users → Add user</div>
+                <div style="display:grid;grid-template-columns:80px 1fr;gap:6px;font-size:12px">
+                  <span style="color:var(--text3)">Email</span>
+                  <code style="background:var(--bg2);padding:2px 6px;border-radius:4px">{{ msgInvitar.email }}</code>
+                  <span style="color:var(--text3)">Password</span>
+                  <code style="background:var(--bg2);padding:2px 6px;border-radius:4px">{{ msgInvitar.pass }}</code>
+                </div>
+                <div style="margin-top:8px;font-size:12px;color:var(--text3)">✓ Marca <strong style="color:var(--text2)">Auto Confirm User</strong></div>
+              </div>
+
+              <div>
+                <div style="font-weight:600;margin-bottom:8px">2. Copia el UUID del usuario y ejecuta en el SQL Editor</div>
+                <pre style="background:var(--bg2);padding:12px;border-radius:6px;font-size:11px;overflow-x:auto;white-space:pre-wrap;margin:0;line-height:1.6">{{ msgInvitar.sql }}</pre>
+              </div>
+
+            </div>
           </div>
         </div>
         <div class="modal-footer">
@@ -197,6 +223,7 @@ import { validarCampos, traducirErrorSupabase } from '../utils/validar.js'
 </template>
 
 <script setup>
+import { validarCampos, traducirErrorSupabase } from '../utils/validar.js'
 import { ref, computed, onMounted } from 'vue'
 import { useAuth } from '../composables/useAuth.js'
 import { supabase } from '../supabase.js'
@@ -352,7 +379,20 @@ async function enviarInvitacion() {
   if (erroresInv.length) return (msgInvitar.value = { ok: false, text: erroresInv.join('\n') })
   // En local no hay API routes — solo funciona en producción
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    msgInvitar.value = { ok: false, text: '⚠️ La invitación de usuarios solo funciona en producción. Despliega con vercel --prod y pruébalo desde promocima-prestamos.vercel.app' }
+    const f = formInvitar.value
+    const pass = 'Temp' + Math.random().toString(36).slice(2, 8) + 'A1!'
+    const sql = `INSERT INTO public.perfiles (id, email, nombre, rol, activo, created_at, participe_ids, empresa_id)
+VALUES (
+  'id_user',          -- ⚠ sustituir por el UUID de Supabase Auth
+  'usuario@empresa.com',  -- ⚠ sustituir por el email real
+  'Nombre del usuario',   -- ⚠ sustituir por el nombre real
+  '${f.rol}',
+  true,
+  now(),
+  '{}',
+  '${f.empresa_id || empresaId.value}'  -- ⚠ verificar empresa
+);`
+    msgInvitar.value = { ok: false, sql, email: f.email, pass }
     return
   }
   savingInvitar.value = true

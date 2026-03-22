@@ -253,16 +253,24 @@ function toggleCollapse() {
 // ── Tema claro / oscuro ────────────────────────
 // En PRUEBAS siempre modo oscuro, en PRODUCCIÓN siempre modo claro
 const entorno = import.meta.env.VITE_ENTORNO || 'PRODUCCIÓN'
-const temaForzado = entorno === 'PRUEBAS' ? 'dark' : entorno === 'PRODUCCIÓN' ? 'light' : null
-const darkMode = ref(temaForzado !== null ? temaForzado === 'dark' : localStorage.getItem('theme') === 'dark')
+const temaForzadoAdmin = entorno === 'PRUEBAS' ? 'dark' : entorno === 'PRODUCCIÓN' ? 'light' : null
+const temaForzado = computed(() => isAdmin.value ? temaForzadoAdmin : null)
+const darkMode = ref(localStorage.getItem('theme') === 'dark')
 function applyTheme(dark) {
   document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
-  if (!temaForzado) localStorage.setItem('theme', dark ? 'dark' : 'light')
+  if (!temaForzado.value) localStorage.setItem('theme', dark ? 'dark' : 'light')
 }
-// Aplicar al cargar
+// Aplicar al cargar con el tema guardado
 applyTheme(darkMode.value)
+// Cuando el perfil cargue, forzar tema si es admin
+watch(isAdmin, (admin) => {
+  if (admin && temaForzadoAdmin) {
+    darkMode.value = temaForzadoAdmin === 'dark'
+    applyTheme(darkMode.value)
+  }
+}, { immediate: true })
 function toggleTheme() {
-  if (temaForzado) return  // No permitir cambio si el tema está forzado por entorno
+  if (temaForzado.value) return  // Solo admins tienen tema forzado
   darkMode.value = !darkMode.value
   applyTheme(darkMode.value)
 }

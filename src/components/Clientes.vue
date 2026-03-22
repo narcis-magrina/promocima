@@ -110,7 +110,7 @@
           <thead><tr>
             <th @click="setSort('nombre')" :class="thClass('nombre')">Nombre <span class="sort-icon">{{ thIcon('nombre') }}</span></th>
             <th @click="setSort('tipo')" :class="thClass('tipo')" class="col-hide-mobile">Tipo <span class="sort-icon">{{ thIcon('tipo') }}</span></th>
-            <th @click="setSort('cif')" :class="thClass('cif')" class="col-hide-mobile">CIF/NIF <span class="sort-icon">{{ thIcon('cif') }}</span></th>
+  
             <th class="col-hide-mobile">Teléfono</th>
             <th class="col-hide-mobile">Email</th>
             <th @click="setSort('nPrestamos')" :class="thClass('nPrestamos')" style="text-align:center">Préstamos <span class="sort-icon">{{ thIcon('nPrestamos') }}</span></th>
@@ -121,7 +121,7 @@
             <tr v-for="c in clientesFiltrados" :key="c.id" style="cursor:pointer" @click="$emit('navigate','clientes',c.id)">
               <td style="font-weight:500">{{ c.nombre }}</td>
               <td class="col-hide-mobile"><span class="badge" :class="c.tipo === 'empresa' ? 'badge-green' : 'badge-blue'">{{ c.tipo }}</span></td>
-              <td class="td-mono col-hide-mobile" style="font-size:12px">{{ c.cif || '—' }}</td>
+
               <td style="font-size:12px" class="col-hide-mobile">{{ c.telefono || '—' }}</td>
               <td style="font-size:12px" class="col-hide-mobile">{{ c.email || '—' }}</td>
               <td class="td-center"><span class="badge badge-gray">{{ c.nPrestamos || 0 }}</span></td>
