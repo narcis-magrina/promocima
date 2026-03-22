@@ -45,7 +45,7 @@
         <table>
           <thead><tr>
               <th @click="setSort('nombre')" :class="thClass('nombre')">Nombre <span class="sort-icon">{{ thIcon('nombre') }}</span></th>
-              <th @click="setSort('empresa')" :class="thClass('empresa')" class="col-hide-mobile">Empresa <span class="sort-icon">{{ thIcon('empresa') }}</span></th>
+
               <th class="col-hide-mobile">Teléfono</th><th class="col-hide-mobile">Email</th>
               <th @click="setSort('nPrestamos')" :class="thClass('nPrestamos')" style="text-align:center">Préstamos <span class="sort-icon">{{ thIcon('nPrestamos') }}</span></th>
               <th></th>
@@ -53,7 +53,7 @@
           <tbody>
             <tr v-for="i in interOrdenados" :key="i.id" style="cursor:pointer" @click="$emit('navigate','intermediarios',i.id)">
               <td style="font-weight:500">{{ i.nombre }}</td>
-              <td class="col-hide-mobile">{{ i.empresa || '—' }}</td>
+
               <td style="font-size:12px" class="col-hide-mobile">{{ i.telefono || '—' }}</td>
               <td style="font-size:12px" class="col-hide-mobile">{{ i.email || '—' }}</td>
               <td class="td-center"><span class="badge badge-gray">{{ i.nPrestamos || 0 }}</span></td>
