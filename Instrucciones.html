@@ -21,13 +21,20 @@
 <p class="p1">npm run dev</p>
 <p class="p1">localhost:5173</p>
 <br>
-<p class="p1"><b><u>Para publicar en vercel:</u></b></p>
-<p class="p1">vercel --prod</p>
+<p class="p1"><b><u>INSTRUCCIONES PARA PASAR DEL ENTORNO DE PRUEBAS A PRODUCCION</u></b></p>
 <br>
-<p class="p1"><b><u>Para subir cambios a GitHub:</u></b></p>
+<p class="p1"><b><u>Para subir cambios a GitHub (no se suben a producción):</u></b></p>
 <p class="p1">git add .</p>
 <p class="p1">git commit -m "Descripción de los cambios"</p>
 <p class="p1">git push</p>
+<br>
+<p class="p1"><b><u>Para publicar en vercel:</u></b></p>
+<p class="p1">en primer lugar hay que migrar la BD</p>
+<p class="p1">Pedirle a Claud que me unifique las SQL en una</p>
+<p class="p1">Ejecutarla en SQL de producción</p>
+<p class="p1">vercel --prod</p>
+<br>
+<p class="p1"><b><u>COMO FUNCIONA EL SISTEMA DE INVITACIONES POR CORREO Y EL RESETEO DEL PASSWORD</u></b></p>
 <br>
 <p class="p1"><b><u>Cada 15 minutos se comprueban las invitaciones:</u></b></p>
 <p class="p1">Desde el correo de gmail narcis.magrinya@gmail.com pero con from: nmagrina@promocima.com</p>
@@ -35,7 +42,8 @@
 <p class="p1">Se comprueba si en la BD Supabase hay emails pendientes y los envía, marcándolos como enviados</p>
 <br>
 <p class="p1"><b><u>Base de datos:</u></b></p>
-<p class="p1">Supabase --> Promocima --> promocima --> Pss: Promocima20!</p></body>
+<p class="p1">Supabase --> Promocima --> PROMOCIMA --> Pss: Promocima20</p></body>
+<p class="p1">Supabase --> Promocima --> PRUEBAS --> Pss: Promocima20</p></body>
 <br>
 <p class="p1"><b><u>Tests:</u></b></p>
 <p class="p1">Se pasarán los tests que habremos definido y comentado en un fichero excel llamado promocima_tests.xlsx</p></body>

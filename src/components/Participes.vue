@@ -399,7 +399,7 @@ onMounted(async () => {
     while (true) {
       const { data } = await supabase
         .from('cobros')
-        .select('prestamo_id, importe, tipo, fecha_real, fecha_teorica, importe_principal, modalidad_recalculo')
+        .select('prestamo_id, importe, tipo, fecha_real, fecha_teorica, importe_principal')
         .order('id').range(from, from + PAGE - 1)
       if (!data || data.length === 0) break
       all = all.concat(data)
@@ -720,7 +720,7 @@ async function cargarKPIsPart(pid) {
     if (prestamoIds.length) {
       const { data: cbp } = await supabase
         .from('cobros')
-        .select('prestamo_id, importe, tipo, fecha_real, fecha_teorica, importe_principal, modalidad_recalculo, cuota_num')
+        .select('prestamo_id, importe, tipo, fecha_real, fecha_teorica, importe_principal, cuota_num')
         .in('prestamo_id', prestamoIds)
       cobrosKPIPart = (cbp || []).filter(cb => !cierre || (cb.fecha_real || cb.fecha_teorica || '') <= cierre)
     }

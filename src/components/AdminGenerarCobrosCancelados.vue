@@ -122,7 +122,7 @@ async function analizar() {
   const ids = prestamos.map(p => p.id)
   const { data: cobrosExistentes } = await supabase
     .from('cobros')
-    .select('prestamo_id, fecha_teorica, importe, tipo, importe_principal, fecha_real, modalidad_recalculo')
+    .select('prestamo_id, fecha_teorica, importe, tipo, importe_principal, fecha_real')
     .in('prestamo_id', ids)
 
   const cobrosMap = {}      // todos los cobros por préstamo (para generateCalendarioTeorico)

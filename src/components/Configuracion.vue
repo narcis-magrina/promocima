@@ -87,6 +87,27 @@
         </div>
       </div>
 
+      <!-- Mantenimiento -->
+      <div class="table-card">
+        <div class="table-header" style="display:flex;align-items:center;justify-content:space-between">
+          <h3>Mantenimiento</h3>
+          <span class="badge" :class="form.mantenimiento ? 'badge-outline-red' : 'badge-outline-green'">
+            {{ form.mantenimiento ? 'Activo' : 'Inactivo' }}
+          </span>
+        </div>
+        <div class="modal-body">
+          <div style="display:flex;align-items:center;gap:12px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+              <input type="checkbox" v-model="form.mantenimiento" style="width:16px;height:16px;cursor:pointer">
+              Poner la aplicación en mantenimiento para usuarios no administradores
+            </label>
+          </div>
+          <div v-if="form.mantenimiento" style="margin-top:10px;font-size:12px;color:var(--orange)">
+            ⚠ Los usuarios con rol <strong>interno</strong> y <strong>partícipe</strong> verán una pantalla de mantenimiento al entrar. Los administradores acceden con normalidad.
+          </div>
+        </div>
+      </div>
+
       <div class="alert alert-success" v-if="guardado">✓ Configuración guardada correctamente</div>
     </template>
   </div>
@@ -96,8 +117,10 @@
 import { validarCampos, traducirErrorSupabase } from '../utils/validar.js'
 import { useAuth } from '../composables/useAuth.js'
 const { empresaId } = useAuth()
+const { setMantenimiento } = useMantenimiento()
 import { ref, onMounted } from 'vue'
 import { supabase } from '../supabase.js'
+import { useMantenimiento } from '../composables/useMantenimiento.js'
 import { fmtDate } from '../utils.js'
 
 const loading = ref(true)
@@ -114,6 +137,7 @@ const form = ref({
   porcentaje_gestion_defecto: 2,
   porcentaje_apertura_defecto: 0,
   fecha_cierre_portal: null,
+  mantenimiento: false,
 })
 
 onMounted(async () => {
@@ -132,6 +156,7 @@ async function guardar() {
     alert(traducirErrorSupabase(error))
     return
   }
+  setMantenimiento(form.value.mantenimiento)
   guardado.value = true
   setTimeout(() => { guardado.value = false }, 3000)
 }

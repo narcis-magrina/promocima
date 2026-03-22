@@ -293,7 +293,7 @@ async function calcularPendientes() {
       let all = [], from = 0
       while (true) {
         const { data } = await supabase.from('cobros')
-          .select('prestamo_id, cuota_num, fecha_teorica, importe, tipo, fecha_real, importe_principal, modalidad_recalculo')
+          .select('prestamo_id, cuota_num, fecha_teorica, importe, tipo, fecha_real, importe_principal')
           .order('id').range(from, from + PAGE - 1)
         if (!data || data.length === 0) break
         all = all.concat(data)

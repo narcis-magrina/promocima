@@ -196,7 +196,7 @@ async function cargarDatos() {
     supabase.from('participes').select('id, nombre').order('nombre'),
     supabase.from('prestamos').select('id, alias, importe, interes_ordinario, interes_demora, fecha_inicio, dia_cobro, duracion_meses, tipo_prestamo, periodicidad, estado, fecha_judicializacion, importe_demanda, demanda_principal, demanda_interes_ordinario, demanda_gastos, meses_carencia, origen_prestamo_id, comision_apertura, garantia_tasacion'),
     supabase.from('pagos_reales_participe').select('contrato_ccp_id'),
-    supabase.from('cobros').select('prestamo_id, cuota_num, importe, tipo, fecha_real, fecha_teorica, importe_principal, modalidad_recalculo').range(0, 9999),
+    supabase.from('cobros').select('prestamo_id, cuota_num, importe, tipo, fecha_real, fecha_teorica, importe_principal').range(0, 9999),
   ])
   // Cargar cobros del préstamo para el contrato en detalle
   if (props.viewId) {

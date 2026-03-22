@@ -440,7 +440,7 @@ async function cargarTodo() {
       let all = [], from = 0, done = false
       while (!done) {
         const { data } = await supabase.from('cobros')
-          .select('prestamo_id, importe, tipo, importe_principal, fecha_real, fecha_teorica, modalidad_recalculo')
+          .select('prestamo_id, importe, tipo, importe_principal, fecha_real, fecha_teorica')
           .order('id').range(from, from + PAGE - 1)
         if (!data || data.length === 0) break
         all = all.concat(data)

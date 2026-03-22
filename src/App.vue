@@ -7,6 +7,22 @@
   <!-- ── Login ────────────────────────────────── -->
   <LoginView v-else-if="!user" />
 
+  <!-- ── Mantenimiento ────────────────────────── -->
+  <div v-else-if="mantenimiento && !isAdmin" class="loading-shell">
+    <div style="max-width:420px;text-align:center">
+      <div style="font-size:48px;margin-bottom:16px">🔧</div>
+      <div style="font-size:18px;font-weight:600;margin-bottom:12px;color:var(--text)">
+        Aplicación en mantenimiento
+      </div>
+      <div style="font-size:13px;color:var(--text3);margin-bottom:24px;line-height:1.6">
+        Estamos realizando tareas de mantenimiento.<br>
+        La aplicación estará disponible en breve.<br>
+        Disculpa las molestias.
+      </div>
+      <button class="btn btn-sm" @click="logout">Cerrar sesión</button>
+    </div>
+  </div>
+
   <!-- ── Sin perfil ────────────────────────────── -->
   <div v-else-if="!perfil" class="loading-shell">
     <div style="max-width:380px;text-align:center">
@@ -30,7 +46,14 @@
   />
 
   <!-- ── Portal Partícipe ──────────────────────── -->
-  <div v-else-if="isParticipe" class="app-layout">
+  <div v-else-if="isParticipe" class="app-layout" :style="mantenimiento && isAdmin ? 'padding-top:36px' : ''">
+    <!-- Banner mantenimiento admin -->
+    <div v-if="mantenimiento && isAdmin"
+      style="position:fixed;top:0;left:0;right:0;z-index:9999;background:var(--orange);color:#fff;padding:8px 16px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.3)">
+      <span style="font-size:16px">🔧</span>
+      <span>APLICACIÓN EN MANTENIMIENTO — los usuarios no administradores no pueden acceder</span>
+      <span style="font-size:16px">🔧</span>
+    </div>
     <div class="sidebar-overlay" :class="{open: sidebarOpen}" @click="sidebarOpen = false"></div>
     <aside class="sidebar" :class="{open: sidebarOpen}">
       <div class="sidebar-logo">
@@ -115,7 +138,14 @@
   </div>
 
   <!-- ── App completa (admin + interno) ─────────── -->
-  <div v-else class="app-layout">
+  <div v-else class="app-layout" :style="mantenimiento && isAdmin ? 'padding-top:36px' : ''">
+    <!-- Banner mantenimiento admin -->
+    <div v-if="mantenimiento && isAdmin"
+      style="position:fixed;top:0;left:0;right:0;z-index:9999;background:var(--orange);color:#fff;padding:8px 16px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.3)">
+      <span style="font-size:16px">🔧</span>
+      <span>APLICACIÓN EN MANTENIMIENTO — los usuarios no administradores no pueden acceder</span>
+      <span style="font-size:16px">🔧</span>
+    </div>
     <div class="sidebar-overlay" :class="{open: sidebarOpen}" @click="sidebarOpen = false"></div>
     <!-- SIDEBAR -->
     <aside class="sidebar" :class="{open: sidebarOpen, collapsed: sidebarCollapsed}">
@@ -242,6 +272,7 @@ import './styles.css'
 
 // ── Auth ───────────────────────────────────────
 import { initAuth, useAuth } from './composables/useAuth.js'
+import { useMantenimiento } from './composables/useMantenimiento.js'
 const { user, perfil, loading, nombre, initiales, isAdmin, isInterno, isParticipe, participeId, participeIds, rol, logout, isRecoveryMode, empresaId } = useAuth()
 const sidebarOpen = ref(false)
 const sidebarCollapsed = ref(localStorage.getItem('sidebarCollapsed') === 'true')
@@ -252,6 +283,8 @@ function toggleCollapse() {
 
 // ── Tema claro / oscuro ────────────────────────
 // En PRUEBAS siempre modo oscuro, en PRODUCCIÓN siempre modo claro
+const { mantenimiento, cargarMantenimiento } = useMantenimiento()
+
 const entorno = import.meta.env.VITE_ENTORNO || 'PRODUCCIÓN'
 const temaForzadoAdmin = entorno === 'PRUEBAS' ? 'dark' : entorno === 'PRODUCCIÓN' ? 'light' : null
 const temaForzado = computed(() => isAdmin.value ? temaForzadoAdmin : null)
@@ -326,6 +359,7 @@ const { page, id, navigate } = useRouter()
 // Al hacer login, redirigir según rol siempre al punto de entrada correcto
 watch(perfil, (p) => {
   if (!p) return
+  cargarMantenimiento()
   if (p.rol === 'participe') return  // portal tiene su propio layout
   navigate('dashboard')              // admin/interno siempre al dashboard
 }, { immediate: true })
