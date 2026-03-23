@@ -530,3 +530,224 @@ input[type="number"] { -moz-appearance: textfield; }
     grid-template-columns: 1fr !important;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   TEMA PROMOCIMA — Identidad Visual Corporativa
+   Colores: Azul marino #002147 · Dorado #D2B48C · Blanco #FFFFFF
+   Tipografías: Impact (títulos) · Helvetica Neue (cuerpo)
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&display=swap');
+
+[data-theme="promocima"] {
+  /* Fondos — basados en azul marino */
+  --bg:      #f5f3ef;          /* fondo general — blanco cálido */
+  --bg2:     #ffffff;          /* cards, modales, sidebar */
+  --bg3:     #f0ede8;          /* inputs, filas hover */
+  --bg4:     #e8e3db;          /* elementos activos */
+
+  /* Bordes */
+  --border:  #e0d9ce;
+  --border2: #cdc4b5;
+
+  /* Textos */
+  --text:    #002147;          /* azul marino — texto principal */
+  --text1:   #002147;
+  --text2:   #3a5272;          /* azul marino suavizado */
+  --text3:   #7a8fa6;          /* azul grisáceo — texto secundario */
+
+  /* Acento — dorado corporativo */
+  --accent:  #D2B48C;
+  --accent2: #b8976a;
+
+  /* Semánticos — mantenemos legibilidad */
+  --green:   #1a7a4a;
+  --red:     #c0392b;
+  --orange:  #c07a2a;
+  --blue:    #002147;
+  --purple:  #5b3a8a;
+  --violet:  #5b3a8a;
+
+  /* KPI */
+  --kpi-val: #002147;
+
+  /* Sombras y overlays */
+  --shadow:        0 1px 4px rgba(0,33,71,0.12);
+  --modal-overlay: rgba(0,33,71,0.45);
+
+  /* Tipografías corporativas */
+  --sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --mono: 'IBM Plex Mono', monospace;
+}
+
+/* ── Sidebar — dorado corporativo ────────────────────────────────────────────── */
+[data-theme="promocima"] .sidebar {
+  background: #D2B48C;
+  border-right: 1px solid #b8976a;
+}
+[data-theme="promocima"] .sidebar-logo {
+  border-bottom-color: rgba(0,33,71,0.15);
+}
+/* PROMOCIMA brand typography */
+.brand { font-family: Impact, 'Barlow Condensed', sans-serif !important; }
+.brand-promo { color: #002147; }                          /* PROMO: azul marino siempre */
+.brand-cima  { color: #D2B48C; }                          /* CIMA: dorado en claro y dark */
+[data-theme="dark"] .brand-promo { color: #ffffff; }      /* PROMO: blanco en dark */
+[data-theme="promocima"] .brand-promo { color: #002147; } /* PROMO: azul marino en promocima */
+[data-theme="promocima"] .brand-cima  { color: #ffffff; } /* CIMA: blanco en promocima */
+
+[data-theme="promocima"] .sidebar-logo .brand {
+  color: #002147;
+  font-family: 'Barlow Condensed', Impact, sans-serif;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  font-size: 18px;
+}
+[data-theme="promocima"] .sidebar-logo .sub {
+  color: rgba(255,255,255,0.75);
+  letter-spacing: 0.1em;
+}
+[data-theme="promocima"] .nav-label {
+  color: rgba(255,255,255,0.5);
+}
+[data-theme="promocima"] .nav-item {
+  color: rgba(255,255,255,0.85);
+}
+[data-theme="promocima"] .nav-item:hover {
+  background: rgba(0,33,71,0.12);
+  color: #fff;
+}
+[data-theme="promocima"] .nav-item.active {
+  background: rgba(0,33,71,0.18);
+  color: #fff;
+  border-color: rgba(0,33,71,0.25);
+  font-weight: 600;
+}
+[data-theme="promocima"] .sidebar-footer {
+  border-top-color: rgba(0,33,71,0.15);
+}
+[data-theme="promocima"] .sidebar-collapse-btn {
+  background: rgba(0,33,71,0.08);
+  border-color: rgba(0,33,71,0.15);
+  color: rgba(0,33,71,0.6);
+}
+[data-theme="promocima"] .sidebar-collapse-btn:hover {
+  background: rgba(0,33,71,0.15);
+  color: #002147;
+}
+[data-theme="promocima"] .user-avatar {
+  background: rgba(0,33,71,0.1);
+  border-color: rgba(0,33,71,0.2);
+  color: #002147;
+}
+[data-theme="promocima"] .user-info .name {
+  color: #ffffff;
+}
+[data-theme="promocima"] .user-info .role {
+  color: rgba(255,255,255,0.65);
+}
+[data-theme="promocima"] .theme-toggle-btn {
+  background: rgba(0,33,71,0.1);
+  border-color: rgba(0,33,71,0.2);
+  color: rgba(255,255,255,0.85);
+}
+[data-theme="promocima"] .theme-toggle-btn:hover {
+  background: rgba(0,33,71,0.18);
+  color: #ffffff;
+}
+
+/* ── Topbar ─────────────────────────────────────────────────────────────────── */
+[data-theme="promocima"] .topbar {
+  background: #ffffff;
+  border-bottom: 2px solid #D2B48C;
+}
+[data-theme="promocima"] .topbar-title {
+  color: #002147;
+  font-family: 'Barlow Condensed', Impact, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  font-size: 17px;
+  text-transform: uppercase;
+}
+
+/* ── Botones ─────────────────────────────────────────────────────────────────── */
+[data-theme="promocima"] .btn-primary {
+  background: #002147;
+  border-color: #001530;
+  color: #fff;
+}
+[data-theme="promocima"] .btn-primary:hover:not(:disabled) {
+  background: #001530;
+  border-color: #000e1e;
+}
+[data-theme="promocima"] .btn-registrar {
+  background: #D2B48C;
+  border-color: #b8976a;
+  color: #002147;
+  font-weight: 600;
+}
+[data-theme="promocima"] .btn-registrar:hover:not(:disabled) {
+  background: #b8976a;
+  border-color: #9e7d52;
+}
+
+/* ── Acento en formularios ───────────────────────────────────────────────────── */
+[data-theme="promocima"] .form-control:focus {
+  border-color: #D2B48C;
+}
+[data-theme="promocima"] .search-input:focus {
+  border-color: #D2B48C;
+}
+[data-theme="promocima"] .search-input.filter-active {
+  border-color: #D2B48C !important;
+  color: #002147 !important;
+}
+
+/* ── KPI cards — acento dorado ───────────────────────────────────────────────── */
+[data-theme="promocima"] .kpi-card.kc-yellow::before { background: #D2B48C; }
+[data-theme="promocima"] .kpi-card.kc-blue::before   { background: #002147; }
+
+/* ── Tabs ────────────────────────────────────────────────────────────────────── */
+[data-theme="promocima"] .tab.active {
+  color: #002147;
+  border-bottom-color: #D2B48C;
+}
+
+/* ── Columnas ordenadas ──────────────────────────────────────────────────────── */
+[data-theme="promocima"] thead th.sorted-asc,
+[data-theme="promocima"] thead th.sorted-desc {
+  color: #D2B48C;
+}
+
+/* ── Badges en tema Promocima ────────────────────────────────────────────────── */
+[data-theme="promocima"] .badge-green  { background: rgba(26,122,74,0.1);  color: #1a7a4a; border-color: rgba(26,122,74,0.3); }
+[data-theme="promocima"] .badge-red    { background: rgba(192,57,43,0.1);  color: #c0392b; border-color: rgba(192,57,43,0.3); }
+[data-theme="promocima"] .badge-orange { background: rgba(192,122,42,0.1); color: #c07a2a; border-color: rgba(192,122,42,0.3); }
+[data-theme="promocima"] .badge-blue   { background: rgba(0,33,71,0.08);   color: #002147; border-color: rgba(0,33,71,0.2); }
+[data-theme="promocima"] .badge-yellow { background: rgba(210,180,140,0.15); color: #8a6a30; border-color: rgba(210,180,140,0.4); }
+[data-theme="promocima"] .badge-gray   { background: rgba(122,143,166,0.1); color: #4a6278; border-color: rgba(122,143,166,0.3); }
+[data-theme="promocima"] .badge-outline-green  { color: #1a7a4a; border-color: #1a7a4a; }
+[data-theme="promocima"] .badge-outline-red    { color: #c0392b; border-color: #c0392b; }
+[data-theme="promocima"] .badge-outline-blue   { color: #002147; border-color: #002147; }
+[data-theme="promocima"] .badge-outline-yellow { color: #8a6a30; border-color: #D2B48C; }
+[data-theme="promocima"] .badge-outline-gray   { color: #4a6278; border-color: #7a8fa6; }
+
+/* ── Alerts ──────────────────────────────────────────────────────────────────── */
+[data-theme="promocima"] .alert-warning { background: rgba(210,180,140,0.1);  border-color: rgba(210,180,140,0.4); color: #8a6a30; }
+[data-theme="promocima"] .alert-danger  { background: rgba(192,57,43,0.08);   border-color: rgba(192,57,43,0.3);   color: #c0392b; }
+[data-theme="promocima"] .alert-info    { background: rgba(0,33,71,0.06);     border-color: rgba(0,33,71,0.2);     color: #002147; }
+[data-theme="promocima"] .alert-success { background: rgba(26,122,74,0.08);   border-color: rgba(26,122,74,0.3);   color: #1a7a4a; }
+
+/* ── Modal ───────────────────────────────────────────────────────────────────── */
+[data-theme="promocima"] .modal-overlay { background: var(--modal-overlay); }
+[data-theme="promocima"] .modal { box-shadow: 0 20px 40px rgba(0,33,71,0.2); }
+[data-theme="promocima"] .modal-header { border-bottom-color: #D2B48C; }
+
+/* ── Filas de tabla — fondo blanco explícito ────────────────────────────────── */
+[data-theme="promocima"] tbody tr { background: #ffffff; }
+[data-theme="promocima"] tbody tr:hover { background: var(--bg3); }
+
+/* ── Scrollbar ───────────────────────────────────────────────────────────────── */
+[data-theme="promocima"] ::-webkit-scrollbar-track { background: var(--bg3); }
+[data-theme="promocima"] ::-webkit-scrollbar-thumb { background: #D2B48C; border-radius: 3px; }
+[data-theme="promocima"] ::-webkit-scrollbar-thumb:hover { background: #b8976a; }

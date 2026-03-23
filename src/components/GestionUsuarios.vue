@@ -287,7 +287,6 @@ async function guardar() {
       rol:           form.value.rol,
       activo:        form.value.activo,
       participe_ids: ids,
-      participe_id:  ids.length > 0 ? ids[0] : null,
       empresa_id:    form.value.empresa_id || empresaId.value,
     }).eq('id', form.value.id)
     if (error) throw error

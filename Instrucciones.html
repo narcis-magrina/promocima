@@ -11,41 +11,46 @@
   </style>
 </head>
 <body>
-<p class="p1"><b><u>Ubicación del código:</u></b></p>
+<p class="p1"><b>Ubicación del código:</b></p>
 <p class="p1">cd "/Users/narcismagrinabalcells/Dropbox/1 - OFICINA/1-PROMOCIMA/02-CAPITAL PRIVADO/30 - Desarrollo/Préstamos/Claude Pro/promocima"</p>
 <br>
-<p class="p1"><b><u>Ejecución publica:</u></b></p>
+<p class="p1"><b>Ejecución publica:</b></p>
 <p class="p1">https://promocima-prestamos.vercel.app</p>
 <br>
-<p class="p1"><b><u>Para levantar servidor local:</u></b></p>
+<p class="p1"><b>Para levantar servidor local:</b></p>
 <p class="p1">npm run dev</p>
 <p class="p1">localhost:5173</p>
 <br>
 <p class="p1"><b><u>INSTRUCCIONES PARA PASAR DEL ENTORNO DE PRUEBAS A PRODUCCION</u></b></p>
 <br>
-<p class="p1"><b><u>Para subir cambios a GitHub (no se suben a producción):</u></b></p>
+<p class="p1"><b>Para subir cambios a GitHub (no se suben a producción):</b></p>
 <p class="p1">git add .</p>
 <p class="p1">git commit -m "Descripción de los cambios"</p>
 <p class="p1">git push</p>
 <br>
-<p class="p1"><b><u>Para publicar en vercel:</u></b></p>
-<p class="p1">en primer lugar hay que migrar la BD</p>
-<p class="p1">Pedirle a Claud que me unifique las SQL en una</p>
-<p class="p1">Ejecutarla en SQL de producción</p>
+<p class="p1"><b>Para publicar en vercel:</b></p>
+<br>
+<p class="p1">Poner la aplicación de producción en MANTENIMIENTO (Configuración)</p>
+<p class="p1">HAcer Backup de la BD</p>
+<p class="p1">En primer lugar hay que migrar la BD</p>
+<p class="p1">Pedirle a Claud que me unifique las SQL en una. ==> Ejecutarla en SQL de producción</p>
 <p class="p1">vercel --prod</p>
+<p class="p1"><b>QUITAR LA APLICACIÓN DE MANTENIMIENTO (Configuración)</b></p>
 <br>
 <p class="p1"><b><u>COMO FUNCIONA EL SISTEMA DE INVITACIONES POR CORREO Y EL RESETEO DEL PASSWORD</u></b></p>
 <br>
-<p class="p1"><b><u>Cada 15 minutos se comprueban las invitaciones:</u></b></p>
+<p class="p1"><b>Cada 15 minutos se comprueban las invitaciones:</b></p>
 <p class="p1">Desde el correo de gmail narcis.magrinya@gmail.com pero con from: nmagrina@promocima.com</p>
 <p class="p1">Usando google apps script, la función enviarCorreosDesdeSuperbase del proyecto Promocima </p>
 <p class="p1">Se comprueba si en la BD Supabase hay emails pendientes y los envía, marcándolos como enviados</p>
 <br>
-<p class="p1"><b><u>Base de datos:</u></b></p>
+<p class="p1"><b><u>OTROS</u></b></p>
+<br>
+<p class="p1"><b>Base de datos:</b></p>
 <p class="p1">Supabase --> Promocima --> PROMOCIMA --> Pss: Promocima20</p></body>
 <p class="p1">Supabase --> Promocima --> PRUEBAS --> Pss: Promocima20</p></body>
 <br>
-<p class="p1"><b><u>Tests:</u></b></p>
+<p class="p1"><b>Tests:</b></p>
 <p class="p1">Se pasarán los tests que habremos definido y comentado en un fichero excel llamado promocima_tests.xlsx</p></body>
 <p class="p1">Yo puedo pasarlos cuando quiera con:</p></body>
 <p class="p1">npx vitest run</p></body>

@@ -57,10 +57,7 @@
     <div class="sidebar-overlay" :class="{open: sidebarOpen}" @click="sidebarOpen = false"></div>
     <aside class="sidebar" :class="{open: sidebarOpen}">
       <div class="sidebar-logo">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
-          <img src="/src/logo.png" class="sidebar-logo-img" alt="Logo">
-          <div class="brand">PROMOCIMA <span style="font-size:10px;font-weight:400;opacity:0.6;letter-spacing:0">v1.0</span></div>
-        </div>
+        <div class="brand"><span class="brand-promo">PROMO</span><span class="brand-cima">CIMA</span> <span style="font-size:10px;font-weight:400;opacity:0.6;letter-spacing:0">v1.0</span></div>
         <div class="sub">Portal Partícipe</div>
       </div>
       <nav class="sidebar-nav">
@@ -82,9 +79,9 @@
         </div>
       </nav>
       <div class="sidebar-footer">
-        <button @click="toggleTheme" class="theme-toggle-btn" style="margin-bottom:8px" :title="darkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'">
-          <span>{{ darkMode ? '☀️' : '🌙' }}</span>
-          <span style="font-size:11px;margin-left:6px">{{ darkMode ? 'Modo claro' : 'Modo oscuro' }}</span>
+        <button @click="toggleTheme" class="theme-toggle-btn" style="margin-bottom:8px" :title="temaActual === 'dark' ? 'Cambiar a Promocima' : temaActual === 'light' ? 'Cambiar a oscuro' : 'Cambiar a claro'">
+          <span>{{ temaActual === 'dark' ? '🌙' : temaActual === 'light' ? '☀️' : '🏛️' }}</span>
+          <span style="font-size:11px;margin-left:6px">{{ temaActual === 'dark' ? 'Modo oscuro' : temaActual === 'light' ? 'Modo claro' : 'Promocima' }}</span>
         </button>
         <div style="display:flex;align-items:center;gap:8px">
           <div class="user-avatar">{{ initiales }}</div>
@@ -151,8 +148,7 @@
     <aside class="sidebar" :class="{open: sidebarOpen, collapsed: sidebarCollapsed}">
       <div class="sidebar-logo">
         <div class="sidebar-logo-img-wrap">
-          <img src="/src/logo.png" class="sidebar-logo-img" alt="Logo">
-          <div class="brand sidebar-logo-text">PROMOCIMA <span style="font-size:10px;font-weight:400;opacity:0.6;letter-spacing:0">v1.0</span></div>
+          <div class="brand sidebar-logo-text"><span class="brand-promo">PROMO</span><span class="brand-cima">CIMA</span> <span style="font-size:10px;font-weight:400;opacity:0.6;letter-spacing:0">v1.0</span></div>
         </div>
         <div class="sub sidebar-logo-text">Capital Privado · Gestión Interna</div>
         <button class="sidebar-collapse-btn" @click="toggleCollapse" :title="sidebarCollapsed ? 'Expandir menú' : 'Colapsar menú'">
@@ -220,18 +216,18 @@
         </div>
         <!-- Entorno forzado: mostrar info, no permitir cambio -->
         <div v-if="temaForzado" style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;background:var(--bg2);font-size:12px">
-          <span>{{ temaForzado === 'dark' ? '🌙' : '☀️' }}</span>
+          <span>🌙</span>
           <span style="color:var(--text3)">Entorno: </span>
           <div style="display:flex;flex-direction:column;gap:1px">
-            <span :style="temaForzado === 'dark' ? 'color:var(--orange);font-weight:600' : 'color:var(--green);font-weight:600'">
+            <span style="color:var(--orange);font-weight:600">
               {{ entorno }}
             </span>
-            <span style="color:var(--text3);font-size:10px">{{ temaForzado === 'dark' ? '(Modo Oscuro)' : '(Modo Claro)' }}</span>
+            <span style="color:var(--text3);font-size:10px">(Modo Oscuro forzado)</span>
           </div>
         </div>
-        <button v-else @click="toggleTheme" class="theme-toggle-btn" :title="darkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'">
-          <span>{{ darkMode ? '☀️' : '🌙' }}</span>
-          <span class="sidebar-footer-text" style="font-size:11px;margin-left:6px">{{ darkMode ? 'Modo claro' : 'Modo oscuro' }}</span>
+        <button v-else @click="toggleTheme" class="theme-toggle-btn" :title="temaActual === 'dark' ? 'Cambiar a Promocima' : temaActual === 'light' ? 'Cambiar a oscuro' : 'Cambiar a claro'">
+          <span>{{ temaActual === 'dark' ? '🌙' : temaActual === 'light' ? '☀️' : '🏛️' }}</span>
+          <span class="sidebar-footer-text" style="font-size:11px;margin-left:6px">{{ temaActual === 'dark' ? 'Modo oscuro' : temaActual === 'light' ? 'Modo claro' : 'Promocima' }}</span>
         </button>
       </div>
     </aside>
@@ -286,27 +282,36 @@ function toggleCollapse() {
 const { mantenimiento, cargarMantenimiento } = useMantenimiento()
 
 const entorno = import.meta.env.VITE_ENTORNO || 'PRODUCCIÓN'
-const temaForzadoAdmin = entorno === 'PRUEBAS' ? 'dark' : entorno === 'PRODUCCIÓN' ? 'light' : null
+// Admin → dark forzado siempre. El resto elige entre 3 temas.
+const temaForzadoAdmin = 'dark'
 const temaForzado = computed(() => isAdmin.value ? temaForzadoAdmin : null)
-const darkMode = ref(localStorage.getItem('theme') === 'dark')
-function applyTheme(dark) {
-  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
-  if (!temaForzado.value) localStorage.setItem('theme', dark ? 'dark' : 'light')
-}
-// Aplicar al cargar con el tema guardado
-applyTheme(darkMode.value)
-// Cuando el perfil cargue, forzar tema si es admin
-watch(isAdmin, (admin) => {
-  if (admin && temaForzadoAdmin) {
-    darkMode.value = temaForzadoAdmin === 'dark'
-    applyTheme(darkMode.value)
+
+const TEMAS = ['promocima', 'light', 'dark']
+const temaActual = ref(localStorage.getItem('tema') || 'promocima')
+
+function applyTheme(tema) {
+  if (temaForzado.value) {
+    document.documentElement.setAttribute('data-theme', 'dark')
+  } else {
+    document.documentElement.setAttribute('data-theme', tema)
+    localStorage.setItem('tema', tema)
+    temaActual.value = tema
   }
+}
+// Aplicar al cargar
+applyTheme(temaActual.value)
+// Cuando el perfil cargue, forzar dark si es admin
+watch(isAdmin, (admin) => {
+  if (admin) applyTheme('dark')
+  else applyTheme(temaActual.value)
 }, { immediate: true })
 function toggleTheme() {
-  if (temaForzado.value) return  // Solo admins tienen tema forzado
-  darkMode.value = !darkMode.value
-  applyTheme(darkMode.value)
+  if (temaForzado.value) return
+  const idx = TEMAS.indexOf(temaActual.value)
+  applyTheme(TEMAS[(idx + 1) % TEMAS.length])
 }
+// darkMode kept for compatibility
+const darkMode = computed(() => temaActual.value === 'dark')
 const participeCcpId    = ref(null)
 const participeActivoId = ref(null)
 const nombresParticipes = ref({})
