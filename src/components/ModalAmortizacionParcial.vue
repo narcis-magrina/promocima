@@ -310,7 +310,7 @@ async function ejecutar() {
     const diaAP  = new Date(fecha + 'T00:00:00').getDate()
     const { data: prestamosExistentes } = await supabase.from('prestamos').select('id')
     const numsP  = (prestamosExistentes || []).map(x => parseInt(x.id.replace(/\D/g, '')) || 0)
-    const nuevoId = 'P' + String((numsP.length ? Math.max(...numsP) : 0) + 1).padStart(3, '0')
+    const nuevoId = 'P' + String((numsP.length ? Math.max(...numsP) : 0) + 1).padStart(6, '0')
     const { error: e3 } = await supabase.from('prestamos').insert({
       id:                  nuevoId,
       empresa_id:          props.prestamo.empresa_id,

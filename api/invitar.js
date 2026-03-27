@@ -46,11 +46,12 @@ export default async function handler(req, res) {
 
     // Crear perfil (activo: false hasta que establezca contraseña)
     const { error: perfilError } = await supabase.from('perfiles').insert({
-      id:     authData.user.id,
+      id:         authData.user.id,
       email,
-      nombre: nombre || '',
-      rol:    rol || 'interno',
-      activo: false
+      nombre:     nombre || '',
+      rol:        rol || 'interno',
+      empresa_id: empresa_id || accesos?.[0]?.empresa_id,
+      activo:     false
     })
     if (perfilError) {
       console.error('[invitar] Error perfil:', perfilError.message)

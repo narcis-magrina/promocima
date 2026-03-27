@@ -170,7 +170,7 @@
             </div>
             <div class="form-group">
               <label class="form-label">Empresa</label>
-              <select class="form-control" v-model="formInvitar.empresa_id">
+              <select class="form-control" v-model="formInvitar.accesos[0].empresa_id" @change="formInvitar.accesos[0].participe_ids = []">
                 <option value="">-- Selecciona empresa --</option>
                 <option v-for="e in empresas" :key="e.id" :value="e.id">{{ e.nombre }}</option>
               </select>
@@ -186,12 +186,12 @@
             <div v-if="formInvitar.rol === 'participe'" class="form-group">
               <label class="form-label">Partícipes vinculados</label>
               <div style="max-height:140px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:8px;display:flex;flex-direction:column;gap:4px">
-                <label v-for="p in participesPorEmpresa(formInvitar.empresa_id)" :key="p.id"
+                <label v-for="p in participesPorEmpresa(formInvitar.accesos[0].empresa_id)" :key="p.id"
                   style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
-                  <input type="checkbox" :value="p.id" v-model="formInvitar.participe_ids">
+                  <input type="checkbox" :value="p.id" v-model="formInvitar.accesos[0].participe_ids">
                   {{ p.nombre }}
                 </label>
-                <div v-if="!participesPorEmpresa(formInvitar.empresa_id).length" style="font-size:12px;color:var(--text3);padding:4px 0">Sin partícipes en esta empresa</div>
+                <div v-if="!participesPorEmpresa(formInvitar.accesos[0].empresa_id).length" style="font-size:12px;color:var(--text3);padding:4px 0">Sin partícipes en esta empresa</div>
               </div>
             </div>
           </div>
@@ -405,7 +405,9 @@ async function eliminarUsuario(u) {
 
 async function reinvitar(u) {
   if (!confirm(`¿Reinvitar a "${u.nombre || u.email}"?`)) return
-  formInvitar.value = { email: u.email, nombre: u.nombre || '', rol: u.rol || 'interno', accesos: accesosDe(u.id).map(a => ({ ...a })) }
+  const accesos = accesosDe(u.id).map(a => ({ ...a, participe_ids: [...(a.participe_ids || [])] }))
+  if (!accesos.length) accesos.push({ empresa_id: empresaId.value || '', participe_ids: [], orden: 0 })
+  formInvitar.value = { email: u.email, nombre: u.nombre || '', rol: u.rol || 'interno', accesos }
   msgInvitar.value  = null
   modalInvitar.value = true
 }
@@ -416,7 +418,7 @@ const msgInvitar    = ref(null)
 const formInvitar   = ref({ email: '', nombre: '', rol: 'interno', accesos: [] })
 
 function abrirInvitar() {
-  formInvitar.value  = { email: '', nombre: '', rol: 'interno', accesos: empresaId.value ? [{ empresa_id: empresaId.value, participe_ids: [], orden: 0 }] : [] }
+  formInvitar.value  = { email: '', nombre: '', rol: 'interno', accesos: [{ empresa_id: empresaId.value || '', participe_ids: [], orden: 0 }] }
   msgInvitar.value   = null
   modalInvitar.value = true
 }
@@ -447,7 +449,7 @@ async function enviarInvitacion() {
     { campo: 'nombre', label: 'Nombre', requerido: true },
     { campo: 'rol',    label: 'Rol',    requerido: true },
   ])
-  if (!formInvitar.value.accesos.length) erroresInv.push('Debe tener al menos una empresa asignada')
+  if (!formInvitar.value.accesos[0]?.empresa_id) erroresInv.push('Debe seleccionar una empresa')
   if (erroresInv.length) return (msgInvitar.value = { ok: false, text: erroresInv.join('\n') })
 
   savingInvitar.value = true
@@ -468,8 +470,8 @@ async function enviarInvitacion() {
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error)
-    msgInvitar.value = { ok: true, text: `Invitación enviada a ${formInvitar.value.email}.` }
-    formInvitar.value = { email: '', nombre: '', rol: 'interno', accesos: [] }
+    modalInvitar.value = false
+    formInvitar.value = { email: '', nombre: '', rol: 'interno', accesos: [{ empresa_id: empresaId.value || '', participe_ids: [], orden: 0 }] }
     await cargar()
   } catch (e) {
     msgInvitar.value = { ok: false, text: e.message }
