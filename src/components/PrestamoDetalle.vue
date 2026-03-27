@@ -911,7 +911,7 @@ async function parsearTablaXLSX(buffer) {
       const data = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null })
 
       // Buscar fila cabecera con "Fecha" e "Importe" en columna >= 5 (col F+)
-      let headerRow = -1, colFecha = -1, colImporte = -1
+      let headerRow = -1, colFecha = -1, colImporte = -1, colFechaReal = -1, colImporteReal = -1
       for (let i = 0; i < Math.min(data.length, 30); i++) {
         const row = data[i]
         if (!row) continue
@@ -922,6 +922,9 @@ async function parsearTablaXLSX(buffer) {
             const iIdx = row.findIndex((c, k) => k > j && typeof c === 'string' && c.trim().toLowerCase() === 'importe')
             if (iIdx !== -1) {
               headerRow = i; colFecha = j; colImporte = iIdx
+              // Buscar columnas opcionales "Fecha real" e "Importe real"
+              colFechaReal   = row.findIndex((c, k) => k > j && typeof c === 'string' && c.trim().toLowerCase() === 'fecha real')
+              colImporteReal = row.findIndex((c, k) => k > j && typeof c === 'string' && c.trim().toLowerCase() === 'importe real')
               break
             }
           }
@@ -955,7 +958,19 @@ async function parsearTablaXLSX(buffer) {
         const importe = typeof iRaw === 'number' ? iRaw : parseFloat(String(iRaw).replace(',', '.'))
         if (isNaN(importe) || importe <= 0) continue
 
-        filas.push({ fecha: fechaStr, importe: Math.round(importe * 100) / 100 })
+        // Columnas opcionales "Fecha real" e "Importe real"
+        const fila = { fecha: fechaStr, importe: Math.round(importe * 100) / 100 }
+
+        if (colFechaReal !== -1 && row[colFechaReal] != null) {
+          const frStr = toISO(row[colFechaReal])
+          if (frStr) fila.fechaReal = frStr
+        }
+        if (colImporteReal !== -1 && row[colImporteReal] != null) {
+          const ir = typeof row[colImporteReal] === 'number' ? row[colImporteReal] : parseFloat(String(row[colImporteReal]).replace(',', '.'))
+          if (!isNaN(ir) && ir > 0) fila.importeReal = Math.round(ir * 100) / 100
+        }
+
+        filas.push(fila)
       }
 
       if (filas.length > 0) return filas
@@ -1013,14 +1028,16 @@ async function procesarArchivoExcel(file) {
         continue
       }
       inserts.push({
-        id:           'CB' + uuid(),
-        prestamo_id:  props.prestamoId,
-        cuota_num:    String(siguienteCuota++),
-        fecha_teorica: fila.fecha,
-        fecha_real:    fila.fecha,
-        importe:       fila.importe,
-        tipo:          'pago_cuota',
-        notas:         'Importado desde Excel',
+        id:              'CB' + uuid(),
+        prestamo_id:     props.prestamoId,
+        cuota_num:       String(siguienteCuota++),
+        fecha_teorica:   fila.fecha,
+        fecha_real:        fila.fechaReal  ?? fila.fecha,
+        importe:           fila.importe,
+        fecha_real_cobro:  fila.fechaReal  ?? fila.fecha,
+        importe_real_cobro: fila.importeReal ?? fila.importe,
+        tipo:            'pago_cuota',
+        notas:           'Importado desde Excel',
       })
     }
 
