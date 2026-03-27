@@ -31,8 +31,9 @@
 <p class="p1"><b>Para publicar en vercel:</b></p>
 <br>
 <p class="p1">Poner la aplicación de producción en MANTENIMIENTO (Configuración)</p>
-<p class="p1">HAcer Backup de la BD</p>
+<p class="p1">Hacer Backup de la BD</p>
 <p class="p1">En primer lugar hay que migrar la BD</p>
+<p class="p1">PAsar los test: npx vitest run</p>
 <p class="p1">Pedirle a Claud que me unifique las SQL en una. ==> Ejecutarla en SQL de producción</p>
 <p class="p1">vercel --prod</p>
 <p class="p1"><b>QUITAR LA APLICACIÓN DE MANTENIMIENTO (Configuración)</b></p>
@@ -47,8 +48,13 @@
 <p class="p1"><b><u>OTROS</u></b></p>
 <br>
 <p class="p1"><b>Base de datos:</b></p>
+<p class="p1">Entorno de producción:</p></body>
 <p class="p1">Supabase --> Promocima --> PROMOCIMA --> Pss: Promocima20</p></body>
+<p class="p1">cp .env.local.prod .env.local</p></body>
+<br>
+<p class="p1">Entorno de pruebas:</p></body>
 <p class="p1">Supabase --> Promocima --> PRUEBAS --> Pss: Promocima20</p></body>
+<p class="p1">cp .env.local.pruebas .env.local</p></body>
 <br>
 <p class="p1"><b>Tests:</b></p>
 <p class="p1">Se pasarán los tests que habremos definido y comentado en un fichero excel llamado promocima_tests.xlsx</p></body>

@@ -1,7 +1,6 @@
 {
   "framework": "vite",
   "rewrites": [
-    { "source": "/callback.html", "destination": "/callback.html" },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    { "source": "/((?!api/|login\\.html|activar-cuenta\\.html|forgot-password\\.html|reset-password\\.html).*)", "destination": "/index.html" }
   ]
 }

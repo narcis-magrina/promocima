@@ -22,7 +22,6 @@ export default async function handler(req, res) {
         rol,
         activo,
         participe_ids: ids,
-        participe_id: ids.length > 0 ? ids[0] : null,
       }).eq('id', id)
       if (error) throw error
       return res.status(200).json({ ok: true })
@@ -30,9 +29,11 @@ export default async function handler(req, res) {
 
     if (req.method === 'DELETE') {
       console.log('Eliminando user_id:', id)
-      const { data, error } = await supabase.auth.admin.deleteUser(id)
-      console.log('Resultado:', JSON.stringify({ data, error }))
-      if (error) throw error
+      // Borrar perfil siempre (aunque el usuario Auth no exista)
+      await supabase.from('perfiles').delete().eq('id', id)
+      // Intentar borrar de Auth — si no existe, no es error crítico
+      const { error } = await supabase.auth.admin.deleteUser(id)
+      if (error && error.message !== 'User not found') throw error
       return res.status(200).json({ ok: true })
     }
     

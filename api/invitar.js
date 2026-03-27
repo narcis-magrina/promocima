@@ -1,5 +1,4 @@
 import { createSupabaseAdmin, verificarAdmin } from './_supabase.js'
-import crypto from 'crypto'
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -10,22 +9,21 @@ export default async function handler(req, res) {
 
   try {
     await verificarAdmin(req)
-    const { email, nombre, rol, participe_ids, empresa_id } = req.body
+    const { email, nombre, rol, participe_ids, empresa_id, accesos } = req.body
     if (!empresa_id) return res.status(400).json({ error: 'empresa_id requerido' })
-    if (!email) return res.status(400).json({ error: 'Email requerido' })
+    if (!email)     return res.status(400).json({ error: 'Email requerido' })
     console.log('[invitar] Inicio para:', email)
 
     const supabase = createSupabaseAdmin()
-    const base = crypto.randomBytes(12).toString('hex')
-    const upper = base.slice(0, 4).toUpperCase()
-    const tempPassword = upper + base.slice(4) + 'A1!'
+    const appUrl   = process.env.APP_URL || 'https://prestamos.promocima.com'
 
     // Verificar si ya existe — permitir reinvitar si está inactivo
     console.log('[invitar] Comprobando si existe...')
     const { data: existing } = await supabase.auth.admin.listUsers()
     const existingUser = existing?.users?.find(u => u.email === email)
     if (existingUser) {
-      const { data: perfilExistente } = await supabase.from('perfiles').select('activo').eq('id', existingUser.id).single()
+      const { data: perfilExistente } = await supabase
+        .from('perfiles').select('activo').eq('id', existingUser.id).single()
       if (perfilExistente?.activo) {
         return res.status(400).json({ error: `Ya existe un usuario activo con el email ${email}` })
       }
@@ -34,25 +32,24 @@ export default async function handler(req, res) {
       await supabase.auth.admin.deleteUser(existingUser.id)
     }
 
-    console.log('[invitar] Creando usuario en Auth...')
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email,
-      password: tempPassword,
-      email_confirm: true,
+    // Enviar invitación oficial de Supabase (igual que la PoC)
+    console.log('[invitar] Enviando invitación Supabase...')
+    const { data: authData, error: authError } = await supabase.auth.admin.inviteUserByEmail(email, {
+      redirectTo: `${appUrl}/activar-cuenta.html`,
+      data: { nombre: nombre || '', origen: 'invitacion' }
     })
     if (authError) {
-      console.error('[invitar] Error createUser:', authError.message)
+      console.error('[invitar] Error inviteUserByEmail:', authError.message)
       throw authError
     }
-    console.log('[invitar] Usuario Auth creado:', authData.user.id)
+    console.log('[invitar] Invitación enviada. Usuario:', authData.user.id)
 
+    // Crear perfil (activo: false hasta que establezca contraseña)
     const { error: perfilError } = await supabase.from('perfiles').insert({
-      id: authData.user.id,
+      id:     authData.user.id,
       email,
       nombre: nombre || '',
-      rol: rol || 'interno',
-      participe_ids: rol === 'participe' ? (participe_ids || []) : [],
-      empresa_id,
+      rol:    rol || 'interno',
       activo: false
     })
     if (perfilError) {
@@ -61,25 +58,22 @@ export default async function handler(req, res) {
     }
     console.log('[invitar] Perfil creado OK')
 
-    const { data: template } = await supabase.from('email_templates').select('asunto').eq('nombre', 'invitacion').single()
-    const asunto = template?.asunto || 'Invitación para acceder a PROMO CIMA'
-    const appUrl = `https://${req.headers.host}/bienvenida.html`
-    console.log('[invitar] Asunto:', asunto, '| URL:', appUrl)
+    // Crear accesos en perfiles_empresas
+    const accesosPayload = accesos?.length
+      ? accesos.map((a, i) => ({
+          perfil_id:     authData.user.id,
+          empresa_id:    a.empresa_id,
+          participe_ids: rol === 'participe' ? (a.participe_ids || []) : [],
+          orden:         i,
+        }))
+      : [{ perfil_id: authData.user.id, empresa_id, participe_ids: rol === 'participe' ? (participe_ids || []) : [], orden: 0 }]
 
-    const { error: emailError } = await supabase.from('emails_pendientes').insert({
-      para: email,
-      asunto,
-      nombre: nombre || '',
-      password: tempPassword,
-      url: appUrl,
-      enviado: false,
-      template_nombre: 'invitacion'
-    })
-    if (emailError) {
-      console.error('[invitar] Error emails_pendientes:', emailError.message)
-      throw emailError
+    const { error: accesosError } = await supabase.from('perfiles_empresas').insert(accesosPayload)
+    if (accesosError) {
+      console.error('[invitar] Error accesos:', accesosError.message)
+      throw accesosError
     }
-    console.log('[invitar] emails_pendientes OK')
+    console.log('[invitar] Accesos creados OK')
 
     return res.status(200).json({ ok: true })
   } catch (e) {

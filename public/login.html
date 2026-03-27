@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Acceso · PROMOCIMA</title>
+
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        background: #f0f0f0;
+        color: #333;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 20px;
+      }
+      .card {
+        width: 100%;
+        max-width: 460px;
+        background: #fff;
+        border-radius: 4px;
+        box-shadow: 0 2px 16px rgba(0,0,0,0.12);
+        overflow: hidden;
+      }
+      .card-header {
+        background: #002147;
+        padding: 32px 40px;
+        text-align: center;
+      }
+      .logo {
+        font-family: Impact, 'Arial Narrow', Arial, sans-serif;
+        font-size: 32px;
+        letter-spacing: 2px;
+        line-height: 1;
+      }
+      .logo span.promo { color: #fff; }
+      .logo span.cima  { color: #D2B48C; }
+      .logo-sub {
+        font-size: 10px;
+        color: #D2B48C;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        margin-top: 8px;
+      }
+      .gold-bar { background: #D2B48C; height: 4px; }
+      .card-body { padding: 40px; }
+      .card-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: #002147;
+        margin-bottom: 6px;
+      }
+      .card-sub {
+        font-size: 12px;
+        color: #999;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        margin-bottom: 28px;
+      }
+      label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: #002147;
+        margin: 16px 0 6px;
+        letter-spacing: 0.3px;
+      }
+      input {
+        width: 100%;
+        padding: 11px 14px;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        font-size: 14px;
+        font-family: inherit;
+        color: #333;
+        transition: border-color 0.2s;
+        background: #fafafa;
+      }
+      input:focus { outline: none; border-color: #002147; background: #fff; }
+      button.btn-primary {
+        width: 100%;
+        margin-top: 24px;
+        padding: 13px;
+        border: 0;
+        border-radius: 3px;
+        background: #002147;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        cursor: pointer;
+        font-family: inherit;
+        transition: background 0.2s;
+      }
+      button.btn-primary:hover { background: #003070; }
+      button.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+      .link-row { margin-top: 14px; text-align: right; }
+      .link-row a { color: #D2B48C; text-decoration: none; font-size: 13px; }
+      .link-row a:hover { text-decoration: underline; }
+      .msg {
+        margin-top: 16px;
+        padding: 11px 14px;
+        border-radius: 3px;
+        font-size: 13px;
+        line-height: 1.5;
+        display: none;
+      }
+      .msg.ok  { display: block; background: #f0f7f0; color: #1a5c1a; border: 1px solid #b8ddb8; }
+      .msg.err { display: block; background: #fdf0f0; color: #9c1c1c; border: 1px solid #e8b8b8; }
+      .gold-bar-bottom { background: #D2B48C; height: 2px; }
+      .card-footer {
+        background: #002147;
+        padding: 14px 40px;
+        text-align: center;
+        font-size: 10px;
+        color: #D2B48C;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+      .muted { font-size: 12px; color: #aaa; margin-top: 8px; }
+      .hidden { display: none; }
+    </style>
+  <script src="/api/config"></script>
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+    const supabase  = createClient(window.APP_CONFIG.SUPABASE_URL, window.APP_CONFIG.SUPABASE_ANON_KEY)
+    const estado    = document.getElementById('estado')
+    const form      = document.getElementById('loginForm')
+    const emailEl   = document.getElementById('email')
+    const passwordEl = document.getElementById('password')
+    const submitBtn = document.getElementById('submitBtn')
+
+    function showMessage(text, type) { estado.className = `msg ${type}`; estado.textContent = text }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault()
+      estado.className = 'msg'
+      const email    = emailEl.value.trim()
+      const password = passwordEl.value
+      if (!email || !password) { showMessage('Introduce email y contraseña.', 'err'); return }
+      submitBtn.disabled = true
+      submitBtn.textContent = 'Accediendo...'
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+        if (error) throw error
+        if (!data?.session) throw new Error('No se ha creado la sesión correctamente.')
+        showMessage('Acceso correcto. Redirigiendo...', 'ok')
+        setTimeout(() => { window.location.href = '/' }, 700)
+      } catch (err) {
+        const msg = err.message?.includes('Invalid login credentials')
+          ? 'Email o contraseña incorrectos'
+          : (err.message || 'No se pudo iniciar sesión.')
+        showMessage(msg, 'err')
+      } finally {
+        submitBtn.disabled = false
+        submitBtn.textContent = 'Entrar'
+      }
+    })
+  </script>
+</head>
+<body>
+  <div class="card">
+    <div class="card-header">
+      <div class="logo"><span class="promo">PROMO</span><span class="cima">CIMA</span></div>
+      <div class="logo-sub">Capital Privado</div>
+    </div>
+    <div class="gold-bar"></div>
+    <div class="card-body">
+      <form id="loginForm">
+        <label for="email">Email</label>
+        <input id="email" type="email" autocomplete="email" placeholder="nombre@empresa.com" required />
+        <label for="password">Contraseña</label>
+        <input id="password" type="password" autocomplete="current-password" placeholder="••••••••" required />
+        <button id="submitBtn" class="btn-primary" type="submit">Entrar</button>
+      </form>
+      <div class="link-row">
+        <a href="/forgot-password.html">He olvidado mi contraseña</a>
+      </div>
+      <div id="estado" class="msg"></div>
+    </div>
+    <div class="gold-bar-bottom"></div>
+    <div class="card-footer">PROMOCIMA · Capital Privado</div>
+  </div>
+</body>
+</html>

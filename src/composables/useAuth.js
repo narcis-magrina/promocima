@@ -1,50 +1,22 @@
 /**
- * useAuth — Supabase Auth + gestión de roles.
- *
- * Roles:
- *   admin      → acceso total + gestión de usuarios/configuración
- *   interno    → acceso total funcional, sin gestión de usuarios
- *   participe  → solo dashboard propio + contratos CCP + pagos propios
- *
- * La tabla `perfiles` en Supabase:
- *   id          uuid  (FK → auth.users.id)
- *   email       text
- *   nombre      text
- *   rol         text  ('admin' | 'interno' | 'participe')
- *   participe_ids text[]  (solo para rol 'participe', FK → participes.id)
- *   activo      bool
- *
- * SQL para crear la tabla (ejecutar en Supabase SQL Editor):
- * ─────────────────────────────────────────────────────────
- * create table public.perfiles (
- *   id           uuid primary key references auth.users(id) on delete cascade,
- *   email        text not null,
- *   nombre       text not null default '',
- *   rol          text not null default 'interno' check (rol in ('admin','interno','participe')),
- *   participe_ids text[] default '{}',
- *   activo       boolean not null default true,
- *   created_at   timestamptz default now()
- * );
- * alter table public.perfiles enable row level security;
- * create policy "Usuarios ven su propio perfil"
- *   on public.perfiles for select using (auth.uid() = id);
- * create policy "Admins ven todos los perfiles"
- *   on public.perfiles for all using (
- *     exists (select 1 from public.perfiles p where p.id = auth.uid() and p.rol = 'admin')
- *   );
+ * useAuth — Supabase Auth + gestión de roles + multi-empresa.
+ * Los accesos empresa/partícipes se gestionan en perfiles_empresas.
  */
 
 import { ref, computed } from 'vue'
-import { supabase } from '../supabase.js'
+import { supabase, empresaActivaHeader } from '../supabase.js'
 
 // ── Singleton state ──────────────────────────────────────────────────────────
-const session  = ref(null)   // Supabase session
-const perfil   = ref(null)   // Row from `perfiles` table
-const loading  = ref(true)   // true while initial session check is running
-const authError = ref(null)
+const session        = ref(null)
+const perfil         = ref(null)
+const accesos        = ref([])    // rows de perfiles_empresas [{empresa_id, participe_ids, orden}]
+const loading        = ref(true)
+const authError      = ref(null)
 const isRecoveryMode = ref(false)
+const empresaActiva  = ref(null)
+const empresaKey     = ref(0)
 
-// ── Init: called once from main.js / App.vue ─────────────────────────────────
+// ── Init ─────────────────────────────────────────────────────────────────────
 export async function initAuth() {
   loading.value = true
   try {
@@ -55,36 +27,33 @@ export async function initAuth() {
     loading.value = false
   }
 
-  // Escuchar cambios de auth:
-  // - TOKEN_REFRESHED: actualizar session sin tocar perfil (ya está cargado)
-  // - SIGNED_IN: cargar perfil si no está
-  // - SIGNED_OUT: solo limpiar si realmente no hay sesión en localStorage
   supabase.auth.onAuthStateChange(async (event, s) => {
     if (event === 'TOKEN_REFRESHED') {
       session.value = s
       return
     }
     if (event === 'SIGNED_OUT') {
-      session.value = null
-      perfil.value  = null
+      session.value        = null
+      perfil.value         = null
+      accesos.value        = []
+      empresaActiva.value  = null
+      empresaActivaHeader.value = null
       isRecoveryMode.value = false
       return
     }
-    // Si es una invitación pendiente (no ha establecido contraseña aún),
-    // guardamos la sesión pero NO cargamos perfil ni redirigimos.
-    // LoginView detectará el sessionStorage y mostrará el formulario de contraseña.
-    if (event === 'SIGNED_IN' && sessionStorage.getItem('supabase_auth_type') === 'invite') {
+    const isInviteSession  = sessionStorage.getItem('supabase_auth_type') === 'invite'
+    const isInviteMetadata = s?.user?.user_metadata?.origen === 'invitacion'
+    if (event === 'SIGNED_IN' && (isInviteSession || isInviteMetadata)) {
       session.value = s
+      sessionStorage.setItem('supabase_auth_type', 'invite')
       return
     }
-    // Durante recovery: activar modo recovery para que App.vue muestre LoginView
     if (event === 'PASSWORD_RECOVERY') {
       session.value = s
       isRecoveryMode.value = true
       sessionStorage.setItem('supabase_auth_type', 'recovery')
       return
     }
-    // SIGNED_IN, USER_UPDATED y otros eventos normales
     session.value = s
     if (s && !perfil.value) {
       loading.value = true
@@ -95,16 +64,28 @@ export async function initAuth() {
 }
 
 async function cargarPerfil(userId) {
-  const { data, error } = await supabase
-    .from('perfiles')
-    .select('*')
-    .eq('id', userId)
-    .single()
-  if (error) {
-    perfil.value = null
-  } else {
-    perfil.value = data
+  // Cargar perfil y accesos en paralelo
+  const [{ data: perfilData }, { data: accesosData }] = await Promise.all([
+    supabase.from('perfiles').select('*').eq('id', userId).single(),
+    supabase.from('perfiles_empresas')
+      .select('empresa_id, participe_ids, orden')
+      .eq('perfil_id', userId)
+      .order('orden', { ascending: true })
+  ])
+
+  if (!perfilData) {
+    perfil.value  = null
+    accesos.value = []
+    return
   }
+
+  perfil.value  = perfilData
+  accesos.value = accesosData || []
+
+  // Empresa principal = la de menor orden
+  const principal = accesos.value[0]?.empresa_id || null
+  empresaActiva.value       = principal
+  empresaActivaHeader.value = principal
 }
 
 // ── Composable ───────────────────────────────────────────────────────────────
@@ -121,26 +102,41 @@ export function useAuth() {
       : n.slice(0, 2).toUpperCase()
   })
 
-  const isAdmin    = computed(() => rol.value === 'admin')
-  const isInterno  = computed(() => rol.value === 'admin' || rol.value === 'interno')
-  const isParticipe  = computed(() => rol.value === 'participe')
-  const participeIds = computed(() => perfil.value?.participe_ids || [])
-  const participeId  = computed(() => participeIds.value[0] || null)  // primer partícipe (compatibilidad)
-  const empresaId    = computed(() => perfil.value?.empresa_id || null)
+  const isAdmin     = computed(() => rol.value === 'admin')
+  const isInterno   = computed(() => rol.value === 'admin' || rol.value === 'interno')
+  const isParticipe = computed(() => rol.value === 'participe')
+
+  // empresaId — empresa activa actual
+  const empresaId = empresaActiva
+
+  // Lista de empresas del usuario ordenadas
+  const empresaIds = computed(() => accesos.value.map(a => a.empresa_id))
+  const tieneMultiEmpresa = computed(() => empresaIds.value.length > 1)
+
+  // Partícipes de la empresa activa
+  const participeIds = computed(() => {
+    const acceso = accesos.value.find(a => a.empresa_id === empresaActiva.value)
+    return acceso?.participe_ids || []
+  })
+  const participeId = computed(() => participeIds.value[0] || null)
+
+  // Cambiar empresa activa
+  function cambiarEmpresa(id) {
+    if (empresaIds.value.includes(id)) {
+      empresaActiva.value       = id
+      empresaActivaHeader.value = id
+      empresaKey.value++
+    }
+  }
 
   async function login(email, password, recordar = false) {
     authError.value = null
-    loading.value = true
+    loading.value   = true
     try {
-      // Limpiar storage de Supabase por si quedó basura de un flujo de invitación
-      Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k))
       const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-        options: { persistSession: recordar }
+        email, password, options: { persistSession: recordar }
       })
       if (error) {
-        // Traducir mensajes técnicos a mensajes comprensibles
         if (error.message.includes('Invalid login credentials') || error.code === 'invalid_credentials') {
           authError.value = 'Email o contraseña incorrectos'
         } else if (error.message.includes('Email not confirmed')) {
@@ -157,11 +153,14 @@ export function useAuth() {
 
   async function logout() {
     await supabase.auth.signOut()
-    session.value = null
-    perfil.value  = null
+    session.value             = null
+    perfil.value              = null
+    accesos.value             = []
+    empresaActiva.value       = null
+    empresaActivaHeader.value = null
+    window.location.href      = '/'
   }
 
-  // Admin: create/update user profile
   async function guardarPerfil(data) {
     const { error } = await supabase.from('perfiles').upsert(data)
     if (error) throw error
@@ -174,12 +173,10 @@ export function useAuth() {
   }
 
   return {
-    // State
-    session, perfil, loading, authError,
-    // Derived
+    session, perfil, accesos, loading, authError,
     user, rol, nombre, initiales,
-    isAdmin, isInterno, isParticipe, participeId, participeIds, empresaId,
-    // Actions
+    isAdmin, isInterno, isParticipe, participeId, participeIds,
+    empresaId, empresaIds, tieneMultiEmpresa, cambiarEmpresa, empresaKey,
     login, logout, guardarPerfil, listarUsuarios,
     isRecoveryMode,
   }

@@ -27,6 +27,16 @@
         <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
 
           <div class="form-group">
+            <label class="form-label">Principal amortizado (€) <span class="req">*</span></label>
+            <input class="form-control" type="number" step="0.01" min="0"
+              :max="capitalPendiente"
+              v-model="form.principal">
+            <div style="font-size:11px;color:var(--text3);margin-top:3px">
+              Capital pendiente actual: <strong>{{ fmt(capitalPendiente) }}</strong>
+            </div>
+          </div>
+
+          <div class="form-group">
             <label class="form-label">
               Intereses ordinarios (€)
               <span style="font-size:10px;color:var(--text3);font-weight:400;margin-left:6px">calculado · editable</span>
@@ -44,16 +54,6 @@
               <span style="font-size:10px;color:var(--text3);font-weight:400;margin-left:6px">editable</span>
             </label>
             <input class="form-control" type="number" step="0.01" min="0" v-model="form.interesDemora">
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Principal amortizado (€) <span class="req">*</span></label>
-            <input class="form-control" type="number" step="0.01" min="0"
-              :max="capitalPendiente"
-              v-model="form.principal">
-            <div style="font-size:11px;color:var(--text3);margin-top:3px">
-              Capital pendiente actual: <strong>{{ fmt(capitalPendiente) }}</strong>
-            </div>
           </div>
 
           <div class="form-group">
@@ -284,6 +284,7 @@ async function ejecutar() {
     // ── Paso 1: Cobro de cancelación en el préstamo original ──────────────────
     const { error: e1 } = await supabase.from('cobros').insert({
       id:                        'CB' + uuid(),
+      empresa_id:                props.prestamo.empresa_id,
       prestamo_id:               props.prestamoId,
       cuota_num:                 'AP' + fecha.replace(/-/g, ''),
       fecha_teorica:             fecha,
@@ -312,6 +313,7 @@ async function ejecutar() {
     const nuevoId = 'P' + String((numsP.length ? Math.max(...numsP) : 0) + 1).padStart(3, '0')
     const { error: e3 } = await supabase.from('prestamos').insert({
       id:                  nuevoId,
+      empresa_id:          props.prestamo.empresa_id,
       origen_prestamo_id:  props.prestamoId,
       alias:               p.alias + ' (AP)',
       centro_coste:        p.centro_coste,
@@ -350,6 +352,7 @@ async function ejecutar() {
       let nextCCP = (numsC.length ? Math.max(...numsC) : 0) + 1
       const nuevosCCPs = ccps.map(ccp => ({
         id:                       'CCP' + String(nextCCP++).padStart(3, '0'),
+        empresa_id:               props.prestamo.empresa_id,
         prestamo_id:              nuevoId,
         participe_id:             ccp.participe_id,
         porcentaje_participacion: ccp.porcentaje_participacion,

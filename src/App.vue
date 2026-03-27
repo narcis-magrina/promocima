@@ -4,8 +4,8 @@
     <div style="color:var(--text3);font-size:13px">Cargando…</div>
   </div>
 
-  <!-- ── Login ────────────────────────────────── -->
-  <LoginView v-else-if="!user" />
+  <!-- ── Redirigir a login si no hay sesión ───── -->
+  <LoginView v-else-if="!user && isLocal" />
 
   <!-- ── Mantenimiento ────────────────────────── -->
   <div v-else-if="mantenimiento && !isAdmin" class="loading-shell">
@@ -37,14 +37,6 @@
     </div>
   </div>
 
-  <!-- ── Activar cuenta (primer acceso) ────────── -->
-  <ActivarCuenta
-    v-else-if="perfil && !perfil.activo"
-    :perfil="perfil"
-    @activado="recargarPerfil"
-    @logout="logout"
-  />
-
   <!-- ── Portal Partícipe ──────────────────────── -->
   <div v-else-if="isParticipe" class="app-layout" :style="mantenimiento && isAdmin ? 'padding-top:36px' : ''">
     <!-- Banner mantenimiento admin -->
@@ -59,6 +51,20 @@
       <div class="sidebar-logo">
         <div class="brand"><span class="brand-promo">PROMO</span><span class="brand-cima">CIMA</span> <span style="font-size:10px;font-weight:400;opacity:0.6;letter-spacing:0">v1.0</span></div>
         <div class="sub">Portal Partícipe</div>
+      </div>
+      <!-- Selector multi-empresa (solo visible con >1 empresa) -->
+      <div v-if="tieneMultiEmpresa" class="empresa-selector" style="padding:8px;border-bottom:1px solid var(--border);">
+        <div style="font-size:9px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Empresa activa</div>
+        <div style="position:relative">
+          <select
+            :value="empresaId"
+            @change="cambiarEmpresa($event.target.value)"
+            style="width:100%;padding:6px 8px;font-size:12px;font-weight:600;color:var(--text);background:var(--bg3);border:1px solid var(--border);border-radius:4px;cursor:pointer;appearance:none;padding-right:24px;"
+          >
+            <option v-for="eid in empresaIds" :key="eid" :value="eid">{{ empresasMap[eid] || eid }}</option>
+          </select>
+          <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--text3);font-size:10px;">▼</span>
+        </div>
       </div>
       <nav class="sidebar-nav">
         <div class="nav-section">
@@ -155,6 +161,20 @@
           {{ sidebarCollapsed ? '»' : '«' }}
         </button>
       </div>
+      <!-- Selector multi-empresa (solo visible con >1 empresa) -->
+      <div v-if="tieneMultiEmpresa" class="empresa-selector sidebar-logo-text" style="padding:8px;border-bottom:1px solid var(--border);">
+        <div style="font-size:9px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Empresa activa</div>
+        <div style="position:relative">
+          <select
+            :value="empresaId"
+            @change="cambiarEmpresa($event.target.value)"
+            style="width:100%;padding:6px 8px;font-size:12px;font-weight:600;color:var(--text);background:var(--bg3);border:1px solid var(--border);border-radius:4px;cursor:pointer;appearance:none;padding-right:24px;"
+          >
+            <option v-for="eid in empresaIds" :key="eid" :value="eid">{{ empresasMap[eid] || eid }}</option>
+          </select>
+          <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--text3);font-size:10px;">▼</span>
+        </div>
+      </div>
       <nav class="sidebar-nav">
         <div class="nav-section">
           <div class="nav-label">Principal</div>
@@ -216,13 +236,13 @@
         </div>
         <!-- Entorno forzado: mostrar info, no permitir cambio -->
         <div v-if="temaForzado" style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;background:var(--bg2);font-size:12px">
-          <span>🌙</span>
+          <span>{{ temaForzado === 'dark' ? '🌙' : '🏛️' }}</span>
           <span style="color:var(--text3)">Entorno: </span>
           <div style="display:flex;flex-direction:column;gap:1px">
-            <span style="color:var(--orange);font-weight:600">
+            <span :style="temaForzado === 'dark' ? 'color:var(--orange);font-weight:600' : 'color:#D2B48C;font-weight:600'">
               {{ entorno }}
             </span>
-            <span style="color:var(--text3);font-size:10px">(Modo Oscuro forzado)</span>
+            <span style="color:var(--text3);font-size:10px">{{ temaForzado === 'dark' ? '(Modo Oscuro)' : '(Tema Corporativo)' }}</span>
           </div>
         </div>
         <button v-else @click="toggleTheme" class="theme-toggle-btn" :title="temaActual === 'dark' ? 'Cambiar a Promocima' : temaActual === 'light' ? 'Cambiar a oscuro' : 'Cambiar a claro'">
@@ -242,7 +262,7 @@
           <button class="btn btn-sm" @click="logout">Cerrar sesión</button>
         </div>
       </div>
-      <div class="content">
+      <div class="content" :key="empresaKey">
         <Dashboard          v-if="page === 'dashboard'"       @navigate="navigate" />
         <Clientes           v-else-if="page === 'clientes'"           :view-id="id" @navigate="navigate" />
         <Intermediarios     v-else-if="page === 'intermediarios'"     :view-id="id" @navigate="navigate" />
@@ -269,9 +289,11 @@ import './styles.css'
 // ── Auth ───────────────────────────────────────
 import { initAuth, useAuth } from './composables/useAuth.js'
 import { useMantenimiento } from './composables/useMantenimiento.js'
-const { user, perfil, loading, nombre, initiales, isAdmin, isInterno, isParticipe, participeId, participeIds, rol, logout, isRecoveryMode, empresaId } = useAuth()
+const { user, perfil, loading, nombre, initiales, isAdmin, isInterno, isParticipe, participeId, participeIds, rol, logout, empresaId, empresaIds, tieneMultiEmpresa, cambiarEmpresa, empresaKey } = useAuth()
+const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
 const sidebarOpen = ref(false)
 const sidebarCollapsed = ref(localStorage.getItem('sidebarCollapsed') === 'true')
+const empresasMap = ref({})  // id -> nombre
 function toggleCollapse() {
   sidebarCollapsed.value = !sidebarCollapsed.value
   localStorage.setItem('sidebarCollapsed', sidebarCollapsed.value)
@@ -282,8 +304,9 @@ function toggleCollapse() {
 const { mantenimiento, cargarMantenimiento } = useMantenimiento()
 
 const entorno = import.meta.env.VITE_ENTORNO || 'PRODUCCIÓN'
-// Admin → dark forzado siempre. El resto elige entre 3 temas.
-const temaForzadoAdmin = 'dark'
+// Admin → tema forzado según entorno. El resto elige libremente.
+// PRUEBAS: dark forzado | PRODUCCIÓN: promocima forzado
+const temaForzadoAdmin = entorno === 'PRUEBAS' ? 'dark' : 'promocima'
 const temaForzado = computed(() => isAdmin.value ? temaForzadoAdmin : null)
 
 const TEMAS = ['promocima', 'light', 'dark']
@@ -291,7 +314,7 @@ const temaActual = ref(localStorage.getItem('tema') || 'promocima')
 
 function applyTheme(tema) {
   if (temaForzado.value) {
-    document.documentElement.setAttribute('data-theme', 'dark')
+    document.documentElement.setAttribute('data-theme', temaForzado.value)
   } else {
     document.documentElement.setAttribute('data-theme', tema)
     localStorage.setItem('tema', tema)
@@ -300,10 +323,13 @@ function applyTheme(tema) {
 }
 // Aplicar al cargar
 applyTheme(temaActual.value)
-// Cuando el perfil cargue, forzar dark si es admin
+// Cuando el perfil cargue, aplicar tema forzado si es admin
 watch(isAdmin, (admin) => {
-  if (admin) applyTheme('dark')
-  else applyTheme(temaActual.value)
+  if (admin && temaForzadoAdmin) {
+    applyTheme(temaForzadoAdmin)
+  } else if (!admin) {
+    applyTheme(temaActual.value)
+  }
 }, { immediate: true })
 function toggleTheme() {
   if (temaForzado.value) return
@@ -330,6 +356,7 @@ watch(participeIds, async (ids) => {
   // Si hay uno solo, seleccionarlo directamente
   if (participeActivoId.value !== null && !ids.includes(participeActivoId.value)) {
     participeActivoId.value = ids.length === 1 ? ids[0] : null
+    participeCcpId.value = null
   }
   if (ids.length === 1 && participeActivoId.value === null) {
     participeActivoId.value = ids[0]
@@ -348,23 +375,19 @@ function onParticipeNav(page, id) {
 
 const rolLabel = computed(() => ({ admin: 'Administrador', interno: 'Usuario Interno', participe: 'Partícipe' }[rol.value] || rol.value))
 
-// ── Recargar perfil tras activar cuenta ────────
-async function recargarPerfil() {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (session) {
-    const { data } = await supabase.from('perfiles').select('*').eq('id', session.user.id).single()
-    if (data) perfil.value = data
-  }
-}
-
 // ── Router ─────────────────────────────────────
 import { useRouter } from './composables/useRouter.js'
 const { page, id, navigate } = useRouter()
 
 // Al hacer login, redirigir según rol siempre al punto de entrada correcto
-watch(perfil, (p) => {
+watch(perfil, async (p) => {
   if (!p) return
   cargarMantenimiento()
+  // Cargar nombres de empresas del usuario
+  if (empresaIds.value.length) {
+    const { data } = await supabase.from('empresas').select('id, nombre').in('id', empresaIds.value)
+    if (data) empresasMap.value = Object.fromEntries(data.map(e => [e.id, e.nombre]))
+  }
   if (p.rol === 'participe') return  // portal tiene su propio layout
   navigate('dashboard')              // admin/interno siempre al dashboard
 }, { immediate: true })
@@ -386,7 +409,6 @@ const pageTitle = computed(() => titles[page.value] || '')
 
 // ── Components ─────────────────────────────────
 import LoginView        from './components/LoginView.vue'
-import ActivarCuenta    from './components/ActivarCuenta.vue'
 import ParticiPePortal  from './components/ParticiPePortal.vue'
 import GestionUsuarios  from './components/GestionUsuarios.vue'
 import Dashboard        from './components/Dashboard.vue'
@@ -403,8 +425,26 @@ import HelpPanel        from './components/HelpPanel.vue'
 import { supabase }     from './supabase.js'
 import { fmtDate }      from './utils.js'
 
+// ── Recargar al cambiar empresa ────────────────
+watch(empresaId, (newId, oldId) => {
+  if (oldId && newId !== oldId) {
+    console.log('[App] empresa cambió de', oldId, 'a', newId, '- recargando')
+    navigate('dashboard')
+  }
+})
+
 // ── Init ───────────────────────────────────────
-onMounted(() => {
-  initAuth()
+
+onMounted(async () => {
+  await initAuth()
+  if (!user.value && !isLocal) {
+    window.location.href = '/login.html'
+  }
+})
+
+watch(user, (u) => {
+  if (!u && !loading.value && !isLocal) {
+    window.location.href = '/login.html'
+  }
 })
 </script>
