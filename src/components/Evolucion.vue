@@ -476,9 +476,12 @@ function ultimoDiaMes(mesStr) {
 // ── Calendarios teóricos precalculados (para préstamos no Americanos) ─────────
 const calendariosPorPrestamo = computed(() => {
   const map = {}
-  for (const p of prestamosEnCurso.value) {
+  for (const p of prestamosRaw.value) {
     if (p.tipo_prestamo !== 'Americano') {
-      map[p.id] = generateCalendarioTeorico(p)
+      // Para préstamos cancelados, pasamos el estado como 'activo' para que
+      // generateCalendarioTeorico no devuelva [] y podamos calcular capital vivo histórico
+      const pCalc = p.estado === 'cancelado' ? { ...p, estado: 'activo' } : p
+      map[p.id] = generateCalendarioTeorico(pCalc)
     }
   }
   return map
@@ -525,8 +528,9 @@ const prestamosEnCurso = computed(() => prestamosRaw.value.filter(p => p.estado 
 
 function stockVivoEnFecha(fecha) {
   let particulares = 0, empresasParticipadas = 0, empresasPropias = 0
-  for (const p of prestamosEnCurso.value) {
+  for (const p of prestamosRaw.value) {
     if (!p.fecha_inicio || p.fecha_inicio > fecha) continue
+    if (p.estado === 'cancelado' && p.fecha_cancelacion && p.fecha_cancelacion <= fecha) continue
     const importe     = Number(p.importe || 0)
     const capitalVivo = capitalVivoEnFecha(p, fecha)
     // Mantenemos la fracción de participación proporcional al importe inicial
@@ -591,9 +595,9 @@ const serieInversion = computed(() => {
 })
 
 const serieInversionEnCurso = computed(() => {
-  if (!prestamosEnCurso.value.length) return []
+  if (!prestamosRaw.value.length) return []
   const hoy = today()
-  const primeraFecha = prestamosEnCurso.value.filter(p => p.fecha_inicio).map(p => p.fecha_inicio).sort()[0]
+  const primeraFecha = prestamosRaw.value.filter(p => p.fecha_inicio).map(p => p.fecha_inicio).sort()[0]
   if (!primeraFecha) return []
   return generarPuntosInversion(primeraFecha, hoy, granularidadInvCurso.value)
     .map(({ label, fecha, fechaInicio }) => {
@@ -641,6 +645,15 @@ const serieIngresos = computed(() => {
   const porMes = {}
   for (const mes of meses) porMes[mes] = ingresosDelMes(mes)
 
+  // Precalcular capital propio (particulares + empresasPropias) al fin de cada mes
+  // Evita recalcular stockVivoEnFecha 12 veces por punto en ltmPct
+  const capitalPropioMes = {}
+  for (const mes of meses) {
+    const fin = `${mes}-${ultimoDiaMes(mes)}`
+    const { particulares, empresasPropias } = stockVivoEnFecha(fin)
+    capitalPropioMes[mes] = particulares + empresasPropias
+  }
+
   const sumar = lista => lista.reduce(
     (acc, mes) => {
       const v = porMes[mes]
@@ -659,12 +672,36 @@ const serieIngresos = computed(() => {
     bajas: prestamosRaw.value.filter(p => p.fecha_cancelacion && p.fecha_cancelacion >= fechaInicio && p.fecha_cancelacion <= fechaFin),
   })
 
+  // LTM (Last Twelve Months): suma los 12 meses anteriores al mes indicado (YYYY-MM)
+  // Usa capitalPropioMes precalculado para evitar recalcular stockVivoEnFecha por punto
+  // Devuelve null si no hay 12 meses completos de historia
+  // modo: 'total' | 'sinApertura' | 'soloIntereses'
+  const ltmPct = (mesStr, modo = 'total') => {
+    const [yStr, mStr] = mesStr.split('-')
+    const y = Number(yStr), m = Number(mStr)
+    const ltmMeses = []
+    for (let i = 11; i >= 0; i--) {
+      let mm = m - i, yy = y
+      while (mm <= 0) { mm += 12; yy-- }
+      ltmMeses.push(`${yy}-${String(mm).padStart(2, '0')}`)
+    }
+    if (!ltmMeses.every(mes => porMes[mes] && capitalPropioMes[mes] !== undefined)) return null
+    const ing = sumar(ltmMeses)
+    const cap = ltmMeses.reduce((s, mes) => s + capitalPropioMes[mes], 0) / ltmMeses.length
+    if (!cap) return null
+    let total
+    if (modo === 'sinApertura')    total = ing.intParticulares + ing.intEmpresasPropias + ing.gestion
+    else if (modo === 'soloIntereses') total = ing.intParticulares + ing.intEmpresasPropias
+    else                            total = ing.intParticulares + ing.intEmpresasPropias + ing.gestion + ing.apertura
+    return Math.round((total / cap) * 10000) / 100
+  }
+
   if (granularidadIng.value === 'mes') {
     return meses.map(mes => {
       const [y, m] = mes.split('-')
       const fechaInicio = mes + '-01'
       const fechaFin = `${mes}-${ultimoDiaMes(mes)}`
-      return { label: `${m}/${y}`, ...porMes[mes], ...altasBajas(fechaInicio, fechaFin) }
+      return { label: `${m}/${y}`, ...porMes[mes], ...altasBajas(fechaInicio, fechaFin), rentabilidadPct: ltmPct(mes), rentabilidadRecurrentePct: ltmPct(mes, 'sinApertura'), rentabilidadInteresesPct: ltmPct(mes, 'soloIntereses') }
     })
   }
   if (granularidadIng.value === 'trimestre') {
@@ -681,7 +718,8 @@ const serieIngresos = computed(() => {
       const fechaInicio = lista[0] + '-01'
       const lastMes = lista[lista.length - 1]
       const fechaFin = `${lastMes}-${ultimoDiaMes(lastMes)}`
-      return { label: `${q} ${y}`, ...sumar(lista), ...altasBajas(fechaInicio, fechaFin) }
+      const ing = sumar(lista)
+      return { label: `${q} ${y}`, ...ing, ...altasBajas(fechaInicio, fechaFin), rentabilidadPct: ltmPct(lastMes), rentabilidadRecurrentePct: ltmPct(lastMes, 'sinApertura'), rentabilidadInteresesPct: ltmPct(lastMes, 'soloIntereses') }
     })
   }
   // anual
@@ -696,12 +734,13 @@ const serieIngresos = computed(() => {
     const fechaInicio = lista[0] + '-01'
     const lastMes = lista[lista.length - 1]
     const fechaFin = `${lastMes}-${ultimoDiaMes(lastMes)}`
-    return { label: y, ...sumar(lista), ...altasBajas(fechaInicio, fechaFin) }
+    const ing = sumar(lista)
+    return { label: y, ...ing, ...altasBajas(fechaInicio, fechaFin), rentabilidadPct: ltmPct(lastMes), rentabilidadRecurrentePct: ltmPct(lastMes, 'sinApertura'), rentabilidadInteresesPct: ltmPct(lastMes, 'soloIntereses') }
   })
 })
 
 // ── Opciones chart ────────────────────────────────────────────────────────────
-function makeChartOptions(getSerie) {
+function makeChartOptions(getSerie, { secondAxis = false } = {}) {
   return {
     responsive: true,
     maintainAspectRatio: true,
@@ -715,11 +754,14 @@ function makeChartOptions(getSerie) {
       tooltip: {
         itemSort: (a, b) => b.datasetIndex - a.datasetIndex,
         callbacks: {
-          label: ctx => ` ${ctx.dataset.label}: ${fmtN(ctx.raw)} €`,
+          label: ctx => ctx.dataset.yAxisID === 'y2'
+            ? ` ${ctx.dataset.label}: ${ctx.raw !== null ? ctx.raw.toFixed(2) + '%' : '—'}`
+            : ` ${ctx.dataset.label}: ${fmtN(ctx.raw)} €`,
           footer: items => {
             const idx = items[0]?.dataIndex
             const point = getSerie()[idx]
-            const lines = [`Total: ${fmtN(items.reduce((s, i) => s + Number(i.raw), 0))} €`]
+            const euroItems = items.filter(i => i.dataset.yAxisID !== 'y2')
+            const lines = [`Total: ${fmtN(euroItems.reduce((s, i) => s + Number(i.raw), 0))} €`]
             if (point?.altas?.length) {
               lines.push('')
               point.altas.forEach(a => lines.push(`▲ ${a.alias || a.centro_coste || '—'}  +${fmtN(a.importe)} €`))
@@ -743,14 +785,25 @@ function makeChartOptions(getSerie) {
             ? (v / 1000000).toFixed(1) + ' M€'
             : v >= 1000 ? (v / 1000).toFixed(0) + ' k€' : v + ' €'
         }
-      }
+      },
+      ...(secondAxis ? {
+        y2: {
+          type: 'linear',
+          position: 'right',
+          grid: { drawOnChartArea: false },
+          ticks: {
+            font: { size: 11 },
+            callback: v => v.toFixed(1) + '%'
+          }
+        }
+      } : {})
     }
   }
 }
 
 const chartOptionsInversion        = computed(() => makeChartOptions(() => serieInversion.value))
 const chartOptionsInversionEnCurso = computed(() => makeChartOptions(() => serieInversionEnCurso.value))
-const chartOptionsIngresos         = computed(() => makeChartOptions(() => serieIngresos.value))
+const chartOptionsIngresos         = computed(() => makeChartOptions(() => serieIngresos.value, { secondAxis: true }))
 
 const ds = (label, color, data) => ({
   label, data,
@@ -760,6 +813,7 @@ const ds = (label, color, data) => ({
   fill: true,
   tension: 0.3,
   pointRadius: 0,
+  order: 1,
 })
 
 // ── Chart data ────────────────────────────────────────────────────────────────
@@ -788,6 +842,49 @@ const chartIngresosData = computed(() => ({
     ds('Intereses empresas propios', 'rgba(104, 211, 145, 1)', serieIngresos.value.map(p => Math.round(p.intEmpresasPropias))),
     ds('Ingresos por gestión',       'rgba(246, 173, 85, 1)',  serieIngresos.value.map(p => Math.round(p.gestion))),
     ds('Comisiones de apertura',     'rgba(159, 122, 234, 1)', serieIngresos.value.map(p => Math.round(p.apertura))),
+    {
+      label: 'Rentabilidad anualizada LTM',
+      data: serieIngresos.value.map(p => p.rentabilidadPct),
+      yAxisID: 'y2',
+      type: 'line',
+      order: 0,
+      borderColor: 'rgba(239, 68, 68, 0.45)',
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      borderDash: [5, 4],
+      fill: false,
+      tension: 0.3,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+    },
+    {
+      label: 'Rentabilidad recurrente LTM',
+      data: serieIngresos.value.map(p => p.rentabilidadRecurrentePct),
+      yAxisID: 'y2',
+      type: 'line',
+      order: 0,
+      borderColor: 'rgba(239, 68, 68, 0.9)',
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      fill: false,
+      tension: 0.3,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+    },
+    {
+      label: 'Rentabilidad intereses LTM',
+      data: serieIngresos.value.map(p => p.rentabilidadInteresesPct),
+      yAxisID: 'y2',
+      type: 'line',
+      order: 0,
+      borderColor: 'rgba(30, 64, 175, 0.9)',
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      fill: false,
+      tension: 0.3,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+    },
   ]
 }))
 
@@ -919,7 +1016,7 @@ function exportarInversionExcel() {
 
 function exportarInversionEnCursoExcel() {
   const hoy = today()
-  const primeraFecha = prestamosEnCurso.value.filter(p => p.fecha_inicio).map(p => p.fecha_inicio).sort()[0]
+  const primeraFecha = prestamosRaw.value.filter(p => p.fecha_inicio).map(p => p.fecha_inicio).sort()[0]
   if (!primeraFecha) return
   const filas = [
     ['Mes', 'Particulares', 'Empresas parte propia', 'Empresas parte participada', 'Total'],
@@ -937,13 +1034,52 @@ function exportarIngresosExcel() {
   const primeraFecha = prestamosRaw.value.filter(p => p.fecha_inicio).map(p => p.fecha_inicio).sort()[0]
   if (!primeraFecha) return
   const meses = mesesEntre(primeraFecha, hoy)
+
+  // Precalcular capital propio mensual (mismo cálculo que serieIngresos)
+  const capitalPropioMes = {}
+  for (const mes of meses) {
+    const fin = `${mes}-${ultimoDiaMes(mes)}`
+    const { particulares, empresasPropias } = stockVivoEnFecha(fin)
+    capitalPropioMes[mes] = particulares + empresasPropias
+  }
+  const porMes = {}
+  for (const mes of meses) porMes[mes] = ingresosDelMes(mes)
+
+  const ltmPctExcel = (mesStr) => {
+    const [yStr, mStr] = mesStr.split('-')
+    const y = Number(yStr), m = Number(mStr)
+    const ltmMeses = []
+    for (let i = 11; i >= 0; i--) {
+      let mm = m - i, yy = y
+      while (mm <= 0) { mm += 12; yy-- }
+      ltmMeses.push(`${yy}-${String(mm).padStart(2, '0')}`)
+    }
+    if (!ltmMeses.every(k => porMes[k] && capitalPropioMes[k] !== undefined)) return ''
+    const totalIng = ltmMeses.reduce((s, k) => {
+      const v = porMes[k]
+      return s + v.intParticulares + v.intEmpresasPropias + v.gestion + v.apertura
+    }, 0)
+    const cap = ltmMeses.reduce((s, k) => s + capitalPropioMes[k], 0) / ltmMeses.length
+    if (!cap) return ''
+    return (Math.round((totalIng / cap) * 10000) / 100).toString().replace('.', ',')
+  }
+
   const filas = [
-    ['Mes', 'Intereses particulares', 'Intereses empresas propios', 'Ingresos gestión', 'Comisiones apertura', 'Total'],
+    ['Mes', 'Intereses particulares', 'Intereses empresas propios', 'Ingresos gestión', 'Comisiones apertura', 'Total ingresos', 'Capital propio medio (€)', 'Rentabilidad LTM (%)'],
     ...meses.map(mes => {
       const [y, m] = mes.split('-')
       const v = ingresosDelMes(mes)
       const total = Math.round(v.intParticulares + v.intEmpresasPropias + v.gestion + v.apertura)
-      return [`${m}/${y}`, Math.round(v.intParticulares), Math.round(v.intEmpresasPropias), Math.round(v.gestion), Math.round(v.apertura), total]
+      return [
+        `${m}/${y}`,
+        Math.round(v.intParticulares),
+        Math.round(v.intEmpresasPropias),
+        Math.round(v.gestion),
+        Math.round(v.apertura),
+        total,
+        Math.round(capitalPropioMes[mes]),
+        ltmPctExcel(mes),
+      ]
     })
   ]
   exportCSV(filas, `evolucion-ingresos-${hoy.slice(0, 10)}.csv`)
