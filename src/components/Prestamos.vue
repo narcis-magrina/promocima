@@ -64,6 +64,7 @@
             <option value="">Todos los intermediarios</option>
             <option v-for="i in intermediariosSorted" :key="i.id" :value="i.id">{{ i.nombre }}</option>
           </select>
+          <button class="btn btn-secondary" @click="exportarExcel">↓ Excel</button>
           <button class="btn btn-primary" @click="abrirModalNuevo">+ Nuevo Préstamo</button>
         </div>
       </div>
@@ -81,8 +82,7 @@
                 <th @click="setSortP('tipo_prestamo')" :class="thClassP('tipo_prestamo')" class="col-hide-mobile">Tipo <span class="sort-icon">{{ thIconP('tipo_prestamo') }}</span></th>
                 <th @click="setSortP('importe')" :class="thClassP('importe')" style="text-align:right">Importe <span class="sort-icon">{{ thIconP('importe') }}</span></th>
                 <th style="text-align:right">Activo</th>
-                <th @click="setSortP('fecha_inicio')" :class="thClassP('fecha_inicio')" class="col-hide-mobile">Inicio <span class="sort-icon">{{ thIconP('fecha_inicio') }}</span></th>
-                <th @click="setSortP('duracion_meses')" :class="thClassP('duracion_meses')" style="text-align:center" class="col-hide-mobile">Meses <span class="sort-icon">{{ thIconP('duracion_meses') }}</span></th>
+                <th @click="setSortP('fecha_vencimiento')" :class="thClassP('fecha_vencimiento')" class="col-hide-mobile">Vencimiento <span class="sort-icon">{{ thIconP('fecha_vencimiento') }}</span></th>
                 <th @click="setSortP('interes_ordinario')" :class="thClassP('interes_ordinario')" style="text-align:center">Interés <span class="sort-icon">{{ thIconP('interes_ordinario') }}</span></th>
                 <th style="text-align:center" class="col-hide-mobile">LTV</th>
                 <th @click="setSortP('estado')" :class="thClassP('estado')">Estado <span class="sort-icon">{{ thIconP('estado') }}</span></th>
@@ -101,8 +101,7 @@
                 <td class="td-mono td-right" style="color:var(--green)">
                   {{ p.estado !== 'cancelado' ? fmtN(calcCapitalEnCursoPrestamo(p)) : '—' }}
                 </td>
-                <td style="font-size:12px" class="col-hide-mobile">{{ fmtDateShort(p.fecha_inicio) }}</td>
-                <td class="td-center col-hide-mobile">{{ p.duracion_meses }}</td>
+                <td style="font-size:12px" class="col-hide-mobile">{{ calcVencimiento(p) }}</td>
                 <td class="td-mono td-center">{{ p.interes_ordinario }}%</td>
                 <td class="td-mono td-center col-hide-mobile" :style="{ color: ltvColor(p) }">{{ ltvValor(p) }}%</td>
                 <td v-html="getEstadoBadge(estadoVisible(p))" />
@@ -115,7 +114,7 @@
                   >✕</button>
                 </td>
               </tr>
-              <tr v-if="!prestamosFiltrados.length"><td colspan="11" class="table-empty">Sin préstamos</td></tr>
+              <tr v-if="!prestamosFiltrados.length"><td colspan="10" class="table-empty">Sin préstamos</td></tr>
             </tbody>
           </table>
         </div>
@@ -261,6 +260,12 @@ import HelpTip from './HelpTip.vue'
 import { help } from '../helpTexts.js'
 import { fmt, fmtInt, fmtN, fmtDate, generateCalendarioTeorico, distribuirCobros, getCuotaEstado, getEstadoBadge, getTipoBadge, uuid, today } from '../utils.js'
 const fmtDateShort = (d) => { if (!d) return '—'; const dt = new Date(d + 'T00:00:00'); return dt.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' }) }
+function calcVencimiento(p) {
+  if (!p.fecha_inicio || !p.duracion_meses) return '—'
+  const d = new Date(p.fecha_inicio + 'T00:00:00')
+  d.setMonth(d.getMonth() + Number(p.duracion_meses))
+  return fmtDateShort(d.toISOString().slice(0, 10))
+}
 import PrestamoDetalle from './PrestamoDetalle.vue'
 
 const props = defineProps({ viewId: String })
@@ -410,6 +415,28 @@ const prestamosFiltrados = computed(() => {
   return list
 })
 
+function exportarExcel() {
+  const sep = ';'
+  const cols = ['CC', 'Alias', 'Intermediario', 'Tipo', 'Importe', 'Capital Activo', 'Vencimiento', 'Interes %', 'LTV %', 'Estado']
+  const rows = prestamosFiltrados.value.map(p => [
+    p.centro_coste || '',
+    p.alias || '',
+    p.intermediarios?.nombre || '',
+    p.tipo_prestamo || '',
+    Number(p.importe || 0).toFixed(2).replace('.', ','),
+    p.estado !== 'cancelado' ? calcCapitalEnCursoPrestamo(p).toFixed(2).replace('.', ',') : '',
+    calcVencimiento(p),
+    String(p.interes_ordinario || 0).replace('.', ','),
+    ltvValor(p).replace('.', ','),
+    estadoVisible(p),
+  ])
+  const csv = '\uFEFF' + [cols, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(sep)).join('\r\n')
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
+  a.download = `prestamos_${today()}.csv`
+  a.click()
+}
+
 // Razón por la que no se puede eliminar un préstamo (null = se puede eliminar)
 function motivoNoPuedeEliminar(p) {
   if (todosCobros.value.some(cb => cb.prestamo_id === p.id && cb.tipo !== 'cancelacion'))
@@ -476,7 +503,13 @@ async function cargarTodo() {
     const cobrosP = cobrosPorPrestamo[p.id] || []
     const sit = calcSituacion(p, cobrosP)
     if (p.id === 'P061') console.log('[P061]', { cobrosP: cobrosP.length, sit, totalTodosCobros: todosCobros.value.length })
-    return { ...p, situacion: sit }
+    let fecha_vencimiento = null
+    if (p.fecha_inicio && p.duracion_meses) {
+      const d = new Date(p.fecha_inicio + 'T00:00:00')
+      d.setMonth(d.getMonth() + Number(p.duracion_meses))
+      fecha_vencimiento = d.toISOString().slice(0, 10)
+    }
+    return { ...p, situacion: sit, fecha_vencimiento }
   })
 }
 

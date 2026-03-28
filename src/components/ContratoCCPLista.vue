@@ -85,6 +85,7 @@
           <option value="">Todos los partícipes</option>
           <option v-for="p in participes" :key="p.id" :value="p.id">{{ p.nombre }}</option>
         </select>
+        <button class="btn btn-secondary" @click="exportarExcel">↓ Excel</button>
         <button v-if="!readOnly" class="btn btn-primary" @click="$emit('nuevo')">+ Nuevo Contrato</button>
       </div>
     </div>
@@ -290,5 +291,26 @@ function calcInteresNeto(c) {
   if (!pr || !c.activo || pr.estado === 'cancelado') return 0
   const bruto = (Number(c.importe_participacion) * Number(pr.interes_ordinario) / 100 / 12) * (1 - Number(c.porcentaje_gestion) / 100)
   return Math.round(bruto * (1 - 0.19) * 100) / 100
+}
+
+function exportarExcel() {
+  const sep = ';'
+  const cols = ['Participe', 'Prestamo', 'F. Firma', 'Importe', '% Part.', '% Gest.', 'Bruto/mes', 'Neto/mes', 'Estado']
+  const rows = contratosFiltrados.value.map(c => [
+    c.participes?.nombre || '',
+    c.prestamos?.alias   || '',
+    c.fecha_firma        || '',
+    Number(c.importe_participacion || 0).toFixed(2).replace('.', ','),
+    String(c.porcentaje_participacion || 0).replace('.', ','),
+    String(c.porcentaje_gestion || 0).replace('.', ','),
+    calcInteresBruto(c).toFixed(2).replace('.', ','),
+    calcInteresNeto(c).toFixed(2).replace('.', ','),
+    c.activo ? 'Activo' : 'Inactivo',
+  ])
+  const csv = '\uFEFF' + [cols, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(sep)).join('\r\n')
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
+  a.download = `contratos_ccp_${today()}.csv`
+  a.click()
 }
 </script>
