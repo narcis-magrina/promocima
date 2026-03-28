@@ -41,11 +41,10 @@ export async function initAuth() {
       isRecoveryMode.value = false
       return
     }
-    const isInviteSession  = sessionStorage.getItem('supabase_auth_type') === 'invite'
-    const isInviteMetadata = s?.user?.user_metadata?.origen === 'invitacion'
-    if (event === 'SIGNED_IN' && (isInviteSession || isInviteMetadata)) {
+    const isInviteSession = sessionStorage.getItem('supabase_auth_type') === 'invite'
+    if (event === 'SIGNED_IN' && isInviteSession) {
+      sessionStorage.removeItem('supabase_auth_type')
       session.value = s
-      sessionStorage.setItem('supabase_auth_type', 'invite')
       return
     }
     if (event === 'PASSWORD_RECOVERY') {
@@ -64,7 +63,6 @@ export async function initAuth() {
 }
 
 async function cargarPerfil(userId) {
-  // Cargar perfil y accesos en paralelo
   const [{ data: perfilData }, { data: accesosData }] = await Promise.all([
     supabase.from('perfiles').select('*').eq('id', userId).single(),
     supabase.from('perfiles_empresas')
@@ -103,24 +101,21 @@ export function useAuth() {
   })
 
   const isAdmin     = computed(() => rol.value === 'admin')
-  const isInterno   = computed(() => rol.value === 'admin' || rol.value === 'interno')
+  const isInterno   = computed(() => rol.value === 'admin' || rol.value === 'interno' || rol.value === 'dirección')
+  const isDireccion = computed(() => rol.value === 'admin' || rol.value === 'dirección')
   const isParticipe = computed(() => rol.value === 'participe')
 
-  // empresaId — empresa activa actual
   const empresaId = empresaActiva
 
-  // Lista de empresas del usuario ordenadas
   const empresaIds = computed(() => accesos.value.map(a => a.empresa_id))
   const tieneMultiEmpresa = computed(() => empresaIds.value.length > 1)
 
-  // Partícipes de la empresa activa
   const participeIds = computed(() => {
     const acceso = accesos.value.find(a => a.empresa_id === empresaActiva.value)
     return acceso?.participe_ids || []
   })
   const participeId = computed(() => participeIds.value[0] || null)
 
-  // Cambiar empresa activa
   function cambiarEmpresa(id) {
     if (empresaIds.value.includes(id)) {
       empresaActiva.value       = id
@@ -175,7 +170,7 @@ export function useAuth() {
   return {
     session, perfil, accesos, loading, authError,
     user, rol, nombre, initiales,
-    isAdmin, isInterno, isParticipe, participeId, participeIds,
+    isAdmin, isInterno, isDireccion, isParticipe, participeId, participeIds,
     empresaId, empresaIds, tieneMultiEmpresa, cambiarEmpresa, empresaKey,
     login, logout, guardarPerfil, listarUsuarios,
     isRecoveryMode,

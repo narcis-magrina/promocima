@@ -5,7 +5,7 @@
         <div class="section-title">Gestión de Usuarios</div>
         <div class="section-sub">Accesos y perfiles del sistema</div>
       </div>
-      <button class="btn btn-primary" @click="abrirInvitar">+ Invitar Usuario</button>
+      <button class="btn btn-primary" :disabled="esPruebas" :title="esPruebas ? hintAuth : ''" @click="abrirInvitar">+ Invitar Usuario</button>
     </div>
 
     <!-- Lista única de usuarios -->
@@ -62,11 +62,12 @@
             <td style="display:flex;gap:6px;flex-wrap:wrap">
               <button class="btn btn-sm btn-registrar" style="font-size:11px;padding:3px 9px" @click="editar(u)">✎ Editar</button>
               <button v-if="isAdmin && !u.activo" class="btn btn-sm" style="font-size:11px;padding:3px 9px;background:var(--orange);color:#fff;border-color:var(--orange)"
-                title="Reinvitar: envía una nueva invitación con nuevas credenciales"
+                :disabled="esPruebas"
+                :title="esPruebas ? hintAuth : 'Reinvitar: envía una nueva invitación con nuevas credenciales'"
                 @click="reinvitar(u)">↺ Reinvitar</button>
               <button v-if="isAdmin" class="btn btn-sm btn-danger-solid" style="font-size:11px;padding:3px 9px"
-                :disabled="u.id === usuarioActualId"
-                :title="u.id === usuarioActualId ? 'No puedes eliminarte a ti mismo' : 'Eliminar usuario definitivamente'"
+                :disabled="u.id === usuarioActualId || esPruebas"
+                :title="esPruebas ? hintAuth : u.id === usuarioActualId ? 'No puedes eliminarte a ti mismo' : 'Eliminar usuario definitivamente'"
                 @click="eliminarUsuario(u)">✕</button>
             </td>
           </tr>
@@ -96,6 +97,7 @@
               <select class="form-control" v-model="form.rol">
                 <option value="admin">Administrador</option>
                 <option value="interno">Usuario Interno</option>
+                <option value="dirección">Dirección</option>
                 <option value="participe">Partícipe</option>
               </select>
             </div>
@@ -179,6 +181,7 @@
               <label class="form-label">Rol</label>
               <select class="form-control" v-model="formInvitar.rol">
                 <option value="interno">Interno</option>
+                <option value="dirección">Dirección</option>
                 <option value="admin">Administrador</option>
                 <option value="participe">Partícipe</option>
               </select>
@@ -228,7 +231,7 @@
         </div>
         <div class="modal-footer">
           <button class="btn" @click="modalInvitar = false">Cancelar</button>
-          <button class="btn btn-primary" :disabled="savingInvitar" @click="enviarInvitacion">
+          <button class="btn btn-primary" :disabled="savingInvitar || esPruebas" :title="esPruebas ? hintAuth : ''" @click="enviarInvitacion">
             <span v-if="savingInvitar" class="btn-spinner"></span>
             Enviar invitación
           </button>
@@ -245,6 +248,9 @@ import { useAuth } from '../composables/useAuth.js'
 import { supabase } from '../supabase.js'
 
 const { listarUsuarios, user, isAdmin, empresaId } = useAuth()
+
+const esPruebas = import.meta.env.VITE_ENTORNO === 'PRUEBAS'
+const hintAuth  = 'No disponible en entorno de pruebas: la autenticación de Supabase solo funciona en producción'
 
 const usuarios        = ref([])
 const todosParticipes = ref([])
@@ -379,15 +385,12 @@ async function guardar() {
 }
 
 function rolBadge(rol) {
-  return { admin: 'badge-outline-red', interno: 'badge-outline-blue', participe: 'badge-outline-yellow' }[rol] || 'badge-outline-gray'
+  return { admin: 'badge-outline-red', interno: 'badge-outline-blue', 'dirección': 'badge-outline-green', participe: 'badge-outline-yellow' }[rol] || 'badge-outline-gray'
 }
 
 const usuarioActualId = computed(() => user.value?.id)
 
 async function eliminarUsuario(u) {
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return alert('⚠️ Eliminar usuarios solo funciona en producción.')
-  }
   if (!confirm(`¿Eliminar definitivamente a "${u.nombre || u.email}"?\nEsta acción no se puede deshacer.`)) return
   try {
     const { data: { session } } = await supabase.auth.getSession()

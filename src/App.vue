@@ -49,7 +49,7 @@
     <div class="sidebar-overlay" :class="{open: sidebarOpen}" @click="sidebarOpen = false"></div>
     <aside class="sidebar" :class="{open: sidebarOpen}">
       <div class="sidebar-logo">
-        <div class="brand"><span class="brand-promo">PROMO</span><span class="brand-cima">CIMA</span> <span style="font-size:10px;font-weight:400;opacity:0.6;letter-spacing:0">v1.0</span></div>
+        <div class="brand"><span class="brand-promo">PROMO</span><span class="brand-cima">CIMA</span></div>
         <div class="sub">Portal Partícipe</div>
       </div>
       <!-- Selector multi-empresa (solo visible con >1 empresa) -->
@@ -212,14 +212,14 @@
             <span class="icon">💸</span><span class="nav-item-text"> Pagos</span>
           </div>
         </div>
+        <div v-if="isDireccion" class="nav-section">
+          <div class="nav-label">Dirección</div>
+          <div class="nav-item" :class="{ active: page === 'direccion' }" @click="sidebarOpen=false; navigate('direccion')" :title="sidebarCollapsed ? 'Dirección' : ''">
+            <span class="icon">📊</span><span class="nav-item-text"> Dirección</span>
+          </div>
+        </div>
         <div v-if="isAdmin" class="nav-section">
           <div class="nav-label">Administración</div>
-          <div class="nav-item" :class="{ active: page === 'usuarios' }" @click="sidebarOpen=false; navigate('usuarios')" :title="sidebarCollapsed ? 'Usuarios' : ''">
-            <span class="icon">👤</span><span class="nav-item-text"> Usuarios</span>
-          </div>
-          <div class="nav-item" :class="{ active: page === 'configuracion' }" @click="sidebarOpen=false; navigate('configuracion')" :title="sidebarCollapsed ? 'Configuración' : ''">
-            <span class="icon">⊙</span><span class="nav-item-text"> Configuración</span>
-          </div>
           <div class="nav-item" :class="{ active: page === 'administracion' }" @click="sidebarOpen=false; navigate('administracion')" :title="sidebarCollapsed ? 'Administración' : ''">
             <span class="icon">🛠</span><span class="nav-item-text"> Administración</span>
           </div>
@@ -273,6 +273,7 @@
         <PagosParticipes    v-else-if="page === 'pagos-participes'"   @navigate="navigate" />
         <GestionUsuarios    v-else-if="page === 'usuarios' && isAdmin" />
         <Configuracion      v-else-if="page === 'configuracion' && isAdmin" />
+        <Direccion          v-else-if="page === 'direccion' && isDireccion" />
         <Administracion     v-else-if="page === 'administracion' && isAdmin" />
         <div v-else class="content" style="padding:40px;color:var(--text3)">
           Página no encontrada o sin acceso.
@@ -289,7 +290,7 @@ import './styles.css'
 // ── Auth ───────────────────────────────────────
 import { initAuth, useAuth } from './composables/useAuth.js'
 import { useMantenimiento } from './composables/useMantenimiento.js'
-const { user, perfil, loading, nombre, initiales, isAdmin, isInterno, isParticipe, participeId, participeIds, rol, logout, empresaId, empresaIds, tieneMultiEmpresa, cambiarEmpresa, empresaKey } = useAuth()
+const { user, perfil, loading, nombre, initiales, isAdmin, isInterno, isDireccion, isParticipe, participeId, participeIds, rol, logout, empresaId, empresaIds, tieneMultiEmpresa, cambiarEmpresa, empresaKey } = useAuth()
 const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
 const sidebarOpen = ref(false)
 const sidebarCollapsed = ref(localStorage.getItem('sidebarCollapsed') === 'true')
@@ -373,7 +374,7 @@ function onParticipeNav(page, id) {
   }
 }
 
-const rolLabel = computed(() => ({ admin: 'Administrador', interno: 'Usuario Interno', participe: 'Partícipe' }[rol.value] || rol.value))
+const rolLabel = computed(() => ({ admin: 'Administrador', interno: 'Usuario Interno', dirección: 'Dirección', participe: 'Partícipe' }[rol.value] || rol.value))
 
 // ── Router ─────────────────────────────────────
 import { useRouter } from './composables/useRouter.js'
@@ -421,6 +422,7 @@ import ContratosCCP     from './components/ContratosCCP.vue'
 import PagosParticipes  from './components/PagosParticipes.vue'
 import Configuracion    from './components/Configuracion.vue'
 import Administracion   from './components/Administracion.vue'
+import Direccion        from './components/Direccion.vue'
 import HelpPanel        from './components/HelpPanel.vue'
 import { supabase }     from './supabase.js'
 import { fmtDate }      from './utils.js'
