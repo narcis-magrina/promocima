@@ -835,56 +835,33 @@ const chartInversionEnCursoData = computed(() => ({
   ]
 }))
 
+const lineDataset = (label, color, data, extra = {}) => ({
+  label, data,
+  yAxisID: 'y2',
+  type: 'line',
+  order: 0,
+  borderColor: color,
+  backgroundColor: 'transparent',
+  borderWidth: 2,
+  fill: false,
+  tension: 0.3,
+  pointRadius: 0,
+  pointHoverRadius: 4,
+  ...extra,
+})
+
 const chartIngresosData = computed(() => ({
   labels: serieIngresos.value.map(p => p.label),
   datasets: [
+    // Líneas de rentabilidad primero → aparecen en la fila 1 de la leyenda
+    lineDataset('Rentabilidad propia',      'rgba(30, 64, 175, 0.9)',  serieIngresos.value.map(p => p.rentabilidadInteresesPct)),
+    lineDataset('Rentabilidad recurrente',  'rgba(239, 68, 68, 0.9)',  serieIngresos.value.map(p => p.rentabilidadRecurrentePct)),
+    lineDataset('Rentabilidad total',       'rgba(239, 68, 68, 0.45)', serieIngresos.value.map(p => p.rentabilidadPct), { borderDash: [5, 4] }),
+    // Áreas después → aparecen en la fila 2 de la leyenda
     ds('Intereses particulares',     'rgba(99, 179, 237, 1)',  serieIngresos.value.map(p => Math.round(p.intParticulares))),
     ds('Intereses empresas propios', 'rgba(104, 211, 145, 1)', serieIngresos.value.map(p => Math.round(p.intEmpresasPropias))),
     ds('Ingresos por gestión',       'rgba(246, 173, 85, 1)',  serieIngresos.value.map(p => Math.round(p.gestion))),
     ds('Comisiones de apertura',     'rgba(159, 122, 234, 1)', serieIngresos.value.map(p => Math.round(p.apertura))),
-    {
-      label: 'Rentabilidad anualizada LTM',
-      data: serieIngresos.value.map(p => p.rentabilidadPct),
-      yAxisID: 'y2',
-      type: 'line',
-      order: 0,
-      borderColor: 'rgba(239, 68, 68, 0.45)',
-      backgroundColor: 'transparent',
-      borderWidth: 2,
-      borderDash: [5, 4],
-      fill: false,
-      tension: 0.3,
-      pointRadius: 0,
-      pointHoverRadius: 4,
-    },
-    {
-      label: 'Rentabilidad recurrente LTM',
-      data: serieIngresos.value.map(p => p.rentabilidadRecurrentePct),
-      yAxisID: 'y2',
-      type: 'line',
-      order: 0,
-      borderColor: 'rgba(239, 68, 68, 0.9)',
-      backgroundColor: 'transparent',
-      borderWidth: 2,
-      fill: false,
-      tension: 0.3,
-      pointRadius: 0,
-      pointHoverRadius: 4,
-    },
-    {
-      label: 'Rentabilidad intereses LTM',
-      data: serieIngresos.value.map(p => p.rentabilidadInteresesPct),
-      yAxisID: 'y2',
-      type: 'line',
-      order: 0,
-      borderColor: 'rgba(30, 64, 175, 0.9)',
-      backgroundColor: 'transparent',
-      borderWidth: 2,
-      fill: false,
-      tension: 0.3,
-      pointRadius: 0,
-      pointHoverRadius: 4,
-    },
   ]
 }))
 
