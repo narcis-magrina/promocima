@@ -154,6 +154,7 @@
               <th v-if="modoTodo" style="text-align:right">Beneficio/mes</th>
               <th style="text-align:right">Neto/mes</th>
               <th style="text-align:right;color:var(--orange)">Devengado</th>
+              <th class="col-hide-mobile" @click="toggleSortVenc()" style="cursor:pointer" :class="sortVenc ? `sorted-${sortVenc}` : ''">Vencimiento <span class="sort-icon">{{ vencIcon() }}</span></th>
               <th>Estado préstamo</th>
               <th>Estado contrato</th>
             </tr>
@@ -167,6 +168,7 @@
               <td v-if="modoTodo" class="td-mono td-right" style="color:var(--accent)">{{ fmt(calcBeneficioMes(c)) }}</td>
               <td class="td-mono td-right" style="color:var(--green)">{{ fmt(calcInteresNeto(c)) }}</td>
               <td class="td-mono td-right" style="color:var(--orange)">{{ calcDevengado(c) > 0 ? fmt(calcDevengado(c)) : '—' }}</td>
+              <td class="col-hide-mobile" style="font-size:12px">{{ calcVencimiento(c.prestamos) }}</td>
               <td><span v-html="getEstadoBadge(c.prestamos?.estado === 'cancelado' ? 'cancelado' : c.prestamos?.estado === 'judicializado' ? 'judicializado' : c.prestamos?.situacion || 'al_dia')" /></td>
               <td><span class="badge" :class="c.activo ? 'badge-outline-green' : 'badge-outline-gray'">{{ c.activo ? 'Activo' : 'Inactivo' }}</span></td>
             </tr>
@@ -203,6 +205,7 @@ const pidsActivos = computed(() => {
 
 const contratos  = ref([])
 const filtroEstado = ref('activos')  // 'activos' | 'todos'
+const sortVenc   = ref(null)         // null | 'asc' | 'desc'
 const pagos      = ref([])
 const loading    = ref(true)
 
@@ -247,7 +250,13 @@ async function cargar() {
         const cobrosP = cobrosPortal
           .filter(cb => cb.prestamo_id === pr.id)
           .filter(cb => !cierre || (cb.fecha_real || cb.fecha_teorica || '') <= cierre)
-        return { ...c, cobrosP, prestamos: { ...pr, situacion: calcSituacionPrestamo(pr, cobrosP, cierre) } }
+        let fecha_vencimiento = null
+        if (pr.fecha_inicio && pr.duracion_meses) {
+          const d = new Date(pr.fecha_inicio + 'T00:00:00')
+          d.setMonth(d.getMonth() + Number(pr.duracion_meses))
+          fecha_vencimiento = d.toISOString().slice(0, 10)
+        }
+        return { ...c, cobrosP, fecha_vencimiento, prestamos: { ...pr, situacion: calcSituacionPrestamo(pr, cobrosP, cierre) } }
       })
 
     const ccpIds = contratos.value.map(c => c.id)
@@ -270,11 +279,27 @@ async function cargar() {
 // Modo Todo: hay varios partícipes en la lista
 const modoTodo = computed(() => pidsActivos.value.length > 1)
 
-// Filtro de estado
+// Filtro de estado + ordenación por vencimiento
 const contratosFiltrados = computed(() => {
-  if (filtroEstado.value === 'todos') return contratos.value
-  return contratos.value.filter(c => estadoContrato(c) !== 'cancelado')
+  let list = filtroEstado.value === 'todos'
+    ? contratos.value
+    : contratos.value.filter(c => estadoContrato(c) !== 'cancelado')
+  if (sortVenc.value) {
+    list = [...list].sort((a, b) => {
+      const va = a.fecha_vencimiento || '9999-99-99'
+      const vb = b.fecha_vencimiento || '9999-99-99'
+      return sortVenc.value === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va)
+    })
+  }
+  return list
 })
+
+function toggleSortVenc() {
+  sortVenc.value = sortVenc.value === 'asc' ? 'desc' : sortVenc.value === 'desc' ? null : 'asc'
+}
+function vencIcon() {
+  return sortVenc.value === 'asc' ? '↑' : sortVenc.value === 'desc' ? '↓' : '↕'
+}
 
 // ── Helpers de estado ─────────────────────────────────────────────────────────
 const estadoContrato = c => {
@@ -360,6 +385,13 @@ const kpartDevengadoTotal = computed(() =>
 )
 
 // ── Tabla contratos ───────────────────────────────────────────────────────────
+function calcVencimiento(pr) {
+  if (!pr?.fecha_inicio || !pr?.duracion_meses) return '—'
+  const d = new Date(pr.fecha_inicio + 'T00:00:00')
+  d.setMonth(d.getMonth() + Number(pr.duracion_meses))
+  return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' })
+}
+
 function calcBeneficioMes(c) {
   // Intereses - gestión (bruto antes de IRPF)
   if (!c.prestamos) return 0

@@ -151,7 +151,6 @@ const TABLAS_CON_EMPRESA = [
 
 const TABLAS_SIN_EMPRESA = [
   'email_templates',
-  'emails_pendientes',
   'BdE_Sectores',
   'BdE_Tipos_id',
   'BdE_Titulares',

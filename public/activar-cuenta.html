@@ -156,7 +156,12 @@
         showMessage('No se ha podido validar la invitación. Abre de nuevo el enlace desde el correo.', 'err')
       } catch (err) {
         bloqueCargando.classList.add('hidden')
-        showMessage(err.message || 'Error al validar la invitación.', 'err')
+        const msg = err.message || ''
+        if (msg.toLowerCase().includes('expired') || msg.toLowerCase().includes('invalid')) {
+          showMessage('El enlace de invitación ha caducado. Contacta con el administrador para que te envíe una nueva invitación.', 'err')
+        } else {
+          showMessage(msg || 'Error al validar la invitación.', 'err')
+        }
       }
     }
 

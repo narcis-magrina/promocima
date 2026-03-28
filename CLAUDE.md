@@ -45,7 +45,7 @@ sql changes/
   histórico/               # Migraciones ya aplicadas (V1.0000 – V1.0006)
   pendientes/              # Migraciones pendientes de aplicar (V1.0007 – V1.0011)
 
-Templates/                 # Plantillas HTML de emails (Google Apps Script)
+Templates/                 # Plantillas HTML de emails (referencia, no se usan en el flujo actual)
 ```
 
 ---
@@ -79,11 +79,14 @@ El sistema tiene tres roles: `admin`, `interno`, `participe`.
 - **No se usa vue-router.**
 
 ### Flujo de invitación de usuarios
-1. Admin rellena formulario en `GestionUsuarios.vue`
-2. Se inserta en tabla `emails_pendientes` de Supabase
-3. Google Apps Script lee la cola y llama a `/api/invitar.js`
-4. El serverless crea el usuario en Supabase Auth y envía email con link
-5. El usuario activa su cuenta en `public/activar-cuenta.html`
+1. Admin rellena formulario en `GestionUsuarios.vue` (email, nombre, rol, accesos por empresa)
+2. El frontend llama directamente a `POST /api/invitar` con el JWT del admin en el header
+3. El serverless verifica que el usuario es admin (`verificarAdmin`) y llama a `supabase.auth.admin.inviteUserByEmail()`, que envía el email de invitación de Supabase al nuevo usuario
+4. El serverless crea el perfil en `perfiles` (`activo: false`) y los accesos en `perfiles_empresas`
+5. El usuario hace clic en el link del email y activa su cuenta en `public/activar-cuenta.html`
+
+Si el usuario ya existe pero está inactivo, el serverless lo borra y reinvita (flujo de reinvitación).
+**No se usa Google Apps Script ni tabla `emails_pendientes`.**
 
 ---
 

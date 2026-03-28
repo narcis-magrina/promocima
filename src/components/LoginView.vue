@@ -46,7 +46,7 @@
           <label for="recordar" style="font-size:12px;color:var(--text3);cursor:pointer">Recordar sesión</label>
         </div>
 
-        <div v-if="error" class="login-error">{{ error }}</div>
+        <div v-if="authError" class="login-error">{{ authError }}</div>
 
         <button
           class="btn btn-primary login-btn"
@@ -58,7 +58,7 @@
         </button>
 
         <div style="text-align:center;margin-top:12px">
-          <button class="btn btn-ghost btn-sm" style="font-size:12px;color:var(--text3)" @click="mostrarRecuperar = true">
+          <button class="btn btn-ghost btn-sm" style="font-size:12px;color:var(--text3)" :disabled="esPruebas" :title="esPruebas ? hintAuth : ''" @click="mostrarRecuperar = true">
             ¿Olvidaste tu contraseña?
           </button>
         </div>
@@ -85,7 +85,7 @@
         </div>
         <div style="display:flex;gap:8px;justify-content:flex-end">
           <button class="btn btn-sm" @click="mostrarRecuperar = false; msgRecuperar = null">Cancelar</button>
-          <button class="btn btn-sm btn-primary" :disabled="loadingRecuperar || !emailRecuperar" @click="enviarRecuperar">
+          <button class="btn btn-sm btn-primary" :disabled="loadingRecuperar || !emailRecuperar || esPruebas" :title="esPruebas ? hintAuth : ''" @click="enviarRecuperar">
             <span v-if="loadingRecuperar" class="btn-spinner"></span>
             {{ loadingRecuperar ? 'Enviando…' : 'Enviar enlace' }}
           </button>
@@ -102,19 +102,18 @@ import { supabase } from '../supabase.js'
 
 const { login, authError, loading } = useAuth()
 
+const esPruebas = import.meta.env.VITE_ENTORNO === 'PRUEBAS'
+const hintAuth  = 'No disponible en entorno de pruebas: la autenticación de Supabase solo funciona en producción'
+
 const email    = ref('')
 const password = ref('')
 const showPass = ref(false)
 const recordar = ref(false)
-const error    = ref(null)
 
 async function handleLogin() {
   if (!email.value || !password.value) return
-  error.value = null
-  const ok = await login(email.value, password.value, recordar.value)
-  if (!ok) {
-    error.value = authError.value || 'Email o contraseña incorrectos'
-  }
+  authError.value = null
+  await login(email.value, password.value, recordar.value)
 }
 
 const mostrarRecuperar = ref(false)
