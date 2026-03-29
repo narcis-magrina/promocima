@@ -356,7 +356,6 @@ const prestamosRaw     = ref([])
 const ccpRaw           = ref([])
 const cobrosRaw        = ref([])   // cobros con principal cobrado (para capital vivo)
 const tabActivo        = ref('inversion')
-const granularidadInv      = ref('mes')
 const granularidadInvCurso = ref('mes')
 const granularidadIng      = ref('mes')
 
@@ -458,6 +457,17 @@ const calendariosPorPrestamo = computed(() => {
   return map
 })
 
+// Índice de cobros por préstamo (solo los que tienen fecha_real)
+const cobrosPorPrestamo = computed(() => {
+  const map = {}
+  for (const c of cobrosRaw.value) {
+    if (!c.fecha_real) continue
+    if (!map[c.prestamo_id]) map[c.prestamo_id] = []
+    map[c.prestamo_id].push(c)
+  }
+  return map
+})
+
 // ── Capital vivo de un préstamo en una fecha ──────────────────────────────────
 // Americano: capital vivo = importe (sin amortización hasta vencimiento)
 // Otros: usa distribuirCobros igual que Analítica para calcular el principal amortizado
@@ -465,9 +475,7 @@ function capitalVivoEnFecha(prestamo, fecha) {
   if (prestamo.tipo_prestamo === 'Americano') return Number(prestamo.importe)
   const cal = calendariosPorPrestamo.value[prestamo.id]
   if (!cal) return Number(prestamo.importe)
-  const cobrosP = cobrosRaw.value.filter(c =>
-    c.prestamo_id === prestamo.id && c.fecha_real && c.fecha_real <= fecha
-  )
+  const cobrosP = (cobrosPorPrestamo.value[prestamo.id] || []).filter(c => c.fecha_real <= fecha)
   const calConEstado = distribuirCobros(cal, cobrosP)
   const amortCuotas = calConEstado
     .filter(c => c.estado === 'cobrada')
@@ -475,27 +483,8 @@ function capitalVivoEnFecha(prestamo, fecha) {
   return Math.max(0, Number(prestamo.importe) - amortCuotas)
 }
 
-// ── Serie inversión total (importe inicial, incluye cancelados en su periodo) ─
-function stockInicialEnFecha(fecha) {
-  let particulares = 0, empresasParticipadas = 0, empresasPropias = 0
-  for (const p of prestamosRaw.value) {
-    if (!p.fecha_inicio || p.fecha_inicio > fecha) continue
-    if (p.estado === 'cancelado' && p.fecha_cancelacion && p.fecha_cancelacion <= fecha) continue
-    const importe     = Number(p.importe || 0)
-    const participado = Math.min(participadoPorPrestamo.value[p.id] || 0, importe)
-    if (p.tipoCliente === 'persona') {
-      particulares += importe
-    } else {
-      empresasParticipadas += participado
-      empresasPropias      += importe - participado
-    }
-  }
-  return { particulares, empresasParticipadas, empresasPropias }
-}
-
 // ── Serie inversión en curso (capital vivo, solo préstamos no cancelados) ─────
 // Usa capitalVivoEnFecha → descuenta el principal amortizado para préstamos no americanos
-const prestamosEnCurso = computed(() => prestamosRaw.value.filter(p => p.estado !== 'cancelado'))
 
 function stockVivoEnFecha(fecha) {
   let particulares = 0, empresasParticipadas = 0, empresasPropias = 0
@@ -552,19 +541,6 @@ function generarPuntosInversion(desde, hasta, gran) {
   return puntos
 }
 
-const serieInversion = computed(() => {
-  if (!prestamosRaw.value.length) return []
-  const hoy = today()
-  const primeraFecha = prestamosRaw.value.filter(p => p.fecha_inicio).map(p => p.fecha_inicio).sort()[0]
-  if (!primeraFecha) return []
-  return generarPuntosInversion(primeraFecha, hoy, granularidadInv.value)
-    .map(({ label, fecha, fechaInicio }) => {
-      const altas = prestamosRaw.value.filter(p => p.fecha_inicio >= fechaInicio && p.fecha_inicio <= fecha)
-      const bajas = prestamosRaw.value.filter(p => p.fecha_cancelacion && p.fecha_cancelacion >= fechaInicio && p.fecha_cancelacion <= fecha)
-      return { label, ...stockInicialEnFecha(fecha), altas, bajas }
-    })
-})
-
 const serieInversionEnCurso = computed(() => {
   if (!prestamosRaw.value.length) return []
   const hoy = today()
@@ -609,16 +585,23 @@ function ingresosDelMes(mesStr) {
   return { intParticulares, intEmpresasPropias, apertura, gestion }
 }
 
-// ── Serie ingresos (suma de meses por periodo) ────────────────────────────────
-const serieIngresos = computed(() => {
-  if (!prestamosRaw.value.length) return []
+// ── Cache de ingresos por mes (compartido entre serieIngresos y reducirMeses) ─
+const porIngresosDelMes = computed(() => {
+  if (!prestamosRaw.value.length) return {}
   const hoy = today()
   const primeraFecha = prestamosRaw.value.filter(p => p.fecha_inicio).map(p => p.fecha_inicio).sort()[0]
-  if (!primeraFecha) return []
-
+  if (!primeraFecha) return {}
   const meses = mesesEntre(primeraFecha, hoy)
-  const porMes = {}
-  for (const mes of meses) porMes[mes] = ingresosDelMes(mes)
+  const map = {}
+  for (const mes of meses) map[mes] = ingresosDelMes(mes)
+  return map
+})
+
+// ── Serie ingresos (suma de meses por periodo) ────────────────────────────────
+const serieIngresos = computed(() => {
+  const meses = Object.keys(porIngresosDelMes.value)
+  if (!meses.length) return []
+  const porMes = porIngresosDelMes.value
 
   // Capital propio al fin de cada mes (para LTM y rentabilidad recurrente)
   const capitalPropioMes = {}
@@ -626,28 +609,6 @@ const serieIngresos = computed(() => {
     const fin = `${mes}-${ultimoDiaMes(mes)}`
     const { particulares, empresasPropias } = stockVivoEnFecha(fin)
     capitalPropioMes[mes] = particulares + empresasPropias
-  }
-
-  // Capital propio al inicio de cada mes (= fin del mes anterior)
-  // Corrección: los ingresos de un mes se generan sobre el capital que había al empezar ese mes,
-  // no el capital que queda al final (que ya incluye altas de ese mes y excluye las bajas)
-  const mesAnterior = (mesStr) => {
-    const [y, m] = mesStr.split('-').map(Number)
-    const mm = m === 1 ? 12 : m - 1
-    const yy = m === 1 ? y - 1 : y
-    return `${yy}-${String(mm).padStart(2, '0')}`
-  }
-  const capitalPropioMesInicio = {}
-  for (const mes of meses) {
-    const prev = mesAnterior(mes)
-    if (capitalPropioMes[prev] !== undefined) {
-      capitalPropioMesInicio[mes] = capitalPropioMes[prev]
-    } else {
-      // Primer mes: calcular el capital el día anterior al inicio
-      const fin = `${mes}-01` // usar inicio del mes = equivalente a fin del mes anterior
-      const { particulares, empresasPropias } = stockVivoEnFecha(fin)
-      capitalPropioMesInicio[mes] = particulares + empresasPropias
-    }
   }
 
   const sumar = lista => lista.reduce(
@@ -692,35 +653,12 @@ const serieIngresos = computed(() => {
     return Math.round((total / cap) * 10000) / 100
   }
 
-  // LTM recurrente con capital de inicio de mes como denominador:
-  // - Numerador: sum intereses recurrentes (sin apertura) de los últimos 12 meses
-  //   usando porMes[], que ya calcula intereses sobre capitalVivoEnFecha (correcto para francés)
-  // - Denominador: promedio de capitalPropioMesInicio[] de los 12 meses
-  //   → altas del mes no inflan el denominador de ese mes
-  //   → bajas del mes sí están en el denominador de ese mes (estaban al empezar)
-  const rentLtmInicioMes = (mesStr) => {
-    const [yStr, mStr] = mesStr.split('-')
-    const y = Number(yStr), m = Number(mStr)
-    const ltmMeses = []
-    for (let i = 11; i >= 0; i--) {
-      let mm = m - i, yy = y
-      while (mm <= 0) { mm += 12; yy-- }
-      ltmMeses.push(`${yy}-${String(mm).padStart(2, '0')}`)
-    }
-    if (!ltmMeses.every(mes => porMes[mes] && capitalPropioMesInicio[mes] !== undefined)) return null
-    const ing = sumar(ltmMeses)
-    const cap = ltmMeses.reduce((s, mes) => s + capitalPropioMesInicio[mes], 0) / ltmMeses.length
-    if (!cap) return null
-    const total = ing.intParticulares + ing.intEmpresasPropias + ing.gestion
-    return Math.round((total / cap) * 10000) / 100
-  }
-
   if (granularidadIng.value === 'mes') {
     return meses.map(mes => {
       const [y, m] = mes.split('-')
       const fechaInicio = mes + '-01'
       const fechaFin = `${mes}-${ultimoDiaMes(mes)}`
-      return { label: `${m}/${y}`, ...porMes[mes], ...altasBajas(fechaInicio, fechaFin), rentabilidadPct: ltmPct(mes), rentabilidadRecurrentePct: ltmPct(mes, 'sinApertura'), rentabilidadInteresesPct: ltmPct(mes, 'soloIntereses'), rentabilidadInicioMesPct: rentLtmInicioMes(mes) }
+      return { label: `${m}/${y}`, ...porMes[mes], ...altasBajas(fechaInicio, fechaFin), rentabilidadPct: ltmPct(mes), rentabilidadRecurrentePct: ltmPct(mes, 'sinApertura'), rentabilidadInteresesPct: ltmPct(mes, 'soloIntereses') }
     })
   }
   if (granularidadIng.value === 'trimestre') {
@@ -738,7 +676,7 @@ const serieIngresos = computed(() => {
       const lastMes = lista[lista.length - 1]
       const fechaFin = `${lastMes}-${ultimoDiaMes(lastMes)}`
       const ing = sumar(lista)
-      return { label: `${q} ${y}`, ...ing, ...altasBajas(fechaInicio, fechaFin), rentabilidadPct: ltmPct(lastMes), rentabilidadRecurrentePct: ltmPct(lastMes, 'sinApertura'), rentabilidadInteresesPct: ltmPct(lastMes, 'soloIntereses'), rentabilidadInicioMesPct: rentLtmInicioMes(lastMes) }
+      return { label: `${q} ${y}`, ...ing, ...altasBajas(fechaInicio, fechaFin), rentabilidadPct: ltmPct(lastMes), rentabilidadRecurrentePct: ltmPct(lastMes, 'sinApertura'), rentabilidadInteresesPct: ltmPct(lastMes, 'soloIntereses') }
     })
   }
   // anual
@@ -754,7 +692,7 @@ const serieIngresos = computed(() => {
     const lastMes = lista[lista.length - 1]
     const fechaFin = `${lastMes}-${ultimoDiaMes(lastMes)}`
     const ing = sumar(lista)
-    return { label: y, ...ing, ...altasBajas(fechaInicio, fechaFin), rentabilidadPct: ltmPct(lastMes), rentabilidadRecurrentePct: ltmPct(lastMes, 'sinApertura'), rentabilidadInteresesPct: ltmPct(lastMes, 'soloIntereses'), rentabilidadInicioMesPct: rentLtmInicioMes(lastMes) }
+    return { label: y, ...ing, ...altasBajas(fechaInicio, fechaFin), rentabilidadPct: ltmPct(lastMes), rentabilidadRecurrentePct: ltmPct(lastMes, 'sinApertura'), rentabilidadInteresesPct: ltmPct(lastMes, 'soloIntereses') }
   })
 })
 
@@ -812,7 +750,6 @@ function makeChartOptions(getSerie, { secondAxis = false } = {}) {
   }
 }
 
-const chartOptionsInversion        = computed(() => makeChartOptions(() => serieInversion.value))
 const chartOptionsInversionEnCurso = computed(() => makeChartOptions(() => serieInversionEnCurso.value))
 const chartOptionsIngresos         = computed(() => makeChartOptions(() => serieIngresos.value, { secondAxis: true }))
 
@@ -828,15 +765,6 @@ const ds = (label, color, data) => ({
 })
 
 // ── Chart data ────────────────────────────────────────────────────────────────
-const chartInversionData = computed(() => ({
-  labels: serieInversion.value.map(p => p.label),
-  datasets: [
-    ds('Particulares',                 'rgba(99, 179, 237, 1)',  serieInversion.value.map(p => Math.round(p.particulares))),
-    ds('Empresas — parte propia',      'rgba(104, 211, 145, 1)', serieInversion.value.map(p => Math.round(p.empresasPropias))),
-    ds('Empresas — parte participada', 'rgba(246, 173, 85, 1)',  serieInversion.value.map(p => Math.round(p.empresasParticipadas))),
-  ]
-}))
-
 const chartInversionEnCursoData = computed(() => ({
   labels: serieInversionEnCurso.value.map(p => p.label),
   datasets: [
@@ -876,32 +804,11 @@ const chartIngresosData = computed(() => ({
   ]
 }))
 
-// ── KPIs inversión total ──────────────────────────────────────────────────────
-const ultimoInv              = computed(() => serieInversion.value.at(-1) || { particulares: 0, empresasParticipadas: 0, empresasPropias: 0 })
-const actualParticulares     = computed(() => ultimoInv.value.particulares)
-const actualEmpresasParticipadas = computed(() => ultimoInv.value.empresasParticipadas)
-const actualEmpresasPropias  = computed(() => ultimoInv.value.empresasPropias)
-const totalInvActual         = computed(() => actualParticulares.value + actualEmpresasParticipadas.value + actualEmpresasPropias.value)
-
-const cierreAnterior1 = computed(() => stockInicialEnFecha(`${anoAnterior}-12-31`))
-const cierreAnterior2 = computed(() => stockInicialEnFecha(`${anoAnterior2}-12-31`))
-const totalCierre1    = computed(() => cierreAnterior1.value.particulares + cierreAnterior1.value.empresasParticipadas + cierreAnterior1.value.empresasPropias)
-const totalCierre2    = computed(() => cierreAnterior2.value.particulares + cierreAnterior2.value.empresasParticipadas + cierreAnterior2.value.empresasPropias)
-
+// ── KPIs inversión en curso ───────────────────────────────────────────────────
 function mkPctInv(valFn, totalRef) {
   return computed(() => totalRef.value ? (valFn() / totalRef.value * 100).toFixed(1) : '0.0')
 }
-const pctParticulares         = mkPctInv(() => actualParticulares.value,                 totalInvActual)
-const pctEmpresasParticipadas = mkPctInv(() => actualEmpresasParticipadas.value,          totalInvActual)
-const pctEmpresasPropias      = mkPctInv(() => actualEmpresasPropias.value,               totalInvActual)
-const pctCierre1Particulares         = mkPctInv(() => cierreAnterior1.value.particulares,         totalCierre1)
-const pctCierre1EmpresasParticipadas = mkPctInv(() => cierreAnterior1.value.empresasParticipadas, totalCierre1)
-const pctCierre1EmpresasPropias      = mkPctInv(() => cierreAnterior1.value.empresasPropias,      totalCierre1)
-const pctCierre2Particulares         = mkPctInv(() => cierreAnterior2.value.particulares,         totalCierre2)
-const pctCierre2EmpresasParticipadas = mkPctInv(() => cierreAnterior2.value.empresasParticipadas, totalCierre2)
-const pctCierre2EmpresasPropias      = mkPctInv(() => cierreAnterior2.value.empresasPropias,      totalCierre2)
 
-// ── KPIs inversión en curso ───────────────────────────────────────────────────
 const ultimoInvCurso              = computed(() => serieInversionEnCurso.value.at(-1) || { particulares: 0, empresasParticipadas: 0, empresasPropias: 0 })
 const actualCursoParticulares     = computed(() => ultimoInvCurso.value.particulares)
 const actualCursoEmpresasParticipadas = computed(() => ultimoInvCurso.value.empresasParticipadas)
@@ -927,8 +834,9 @@ const pctCierreCurso2EmpresasPropias      = mkPctInv(() => cierreCurso2.value.em
 const CERO_ING = { intParticulares: 0, intEmpresasPropias: 0, apertura: 0, gestion: 0 }
 
 function reducirMeses(meses) {
+  const cache = porIngresosDelMes.value
   return meses.reduce((acc, mes) => {
-    const v = ingresosDelMes(mes)
+    const v = cache[mes] || { intParticulares: 0, intEmpresasPropias: 0, apertura: 0, gestion: 0 }
     return {
       intParticulares:    acc.intParticulares    + v.intParticulares,
       intEmpresasPropias: acc.intEmpresasPropias + v.intEmpresasPropias,
@@ -996,21 +904,6 @@ function exportCSV(filas, nombreArchivo) {
   const a = document.createElement('a')
   a.href = url; a.download = nombreArchivo; a.click()
   URL.revokeObjectURL(url)
-}
-
-function exportarInversionExcel() {
-  const hoy = today()
-  const primeraFecha = prestamosRaw.value.filter(p => p.fecha_inicio).map(p => p.fecha_inicio).sort()[0]
-  if (!primeraFecha) return
-  const filas = [
-    ['Mes', 'Particulares', 'Empresas parte propia', 'Empresas parte participada', 'Total'],
-    ...generarPuntosInversion(primeraFecha, hoy, 'mes').map(({ label, fecha }) => {
-      const v = stockInicialEnFecha(fecha)
-      const total = Math.round(v.particulares + v.empresasPropias + v.empresasParticipadas)
-      return [label, Math.round(v.particulares), Math.round(v.empresasPropias), Math.round(v.empresasParticipadas), total]
-    })
-  ]
-  exportCSV(filas, `evolucion-inversion-${hoy.slice(0, 10)}.csv`)
 }
 
 function exportarInversionEnCursoExcel() {
