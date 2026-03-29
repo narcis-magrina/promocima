@@ -5,8 +5,8 @@
 
       <!-- Pestañas principales -->
       <div class="tabs" style="margin-bottom:20px">
-        <div class="tab" :class="{ active: tabActivo === 'inversion' }" @click="tabActivo = 'inversion'">📈 Evolución inversión</div>
-        <div class="tab" :class="{ active: tabActivo === 'ingresos' }"  @click="tabActivo = 'ingresos'">💰 Evolución de ingresos</div>
+        <div class="tab" :class="{ active: tabActivo === 'inversion' }" @click="tabActivo = 'inversion'">📈 Inversión en curso</div>
+        <div class="tab" :class="{ active: tabActivo === 'ingresos' }"  @click="tabActivo = 'ingresos'">💰 Ingresos</div>
       </div>
 
       <!-- ══════════════════ TAB: EVOLUCIÓN INVERSIÓN ══════════════════ -->
@@ -120,112 +120,36 @@
           </div>
         </div>
 
-        <!-- Gráfico 2: Evolución de la Inversión (capital inicial histórico) -->
-        <div class="table-card" style="padding:20px;margin-bottom:14px">
-          <div class="table-header" style="margin-bottom:16px">
-            <h3>Evolución de la Inversión</h3>
-            <div style="display:flex;gap:8px;align-items:center">
-              <label style="font-size:12px;color:var(--text3)">Granularidad</label>
-              <select class="form-control" style="width:auto;font-size:12px" v-model="granularidadInv">
-                <option value="mes">Mensual</option>
-                <option value="trimestre">Trimestral</option>
-                <option value="año">Anual</option>
-              </select>
-              <button class="btn btn-secondary" style="font-size:12px;padding:4px 12px" @click="exportarInversionExcel">↓ Excel</button>
-            </div>
-          </div>
-          <Line :data="chartInversionData" :options="chartOptionsInversion" style="max-height:380px" />
-        </div>
-
-        <!-- KPIs inversión total -->
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px">
-          <div class="kpi-card kc-blue">
-            <div class="kpi-label">Particulares</div>
-            <div style="margin-top:8px;display:grid;gap:4px">
-              <div class="kpi-row kpi-row-sep">
-                <span style="color:var(--text3)">Actual</span>
-                <span class="kpi-row-val" style="font-size:15px;font-weight:600">{{ fmtN(actualParticulares) }}</span>
-              </div>
-              <div class="kpi-row">
-                <span style="color:var(--text3)">% sobre total</span>
-                <span class="kpi-row-val">{{ pctParticulares }}%</span>
-              </div>
-              <div class="kpi-row kpi-row-sep">
-                <span style="color:var(--text3)">Cierre {{ anoAnterior }}</span>
-                <span class="kpi-row-val">{{ fmtN(cierreAnterior1.particulares) }}</span>
-              </div>
-              <div class="kpi-row">
-                <span style="color:var(--text3)">% sobre total</span>
-                <span class="kpi-row-val">{{ pctCierre1Particulares }}%</span>
-              </div>
-              <div class="kpi-row kpi-row-sep">
-                <span style="color:var(--text3)">Cierre {{ anoAnterior2 }}</span>
-                <span class="kpi-row-val">{{ fmtN(cierreAnterior2.particulares) }}</span>
-              </div>
-              <div class="kpi-row">
-                <span style="color:var(--text3)">% sobre total</span>
-                <span class="kpi-row-val">{{ pctCierre2Particulares }}%</span>
-              </div>
-            </div>
-          </div>
-          <div class="kpi-card kc-green">
-            <div class="kpi-label">Empresas — parte propia</div>
-            <div style="margin-top:8px;display:grid;gap:4px">
-              <div class="kpi-row kpi-row-sep">
-                <span style="color:var(--text3)">Actual</span>
-                <span class="kpi-row-val" style="font-size:15px;font-weight:600">{{ fmtN(actualEmpresasPropias) }}</span>
-              </div>
-              <div class="kpi-row">
-                <span style="color:var(--text3)">% sobre total</span>
-                <span class="kpi-row-val">{{ pctEmpresasPropias }}%</span>
-              </div>
-              <div class="kpi-row kpi-row-sep">
-                <span style="color:var(--text3)">Cierre {{ anoAnterior }}</span>
-                <span class="kpi-row-val">{{ fmtN(cierreAnterior1.empresasPropias) }}</span>
-              </div>
-              <div class="kpi-row">
-                <span style="color:var(--text3)">% sobre total</span>
-                <span class="kpi-row-val">{{ pctCierre1EmpresasPropias }}%</span>
-              </div>
-              <div class="kpi-row kpi-row-sep">
-                <span style="color:var(--text3)">Cierre {{ anoAnterior2 }}</span>
-                <span class="kpi-row-val">{{ fmtN(cierreAnterior2.empresasPropias) }}</span>
-              </div>
-              <div class="kpi-row">
-                <span style="color:var(--text3)">% sobre total</span>
-                <span class="kpi-row-val">{{ pctCierre2EmpresasPropias }}%</span>
-              </div>
-            </div>
-          </div>
-          <div class="kpi-card kc-orange">
-            <div class="kpi-label">Empresas — parte participada</div>
-            <div style="margin-top:8px;display:grid;gap:4px">
-              <div class="kpi-row kpi-row-sep">
-                <span style="color:var(--text3)">Actual</span>
-                <span class="kpi-row-val" style="font-size:15px;font-weight:600">{{ fmtN(actualEmpresasParticipadas) }}</span>
-              </div>
-              <div class="kpi-row">
-                <span style="color:var(--text3)">% sobre total</span>
-                <span class="kpi-row-val">{{ pctEmpresasParticipadas }}%</span>
-              </div>
-              <div class="kpi-row kpi-row-sep">
-                <span style="color:var(--text3)">Cierre {{ anoAnterior }}</span>
-                <span class="kpi-row-val">{{ fmtN(cierreAnterior1.empresasParticipadas) }}</span>
-              </div>
-              <div class="kpi-row">
-                <span style="color:var(--text3)">% sobre total</span>
-                <span class="kpi-row-val">{{ pctCierre1EmpresasParticipadas }}%</span>
-              </div>
-              <div class="kpi-row kpi-row-sep">
-                <span style="color:var(--text3)">Cierre {{ anoAnterior2 }}</span>
-                <span class="kpi-row-val">{{ fmtN(cierreAnterior2.empresasParticipadas) }}</span>
-              </div>
-              <div class="kpi-row">
-                <span style="color:var(--text3)">% sobre total</span>
-                <span class="kpi-row-val">{{ pctCierre2EmpresasParticipadas }}%</span>
-              </div>
-            </div>
-          </div>
+        <!-- Movimientos (altas y bajas) -->
+        <div v-if="altasBajasVisibles.movimientos.length"
+             class="table-card" style="padding:20px;margin-top:14px">
+          <div style="font-weight:600;margin-bottom:10px">Movimientos</div>
+          <table class="table" style="font-size:13px">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Préstamo</th>
+                <th class="text-right">Importe</th>
+                <th class="text-right">Interés</th>
+                <th class="text-right">Gestión</th>
+                <th class="text-right">Apertura</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="p in altasBajasVisibles.movimientos" :key="p._tipo+'-inv-'+p.id">
+                <td>{{ fmtDate(p._fecha) }}</td>
+                <td :style="p._tipo === 'alta' ? 'color:var(--green);font-weight:600' : 'color:var(--red);font-weight:600'">
+                  {{ p._tipo === 'alta' ? '▲ Alta' : '▼ Baja' }}
+                </td>
+                <td>{{ p.alias || p.centro_coste || '—' }}</td>
+                <td class="text-right">{{ fmtN(p.importe) }} €</td>
+                <td class="text-right">{{ Number(p.interes_ordinario || 0).toFixed(2) }}%</td>
+                <td class="text-right">{{ gestionPctPorPrestamo[p.id] ? gestionPctPorPrestamo[p.id].toFixed(2) + '%' : '—' }}</td>
+                <td class="text-right">{{ p.comision_apertura ? p.comision_apertura + '%' : '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
       </div><!-- /tab inversion -->
@@ -375,6 +299,38 @@
 
         </div>
 
+        <!-- Movimientos (altas y bajas) -->
+        <div v-if="altasBajasVisibles.movimientos.length"
+             class="table-card" style="padding:20px;margin-top:14px">
+          <div style="font-weight:600;margin-bottom:10px">Movimientos</div>
+          <table class="table" style="font-size:13px">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Préstamo</th>
+                <th class="text-right">Importe</th>
+                <th class="text-right">Interés</th>
+                <th class="text-right">Gestión</th>
+                <th class="text-right">Apertura</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="p in altasBajasVisibles.movimientos" :key="p._tipo+'-'+p.id">
+                <td>{{ fmtDate(p._fecha) }}</td>
+                <td :style="p._tipo === 'alta' ? 'color:var(--green);font-weight:600' : 'color:var(--red);font-weight:600'">
+                  {{ p._tipo === 'alta' ? '▲ Alta' : '▼ Baja' }}
+                </td>
+                <td>{{ p.alias || p.centro_coste || '—' }}</td>
+                <td class="text-right">{{ fmtN(p.importe) }} €</td>
+                <td class="text-right">{{ Number(p.interes_ordinario || 0).toFixed(2) }}%</td>
+                <td class="text-right">{{ gestionPctPorPrestamo[p.id] ? gestionPctPorPrestamo[p.id].toFixed(2) + '%' : '—' }}</td>
+                <td class="text-right">{{ p.comision_apertura ? p.comision_apertura + '%' : '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
       </div><!-- /tab ingresos -->
 
     </div>
@@ -391,7 +347,7 @@ import {
   Title, Tooltip, Legend
 } from 'chart.js'
 import { supabase } from '../supabase.js'
-import { fmtN, today, generateCalendarioTeorico, distribuirCobros } from '../utils.js'
+import { fmtN, fmtDate, today, generateCalendarioTeorico, distribuirCobros } from '../utils.js'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Title, Tooltip, Legend)
 
@@ -453,6 +409,20 @@ const gestionMensualPorPrestamo = computed(() => {
     map[c.prestamo_id] = (map[c.prestamo_id] || 0) +
       Number(c.importe_participacion || 0) * (Number(c.porcentaje_gestion || 0) / 100) / 12
   return map
+})
+
+// % de gestión medio ponderado por préstamo (para mostrar en la tabla de altas/bajas)
+const gestionPctPorPrestamo = computed(() => {
+  const map = {}
+  for (const c of ccpRaw.value) {
+    if (!map[c.prestamo_id]) map[c.prestamo_id] = { importe: 0, ponderado: 0 }
+    map[c.prestamo_id].importe    += Number(c.importe_participacion || 0)
+    map[c.prestamo_id].ponderado  += Number(c.importe_participacion || 0) * Number(c.porcentaje_gestion || 0)
+  }
+  const result = {}
+  for (const [id, v] of Object.entries(map))
+    result[id] = v.importe > 0 ? v.ponderado / v.importe : 0
+  return result
 })
 
 // ── Helpers de fecha ──────────────────────────────────────────────────────────
@@ -621,11 +591,15 @@ function ingresosDelMes(mesStr) {
     const importe     = Number(p.importe || 0)
     const tasa        = Number(p.interes_ordinario || 0) / 100 / 12
     const participado = Math.min(participadoPorPrestamo.value[p.id] || 0, importe)
+    // Para préstamos con amortización (francés), los intereses se calculan sobre
+    // el capital vivo al inicio del mes, no sobre el importe inicial
+    const baseInteres = p.tipo_prestamo === 'Americano' ? importe : capitalVivoEnFecha(p, mesInicio)
 
     if (p.tipoCliente === 'persona') {
-      intParticulares += importe * tasa
+      intParticulares += baseInteres * tasa
     } else {
-      intEmpresasPropias += (importe - participado) * tasa
+      const fracProp = importe > 0 ? (importe - participado) / importe : 1
+      intEmpresasPropias += baseInteres * fracProp * tasa
     }
     gestion += gestionMensualPorPrestamo.value[p.id] || 0
     if (p.fecha_inicio >= mesInicio && p.fecha_inicio <= mesFin) {
@@ -646,13 +620,34 @@ const serieIngresos = computed(() => {
   const porMes = {}
   for (const mes of meses) porMes[mes] = ingresosDelMes(mes)
 
-  // Precalcular capital propio (particulares + empresasPropias) al fin de cada mes
-  // Evita recalcular stockVivoEnFecha 12 veces por punto en ltmPct
+  // Capital propio al fin de cada mes (para LTM y rentabilidad recurrente)
   const capitalPropioMes = {}
   for (const mes of meses) {
     const fin = `${mes}-${ultimoDiaMes(mes)}`
     const { particulares, empresasPropias } = stockVivoEnFecha(fin)
     capitalPropioMes[mes] = particulares + empresasPropias
+  }
+
+  // Capital propio al inicio de cada mes (= fin del mes anterior)
+  // Corrección: los ingresos de un mes se generan sobre el capital que había al empezar ese mes,
+  // no el capital que queda al final (que ya incluye altas de ese mes y excluye las bajas)
+  const mesAnterior = (mesStr) => {
+    const [y, m] = mesStr.split('-').map(Number)
+    const mm = m === 1 ? 12 : m - 1
+    const yy = m === 1 ? y - 1 : y
+    return `${yy}-${String(mm).padStart(2, '0')}`
+  }
+  const capitalPropioMesInicio = {}
+  for (const mes of meses) {
+    const prev = mesAnterior(mes)
+    if (capitalPropioMes[prev] !== undefined) {
+      capitalPropioMesInicio[mes] = capitalPropioMes[prev]
+    } else {
+      // Primer mes: calcular el capital el día anterior al inicio
+      const fin = `${mes}-01` // usar inicio del mes = equivalente a fin del mes anterior
+      const { particulares, empresasPropias } = stockVivoEnFecha(fin)
+      capitalPropioMesInicio[mes] = particulares + empresasPropias
+    }
   }
 
   const sumar = lista => lista.reduce(
@@ -691,9 +686,32 @@ const serieIngresos = computed(() => {
     const cap = ltmMeses.reduce((s, mes) => s + capitalPropioMes[mes], 0) / ltmMeses.length
     if (!cap) return null
     let total
-    if (modo === 'sinApertura')    total = ing.intParticulares + ing.intEmpresasPropias + ing.gestion
+    if (modo === 'sinApertura')        total = ing.intParticulares + ing.intEmpresasPropias + ing.gestion
     else if (modo === 'soloIntereses') total = ing.intParticulares + ing.intEmpresasPropias
-    else                            total = ing.intParticulares + ing.intEmpresasPropias + ing.gestion + ing.apertura
+    else                               total = ing.intParticulares + ing.intEmpresasPropias + ing.gestion + ing.apertura
+    return Math.round((total / cap) * 10000) / 100
+  }
+
+  // LTM recurrente con capital de inicio de mes como denominador:
+  // - Numerador: sum intereses recurrentes (sin apertura) de los últimos 12 meses
+  //   usando porMes[], que ya calcula intereses sobre capitalVivoEnFecha (correcto para francés)
+  // - Denominador: promedio de capitalPropioMesInicio[] de los 12 meses
+  //   → altas del mes no inflan el denominador de ese mes
+  //   → bajas del mes sí están en el denominador de ese mes (estaban al empezar)
+  const rentLtmInicioMes = (mesStr) => {
+    const [yStr, mStr] = mesStr.split('-')
+    const y = Number(yStr), m = Number(mStr)
+    const ltmMeses = []
+    for (let i = 11; i >= 0; i--) {
+      let mm = m - i, yy = y
+      while (mm <= 0) { mm += 12; yy-- }
+      ltmMeses.push(`${yy}-${String(mm).padStart(2, '0')}`)
+    }
+    if (!ltmMeses.every(mes => porMes[mes] && capitalPropioMesInicio[mes] !== undefined)) return null
+    const ing = sumar(ltmMeses)
+    const cap = ltmMeses.reduce((s, mes) => s + capitalPropioMesInicio[mes], 0) / ltmMeses.length
+    if (!cap) return null
+    const total = ing.intParticulares + ing.intEmpresasPropias + ing.gestion
     return Math.round((total / cap) * 10000) / 100
   }
 
@@ -702,7 +720,7 @@ const serieIngresos = computed(() => {
       const [y, m] = mes.split('-')
       const fechaInicio = mes + '-01'
       const fechaFin = `${mes}-${ultimoDiaMes(mes)}`
-      return { label: `${m}/${y}`, ...porMes[mes], ...altasBajas(fechaInicio, fechaFin), rentabilidadPct: ltmPct(mes), rentabilidadRecurrentePct: ltmPct(mes, 'sinApertura'), rentabilidadInteresesPct: ltmPct(mes, 'soloIntereses') }
+      return { label: `${m}/${y}`, ...porMes[mes], ...altasBajas(fechaInicio, fechaFin), rentabilidadPct: ltmPct(mes), rentabilidadRecurrentePct: ltmPct(mes, 'sinApertura'), rentabilidadInteresesPct: ltmPct(mes, 'soloIntereses'), rentabilidadInicioMesPct: rentLtmInicioMes(mes) }
     })
   }
   if (granularidadIng.value === 'trimestre') {
@@ -720,7 +738,7 @@ const serieIngresos = computed(() => {
       const lastMes = lista[lista.length - 1]
       const fechaFin = `${lastMes}-${ultimoDiaMes(lastMes)}`
       const ing = sumar(lista)
-      return { label: `${q} ${y}`, ...ing, ...altasBajas(fechaInicio, fechaFin), rentabilidadPct: ltmPct(lastMes), rentabilidadRecurrentePct: ltmPct(lastMes, 'sinApertura'), rentabilidadInteresesPct: ltmPct(lastMes, 'soloIntereses') }
+      return { label: `${q} ${y}`, ...ing, ...altasBajas(fechaInicio, fechaFin), rentabilidadPct: ltmPct(lastMes), rentabilidadRecurrentePct: ltmPct(lastMes, 'sinApertura'), rentabilidadInteresesPct: ltmPct(lastMes, 'soloIntereses'), rentabilidadInicioMesPct: rentLtmInicioMes(lastMes) }
     })
   }
   // anual
@@ -736,7 +754,7 @@ const serieIngresos = computed(() => {
     const lastMes = lista[lista.length - 1]
     const fechaFin = `${lastMes}-${ultimoDiaMes(lastMes)}`
     const ing = sumar(lista)
-    return { label: y, ...ing, ...altasBajas(fechaInicio, fechaFin), rentabilidadPct: ltmPct(lastMes), rentabilidadRecurrentePct: ltmPct(lastMes, 'sinApertura'), rentabilidadInteresesPct: ltmPct(lastMes, 'soloIntereses') }
+    return { label: y, ...ing, ...altasBajas(fechaInicio, fechaFin), rentabilidadPct: ltmPct(lastMes), rentabilidadRecurrentePct: ltmPct(lastMes, 'sinApertura'), rentabilidadInteresesPct: ltmPct(lastMes, 'soloIntereses'), rentabilidadInicioMesPct: rentLtmInicioMes(lastMes) }
   })
 })
 
@@ -763,14 +781,6 @@ function makeChartOptions(getSerie, { secondAxis = false } = {}) {
             const point = getSerie()[idx]
             const euroItems = items.filter(i => i.dataset.yAxisID !== 'y2')
             const lines = [`Total: ${fmtN(euroItems.reduce((s, i) => s + Number(i.raw), 0))} €`]
-            if (point?.altas?.length) {
-              lines.push('')
-              point.altas.forEach(a => lines.push(`▲ ${a.alias || a.centro_coste || '—'}  +${fmtN(a.importe)} €`))
-            }
-            if (point?.bajas?.length) {
-              if (!point?.altas?.length) lines.push('')
-              point.bajas.forEach(b => lines.push(`▼ ${b.alias || b.centro_coste || '—'}  -${fmtN(b.importe)} €`))
-            }
             return lines
           }
         }
@@ -855,9 +865,9 @@ const chartIngresosData = computed(() => ({
   labels: serieIngresos.value.map(p => p.label),
   datasets: [
     // Líneas de rentabilidad primero → aparecen en la fila 1 de la leyenda
-    lineDataset('Rentabilidad propia',      'rgba(30, 64, 175, 0.9)',  serieIngresos.value.map(p => p.rentabilidadInteresesPct)),
-    lineDataset('Rentabilidad recurrente',  'rgba(239, 68, 68, 0.9)',  serieIngresos.value.map(p => p.rentabilidadRecurrentePct)),
-    lineDataset('Rentabilidad total',       'rgba(239, 68, 68, 0.45)', serieIngresos.value.map(p => p.rentabilidadPct), { borderDash: [5, 4] }),
+    lineDataset('Rentabilidad propia',            'rgba(30, 64, 175, 0.9)',  serieIngresos.value.map(p => p.rentabilidadInteresesPct)),
+    lineDataset('Rentabilidad + gestión',          'rgba(239, 68, 68, 0.9)',  serieIngresos.value.map(p => p.rentabilidadRecurrentePct)),
+    lineDataset('Rentabilidad total',             'rgba(16, 185, 129, 0.9)', serieIngresos.value.map(p => p.rentabilidadPct)),
     // Áreas después → aparecen en la fila 2 de la leyenda
     ds('Intereses particulares',     'rgba(99, 179, 237, 1)',  serieIngresos.value.map(p => Math.round(p.intParticulares))),
     ds('Intereses empresas propios', 'rgba(104, 211, 145, 1)', serieIngresos.value.map(p => Math.round(p.intEmpresasPropias))),
@@ -967,6 +977,17 @@ const pctIngEmpresasPropiasPrev = mkPct(ingEjercicioAnterior, 'intEmpresasPropia
 const pctIngGestionPrev         = mkPct(ingEjercicioAnterior, 'gestion',            totalEjercicioAnterior)
 const pctIngAperturaPrev        = mkPct(ingEjercicioAnterior, 'apertura',           totalEjercicioAnterior)
 
+// ── Altas y bajas del periodo actual (último punto de la serie de ingresos) ───
+const altasBajasVisibles = computed(() => {
+  const movimientos = []
+  for (const punto of serieIngresos.value) {
+    for (const p of (punto.altas || [])) movimientos.push({ ...p, _tipo: 'alta', _periodo: punto.label, _fecha: p.fecha_inicio || '' })
+    for (const p of (punto.bajas || [])) movimientos.push({ ...p, _tipo: 'baja', _periodo: punto.label, _fecha: p.fecha_cancelacion || '' })
+  }
+  movimientos.sort((a, b) => a._fecha < b._fecha ? -1 : a._fecha > b._fecha ? 1 : 0)
+  return { movimientos }
+})
+
 // ── Exportar a CSV (abre en Excel con separador ; y BOM UTF-8) ────────────────
 function exportCSV(filas, nombreArchivo) {
   const csv = '\uFEFF' + filas.map(f => f.join(';')).join('\r\n')
@@ -1042,12 +1063,27 @@ function exportarIngresosExcel() {
     return (Math.round((totalIng / cap) * 10000) / 100).toString().replace('.', ',')
   }
 
+  const comentarioMovimientos = (mes) => {
+    const inicio = mes + '-01'
+    const fin = `${mes}-${ultimoDiaMes(mes)}`
+    const altas = prestamosRaw.value.filter(p => p.fecha_inicio >= inicio && p.fecha_inicio <= fin)
+    const bajas = prestamosRaw.value.filter(p => p.fecha_cancelacion && p.fecha_cancelacion >= inicio && p.fecha_cancelacion <= fin)
+    const lineas = []
+    altas.forEach(p => lineas.push(`ALTA: ${p.alias || p.centro_coste || p.id} (${Math.round(Number(p.importe || 0)).toLocaleString('es-ES')} € / ${Number(p.interes_ordinario || 0).toLocaleString('es-ES')}%)`))
+    bajas.forEach(p => lineas.push(`BAJA: ${p.alias || p.centro_coste || p.id} (${Math.round(Number(p.importe || 0)).toLocaleString('es-ES')} € / ${Number(p.interes_ordinario || 0).toLocaleString('es-ES')}%)`))
+    return lineas.join(' | ')
+  }
+
   const filas = [
-    ['Mes', 'Intereses particulares', 'Intereses empresas propios', 'Ingresos gestión', 'Comisiones apertura', 'Total ingresos', 'Capital propio medio (€)', 'Rentabilidad LTM (%)'],
+    ['Mes', 'Intereses particulares', 'Intereses empresas propios', 'Ingresos gestión', 'Comisiones apertura', 'Total ingresos', 'Capital propio medio (€)', 'Rentabilidad mes anualizada (%)', 'Rentabilidad LTM (%)', 'Movimientos'],
     ...meses.map(mes => {
       const [y, m] = mes.split('-')
       const v = ingresosDelMes(mes)
       const total = Math.round(v.intParticulares + v.intEmpresasPropias + v.gestion + v.apertura)
+      const cap = capitalPropioMes[mes]
+      const rentMesAnualizada = cap
+        ? (Math.round((v.intParticulares + v.intEmpresasPropias + v.gestion) * 12 / cap * 10000) / 100).toString().replace('.', ',')
+        : ''
       return [
         `${m}/${y}`,
         Math.round(v.intParticulares),
@@ -1055,8 +1091,10 @@ function exportarIngresosExcel() {
         Math.round(v.gestion),
         Math.round(v.apertura),
         total,
-        Math.round(capitalPropioMes[mes]),
+        Math.round(cap),
+        rentMesAnualizada,
         ltmPctExcel(mes),
+        comentarioMovimientos(mes),
       ]
     })
   ]
