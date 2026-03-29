@@ -5,9 +5,8 @@
 
       <!-- Pestañas principales -->
       <div class="tabs" style="margin-bottom:20px">
-        <div class="tab" :class="{ active: tabActivo === 'inversion' }"   @click="tabActivo = 'inversion'">📈 Evolución inversión</div>
-        <div class="tab" :class="{ active: tabActivo === 'ingresos' }"    @click="tabActivo = 'ingresos'">💰 Evolución de ingresos</div>
-        <div class="tab" :class="{ active: tabActivo === 'vencimientos' }" @click="tabActivo = 'vencimientos'">📅 Vencimientos previstos</div>
+        <div class="tab" :class="{ active: tabActivo === 'inversion' }" @click="tabActivo = 'inversion'">📈 Evolución inversión</div>
+        <div class="tab" :class="{ active: tabActivo === 'ingresos' }"  @click="tabActivo = 'ingresos'">💰 Evolución de ingresos</div>
       </div>
 
       <!-- ══════════════════ TAB: EVOLUCIÓN INVERSIÓN ══════════════════ -->
@@ -378,71 +377,23 @@
 
       </div><!-- /tab ingresos -->
 
-      <!-- ══════════════════ TAB: VENCIMIENTOS PREVISTOS ══════════════════ -->
-      <div v-if="tabActivo === 'vencimientos'">
-
-        <div class="table-card" style="padding:20px;margin-bottom:14px">
-          <div class="table-header" style="margin-bottom:16px">
-            <h3>Vencimientos previstos</h3>
-            <div style="display:flex;gap:8px;align-items:center">
-              <label style="font-size:12px;color:var(--text3)">Granularidad</label>
-              <select class="form-control" style="width:auto;font-size:12px" v-model="granularidadVenc">
-                <option value="mes">Mensual</option>
-                <option value="trimestre">Trimestral</option>
-                <option value="año">Anual</option>
-              </select>
-            </div>
-          </div>
-          <Bar :data="chartVencimientosData" :options="chartOptionsVencimientos" style="max-height:380px" />
-        </div>
-
-        <!-- Tabla detalle de vencimientos -->
-        <div class="table-card" style="padding:20px">
-          <h3 style="margin-bottom:14px">Detalle de vencimientos</h3>
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Préstamo</th>
-                <th>Tipo</th>
-                <th>Vencimiento</th>
-                <th class="text-right">Importe inicial</th>
-                <th class="text-right">Capital en curso</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="p in vencimientosDetalle" :key="p.id">
-                <td>{{ p.alias || p.centro_coste || '—' }}</td>
-                <td>{{ p.tipoCliente === 'persona' ? 'Particular' : 'Empresa' }}</td>
-                <td>{{ p.fechaVenc }}</td>
-                <td class="text-right">{{ fmtN(p.importe) }} €</td>
-                <td class="text-right">{{ fmtN(p.capitalVivo) }} €</td>
-              </tr>
-              <tr v-if="!vencimientosDetalle.length">
-                <td colspan="5" class="table-empty">Sin datos</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-      </div><!-- /tab vencimientos -->
-
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { Line, Bar } from 'vue-chartjs'
+import { Line } from 'vue-chartjs'
 import {
   Chart as ChartJS,
-  CategoryScale, LinearScale, BarElement, BarController,
+  CategoryScale, LinearScale,
   PointElement, LineElement, Filler,
   Title, Tooltip, Legend
 } from 'chart.js'
 import { supabase } from '../supabase.js'
 import { fmtN, today, generateCalendarioTeorico, distribuirCobros } from '../utils.js'
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, BarController, PointElement, LineElement, Filler, Title, Tooltip, Legend)
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Title, Tooltip, Legend)
 
 const loading          = ref(true)
 const prestamosRaw     = ref([])
@@ -452,7 +403,6 @@ const tabActivo        = ref('inversion')
 const granularidadInv      = ref('mes')
 const granularidadInvCurso = ref('mes')
 const granularidadIng      = ref('mes')
-const granularidadVenc     = ref('trimestre')
 
 async function fetchAllCobros() {
   const PAGE = 1000
@@ -1113,118 +1063,5 @@ function exportarIngresosExcel() {
   exportCSV(filas, `evolucion-ingresos-${hoy.slice(0, 10)}.csv`)
 }
 
-// ── Vencimientos previstos ────────────────────────────────────────────────────
 
-// Calcula la fecha de vencimiento teórica: fecha_inicio + duracion_meses
-function calcFechaVenc(prestamo) {
-  if (!prestamo.fecha_inicio || !prestamo.duracion_meses) return null
-  const d = new Date(prestamo.fecha_inicio + 'T00:00:00')
-  d.setMonth(d.getMonth() + Number(prestamo.duracion_meses))
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
-// Préstamos activos con su fecha de vencimiento y capital en curso actual
-const vencimientosBase = computed(() => {
-  const hoy = today()
-  return prestamosRaw.value
-    .filter(p => p.estado !== 'cancelado' && p.fecha_inicio)
-    .map(p => {
-      const fechaVenc = calcFechaVenc(p)
-      const capitalVivo = capitalVivoEnFecha(p, hoy)
-      return { ...p, fechaVenc, capitalVivo }
-    })
-    .filter(p => p.fechaVenc)
-    .sort((a, b) => a.fechaVenc.localeCompare(b.fechaVenc))
-})
-
-// Tabla detalle ordenada por vencimiento
-const vencimientosDetalle = computed(() => vencimientosBase.value)
-
-// Agrupa por mes/trimestre/año y devuelve serie para el gráfico
-const serieVencimientos = computed(() => {
-  if (!vencimientosBase.value.length) return []
-  const grupos = {}, orden = []
-
-  for (const p of vencimientosBase.value) {
-    const mes = p.fechaVenc.slice(0, 7) // YYYY-MM
-    const [y, m] = mes.split('-').map(Number)
-
-    let key, label
-    if (granularidadVenc.value === 'mes') {
-      key = mes; label = `${String(m).padStart(2,'0')}/${y}`
-    } else if (granularidadVenc.value === 'trimestre') {
-      key = `${y}-Q${Math.ceil(m / 3)}`; label = `Q${Math.ceil(m / 3)} ${y}`
-    } else {
-      key = `${y}`; label = `${y}`
-    }
-
-    if (!grupos[key]) { grupos[key] = { label, personas: 0, empresas: 0 }; orden.push(key) }
-    if (p.tipoCliente === 'persona') grupos[key].personas += p.capitalVivo
-    else                             grupos[key].empresas += p.capitalVivo
-  }
-
-  return orden.map(k => grupos[k])
-})
-
-const chartVencimientosData = computed(() => ({
-  labels: serieVencimientos.value.map(p => p.label),
-  datasets: [
-    {
-      label: 'Particulares',
-      data: serieVencimientos.value.map(p => Math.round(p.personas)),
-      backgroundColor: 'rgba(99, 179, 237, 0.7)',
-      borderColor: 'rgba(99, 179, 237, 1)',
-      borderWidth: 1,
-      stack: 'venc',
-    },
-    {
-      label: 'Empresas',
-      data: serieVencimientos.value.map(p => Math.round(p.empresas)),
-      backgroundColor: 'rgba(104, 211, 145, 0.7)',
-      borderColor: 'rgba(104, 211, 145, 1)',
-      borderWidth: 1,
-      stack: 'venc',
-    },
-  ]
-}))
-
-const chartOptionsVencimientos = computed(() => ({
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: { position: 'top' },
-    tooltip: {
-      callbacks: {
-        label: ctx => ` ${ctx.dataset.label}: ${fmtN(ctx.raw)} €`,
-        footer: items => {
-          const total = items.reduce((s, i) => s + Number(i.raw), 0)
-          // Préstamos que vencen en este periodo
-          const idx = items[0]?.dataIndex
-          const label = serieVencimientos.value[idx]?.label || ''
-          const prestamos = vencimientosBase.value.filter(p => {
-            const mes = p.fechaVenc.slice(0, 7)
-            const [y, m] = mes.split('-').map(Number)
-            if (granularidadVenc.value === 'mes')      return `${String(m).padStart(2,'0')}/${y}` === label
-            if (granularidadVenc.value === 'trimestre') return `Q${Math.ceil(m/3)} ${y}` === label
-            return `${y}` === label
-          })
-          const lines = [`Total: ${fmtN(total)} €`, '']
-          prestamos.forEach(p => lines.push(`• ${p.alias || p.centro_coste || '—'}  ${fmtN(p.capitalVivo)} €`))
-          return lines
-        },
-      },
-    },
-  },
-  scales: {
-    x: { stacked: true, grid: { display: false } },
-    y: {
-      stacked: true,
-      ticks: { callback: v => fmtN(v) + ' €' },
-      grid: { color: 'rgba(0,0,0,0.05)' },
-    },
-  },
-}))
 </script>

@@ -8,7 +8,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 
 const props = defineProps({
   texto: { type: String, required: true },
@@ -25,6 +25,14 @@ function open() {
 }
 function close()  { show.value = false }
 function toggle() { show.value ? close() : open() }
+
+// Cierra el tooltip al tocar/clicar fuera (necesario en móvil donde mouseleave no aplica)
+function onOutsideClick() { close() }
+watch(show, val => {
+  if (val) document.addEventListener('click', onOutsideClick)
+  else     document.removeEventListener('click', onOutsideClick)
+})
+onUnmounted(() => document.removeEventListener('click', onOutsideClick))
 
 const bubbleStyle = computed(() => {
   if (!rect.value) return {}

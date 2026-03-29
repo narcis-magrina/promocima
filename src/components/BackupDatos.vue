@@ -136,13 +136,16 @@ const archivoSeleccionado = ref(null)
 const inputZip = ref(null)
 
 // ── Tablas ────────────────────────────────────────────────────
+// Orden de inserción respeta dependencias FK (hijos después de padres)
 const TABLAS_CON_EMPRESA = [
   'empresas',
   'clientes',
   'intermediarios',
   'participes',
   'prestamos',
-  'cobros',
+  'garantias',        // depende de prestamos
+  'cobros',           // depende de prestamos
+  'cobros_reales',    // depende de cobros + prestamos
   'titulares',
   'contratos_ccp',
   'pagos_reales_participe',
@@ -150,6 +153,7 @@ const TABLAS_CON_EMPRESA = [
 ]
 
 const TABLAS_SIN_EMPRESA = [
+  'perfiles_empresas', // depende de perfiles + empresas
   'email_templates',
   'BdE_Sectores',
   'BdE_Tipos_id',
